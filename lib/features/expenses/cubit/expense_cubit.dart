@@ -1,0 +1,87 @@
+import 'dart:math';
+
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../expense.dart';
+import '../expense_ledger.dart';
+import 'expense_state.dart';
+
+class ExpenseCubit extends Cubit<ExpenseState> {
+  ExpenseCubit(this._ledger) : super(const ExpenseInitial());
+
+  final ExpenseLedger _ledger;
+
+  Future<void> load() async {
+    if (isClosed) return;
+    emit(const ExpenseLoading());
+    try {
+      final expenses = await _ledger.loadExpenses();
+      if (isClosed) return;
+      emit(ExpenseLoaded(expenses));
+    } catch (e) {
+      if (isClosed) return;
+      emit(ExpenseError(e.toString()));
+    }
+  }
+
+  Future<void> addExpense({
+    required int amountMinor,
+    required String categoryId,
+    required DateTime spentOn,
+  }) async {
+    try {
+      final id = _generateId();
+      final now = DateTime.now();
+      final expense = Expense(
+        id: id,
+        amountMinor: amountMinor,
+        categoryId: categoryId,
+        spentOn: spentOn,
+        createdAt: now,
+        updatedAt: now,
+      );
+      await _ledger.logExpense(expense);
+      final expenses = await _ledger.loadExpenses();
+      if (isClosed) return;
+      emit(ExpenseLoaded(expenses));
+    } catch (e) {
+      if (isClosed) return;
+      emit(ExpenseError(e.toString()));
+    }
+  }
+
+  Future<void> updateExpense(Expense expense) async {
+    try {
+      final updated = expense.copyWith(updatedAt: DateTime.now());
+      await _ledger.updateExpense(updated);
+      final expenses = await _ledger.loadExpenses();
+      if (isClosed) return;
+      emit(ExpenseLoaded(expenses));
+    } catch (e) {
+      if (isClosed) return;
+      emit(ExpenseError(e.toString()));
+    }
+  }
+
+  Future<void> deleteExpense(String id) async {
+    try {
+      await _ledger.deleteExpense(id);
+      final expenses = await _ledger.loadExpenses();
+      if (isClosed) return;
+      emit(ExpenseLoaded(expenses));
+    } catch (e) {
+      if (isClosed) return;
+      emit(ExpenseError(e.toString()));
+    }
+  }
+
+  String _generateId() {
+    final rand = Random();
+    final chars = '0123456789abcdef';
+    final buffer = StringBuffer('exp_');
+    for (var i = 0; i < 16; i++) {
+      buffer.write(chars[rand.nextInt(chars.length)]);
+    }
+    return buffer.toString();
+  }
+}
