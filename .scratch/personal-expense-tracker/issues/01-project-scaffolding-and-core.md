@@ -4,10 +4,10 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Flutter application builds and runs cleanly across mobile and desktop
-- [ ] Docker container setup for Supabase (`docker-compose.yml` or Supabase CLI) spins up local PostgreSQL, PostgREST, and GoTrue
-- [ ] Local SQLite database helper initializes with required schema
-- [ ] Supabase client configuration connects to local Supabase Docker container
-- [ ] Primary app shell renders with bottom navigation bar and thematic typography
+- [x] Flutter application builds and runs cleanly across mobile and desktop
+- [x] Docker container setup for Supabase (`docker-compose.yml` or Supabase CLI) spins up local PostgreSQL, PostgREST, and GoTrue
+- [x] Local SQLite database helper initializes with required schema
+- [x] Supabase client configuration connects to local Supabase Docker container
+- [x] Primary app shell renders with bottom navigation bar and thematic typography
