@@ -4,10 +4,10 @@
 
 **Blocked by:** 01: Project Scaffolding & Core Foundations, 02: Category Presets & Management Slice
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Prominent quick-add button opens a minimalist bottom sheet/dialog
-- [ ] Users can enter an amount, pick a category, and save in fewer than three taps
-- [ ] Date defaults to today with an optional date picker
-- [ ] Expenses display in reverse-chronological order grouped by day with category icons
-- [ ] Users can delete or edit an existing expense from the list
+- [x] Prominent quick-add button opens a minimalist bottom sheet/dialog
+- [x] Users can enter an amount, pick a category, and save in fewer than three taps
+- [x] Date defaults to today with an optional date picker
+- [x] Expenses display in reverse-chronological order grouped by day with category icons
+- [x] Users can delete or edit an existing expense from the list
