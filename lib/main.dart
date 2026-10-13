@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 import 'app.dart';
 import 'core/database/open_app_database.dart';
 import 'core/network/supabase_bootstrap.dart';
+import 'features/categories/category_store.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Local-first: SQLite opens before anything else. Feature modules
-  // (tickets 02+) will receive these via constructor injection.
-  await openAppDatabase();
+  // receive the database via constructor injection.
+  final db = await openAppDatabase();
+  final categoryStore = CategoryStore(db);
   await initSupabase();
-  runApp(const BudgetApp());
+  runApp(BudgetApp(categoryStore: categoryStore));
 }

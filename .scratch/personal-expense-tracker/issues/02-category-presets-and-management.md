@@ -4,9 +4,9 @@
 
 **Blocked by:** 01: Project Scaffolding & Core Foundations
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Default system categories automatically populate on first launch
-- [ ] Users can create a new custom category with a name, icon, and color
-- [ ] Users can edit or delete non-essential categories
-- [ ] Category changes persist in local SQLite and stream reactively to UI
+- [x] Default system categories automatically populate on first launch
+- [x] Users can create a new custom category with a name, icon, and color
+- [x] Users can edit or delete non-essential categories
+- [x] Category changes persist in local SQLite and stream reactively to UI

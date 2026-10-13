@@ -1,10 +1,28 @@
 import 'package:budget_app/app.dart';
+import 'package:budget_app/core/database/app_database.dart';
+import 'package:budget_app/features/categories/category_store.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
+  setUpAll(sqfliteFfiInit);
+
+  late AppDatabase db;
+  late CategoryStore store;
+
+  setUp(() async {
+    db = await AppDatabase.open(
+      factory: databaseFactoryFfiNoIsolate,
+      path: inMemoryDatabasePath,
+    );
+    store = CategoryStore(db);
+  });
+
+  tearDown(() => db.close());
+
   testWidgets('shell shows three tabs and starts on Expenses', (tester) async {
-    await tester.pumpWidget(const BudgetApp());
+    await tester.pumpWidget(BudgetApp(categoryStore: store));
     await tester.pumpAndSettle();
 
     expect(find.byType(NavigationBar), findsOneWidget);
@@ -15,7 +33,7 @@ void main() {
   });
 
   testWidgets('tapping a tab switches the visible screen', (tester) async {
-    await tester.pumpWidget(const BudgetApp());
+    await tester.pumpWidget(BudgetApp(categoryStore: store));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Consultant'));
