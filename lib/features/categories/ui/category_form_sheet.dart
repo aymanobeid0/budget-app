@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../category.dart';
 import 'category_icon_helper.dart';
 
@@ -23,12 +24,12 @@ class _CategoryFormSheetState extends State<CategoryFormSheet> {
   late int _selectedColor;
 
   static const List<int> _availableColors = [
-    0xFF10B981, // Emerald
+    0xFF6C3EE8, // Violet (Primary)
+    0xFFFF5B35, // Coral Red
+    0xFF00BA88, // Mint Emerald
     0xFF3B82F6, // Blue
     0xFF6366F1, // Indigo
-    0xFF8B5CF6, // Purple
     0xFFEC4899, // Pink
-    0xFFEF4444, // Red
     0xFFF59E0B, // Amber
     0xFF14B8A6, // Teal
     0xFFF97316, // Orange
@@ -58,49 +59,97 @@ class _CategoryFormSheetState extends State<CategoryFormSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final isEditing = widget.category != null;
 
-    return Padding(
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurface : AppColors.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.sheet)),
+      ),
       padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        left: 24,
+        right: 24,
+        top: 14,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
       ),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Drag Handle
+            Center(
+              child: Container(
+                width: 38,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.darkBorder : const Color(0xFFE2E4F0),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Header Row
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   isEditing ? 'Edit Category' : 'New Category',
-                  style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 20,
+                    color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+                  ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.of(context).pop(),
+                GestureDetector(
+                  onTap: () => Navigator.of(context).pop(),
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.darkSurfaceSubtle : AppColors.surfaceSubtle,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.close_rounded,
+                      size: 18,
+                      color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                    ),
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
+
+            // Category Name Field
             TextField(
               key: const Key('category-name-field'),
               controller: _nameController,
               autofocus: true,
-              decoration: InputDecoration(
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+              ),
+              decoration: const InputDecoration(
                 labelText: 'Category Name',
                 hintText: 'e.g. Groceries, Gym, Subscriptions',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
               textInputAction: TextInputAction.done,
               onSubmitted: (_) => _submit(),
             ),
             const SizedBox(height: 20),
-            Text('Select Icon', style: theme.textTheme.titleSmall),
-            const SizedBox(height: 10),
+
+            // Icon Picker
+            Text(
+              'Select Icon',
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 12),
             SizedBox(
               height: 52,
               child: ListView.separated(
@@ -113,24 +162,26 @@ class _CategoryFormSheetState extends State<CategoryFormSheet> {
                   final isSelected = key == _selectedIcon;
                   return InkWell(
                     onTap: () => setState(() => _selectedIcon = key),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                     child: Container(
                       width: 48,
                       height: 48,
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? theme.colorScheme.primaryContainer
-                            : theme.colorScheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(12),
+                            ? AppColors.primaryLight
+                            : (isDark ? AppColors.darkSurfaceSubtle : AppColors.surfaceSubtle),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
                         border: isSelected
-                            ? Border.all(color: theme.colorScheme.primary, width: 2)
-                            : null,
+                            ? Border.all(color: AppColors.primary, width: 2)
+                            : Border.all(
+                                color: isDark ? AppColors.darkBorder : AppColors.borderLight,
+                              ),
                       ),
                       child: Icon(
                         icon,
                         color: isSelected
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.onSurfaceVariant,
+                            ? AppColors.primary
+                            : (isDark ? AppColors.darkTextSecondary : AppColors.textSecondary),
                       ),
                     ),
                   );
@@ -138,8 +189,16 @@ class _CategoryFormSheetState extends State<CategoryFormSheet> {
               ),
             ),
             const SizedBox(height: 20),
-            Text('Select Color', style: theme.textTheme.titleSmall),
-            const SizedBox(height: 10),
+
+            // Color Picker
+            Text(
+              'Select Color',
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 12),
             SizedBox(
               height: 44,
               child: ListView.separated(
@@ -158,11 +217,20 @@ class _CategoryFormSheetState extends State<CategoryFormSheet> {
                         color: Color(colorVal),
                         shape: BoxShape.circle,
                         border: isSelected
-                            ? Border.all(color: theme.colorScheme.onSurface, width: 3)
+                            ? Border.all(color: Colors.white, width: 3)
+                            : null,
+                        boxShadow: isSelected
+                            ? [
+                                BoxShadow(
+                                  color: Color(colorVal).withValues(alpha: 0.5),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                )
+                              ]
                             : null,
                       ),
                       child: isSelected
-                          ? const Icon(Icons.check, size: 20, color: Colors.white)
+                          ? const Icon(Icons.check_rounded, size: 20, color: Colors.white)
                           : null,
                     ),
                   );
@@ -170,14 +238,19 @@ class _CategoryFormSheetState extends State<CategoryFormSheet> {
               ),
             ),
             const SizedBox(height: 28),
+
+            // Action Button
             FilledButton.icon(
               key: const Key('save-category-btn'),
               onPressed: _submit,
-              icon: const Icon(Icons.check),
+              icon: const Icon(Icons.check_rounded),
               label: Text(isEditing ? 'Save Changes' : 'Create Category'),
               style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                backgroundColor: AppColors.primary,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.xl),
+                ),
               ),
             ),
           ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../../categories/category.dart';
 import '../../categories/ui/category_icon_helper.dart';
 import '../expense.dart';
@@ -89,68 +90,167 @@ class _ExpenseFormSheetState extends State<ExpenseFormSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final isEditing = widget.expense != null;
 
-    return Padding(
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurface : AppColors.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.sheet)),
+      ),
       padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        left: 24,
+        right: 24,
+        top: 14,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
       ),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Drag Handle
+            Center(
+              child: Container(
+                width: 38,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.darkBorder : const Color(0xFFE2E4F0),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Header Row
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   isEditing ? 'Edit Expense' : 'Log Expense',
-                  style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 20,
+                    color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+                  ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.of(context).pop(),
+                GestureDetector(
+                  onTap: () => Navigator.of(context).pop(),
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.darkSurfaceSubtle : AppColors.surfaceSubtle,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.close_rounded,
+                      size: 18,
+                      color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                    ),
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
+
+            // Expense Badge Pill (Inspired by Mockup toggle tabs)
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.expenseContainer,
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.arrow_upward_rounded, size: 14, color: AppColors.expense),
+                      SizedBox(width: 6),
+                      Text(
+                        'Add Expense',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.expense,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+
+            // Amount Input Field
             TextField(
               key: const Key('expense-amount-field'),
               controller: _amountController,
               autofocus: true,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.w800,
+                color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+              ),
               decoration: InputDecoration(
                 prefixText: '\$ ',
+                prefixStyle: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primary,
+                ),
                 labelText: 'Amount',
                 hintText: '0.00',
                 errorText: _errorMessage,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
               ),
               textInputAction: TextInputAction.done,
               onSubmitted: (_) => _submit(),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 18),
+
+            // Date Picker Row
             Row(
               children: [
-                Text('Date:', style: theme.textTheme.titleSmall),
-                const SizedBox(width: 10),
+                Text(
+                  'Date:',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(width: 12),
                 OutlinedButton.icon(
                   onPressed: _pickDate,
-                  icon: const Icon(Icons.calendar_today, size: 16),
-                  label: Text(_formatDateLabel(_selectedDate)),
+                  icon: const Icon(Icons.calendar_today_rounded, size: 15),
+                  label: Text(
+                    _formatDateLabel(_selectedDate),
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
                   style: OutlinedButton.styleFrom(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    foregroundColor: isDark ? Colors.white : AppColors.primary,
+                    side: BorderSide(
+                      color: isDark ? AppColors.darkBorder : AppColors.borderLight,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            Text('Select Category', style: theme.textTheme.titleSmall),
-            const SizedBox(height: 10),
+            const SizedBox(height: 18),
+
+            // Category Selection
+            Text(
+              'Select Category',
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 12),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -161,11 +261,25 @@ class _ExpenseFormSheetState extends State<ExpenseFormSheet> {
 
                 return FilterChip(
                   selected: isSelected,
+                  selectedColor: AppColors.primary,
+                  checkmarkColor: Colors.white,
                   avatar: CircleAvatar(
-                    backgroundColor: color.withValues(alpha: 0.2),
-                    child: Icon(icon, size: 16, color: color),
+                    backgroundColor: isSelected
+                        ? Colors.white.withValues(alpha: 0.25)
+                        : color.withValues(alpha: 0.2),
+                    child: Icon(
+                      icon,
+                      size: 15,
+                      color: isSelected ? Colors.white : color,
+                    ),
                   ),
-                  label: Text(cat.name),
+                  label: Text(
+                    cat.name,
+                    style: TextStyle(
+                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                      color: isSelected ? Colors.white : (isDark ? Colors.white : AppColors.textPrimary),
+                    ),
+                  ),
                   onSelected: (_) {
                     setState(() {
                       _selectedCategoryId = cat.id;
@@ -176,14 +290,19 @@ class _ExpenseFormSheetState extends State<ExpenseFormSheet> {
               }).toList(),
             ),
             const SizedBox(height: 28),
+
+            // Save Action Button
             FilledButton.icon(
               key: const Key('save-expense-btn'),
               onPressed: _submit,
-              icon: const Icon(Icons.check),
+              icon: const Icon(Icons.check_rounded),
               label: Text(isEditing ? 'Save Changes' : 'Save Expense'),
               style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                backgroundColor: AppColors.primary,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.xl),
+                ),
               ),
             ),
           ],
