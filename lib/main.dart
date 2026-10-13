@@ -14,8 +14,5 @@ Future<void> main() async {
   final categoryStore = CategoryStore(db);
   final expenseLedger = ExpenseLedger(db);
   await initSupabase();
-  runApp(BudgetApp(
-    categoryStore: categoryStore,
-    expenseLedger: expenseLedger,
-  ));
+  runApp(BudgetApp(categoryStore: categoryStore, expenseLedger: expenseLedger));
 }
