@@ -5,13 +5,18 @@ services:
   # Supabase Studio Dashboard (Port 3000)
   studio:
     container_name: supabase-studio
-    image: supabase/studio:20240729-fa6693a
+    image: supabase/studio:2026.09.07-sha-7996410
     restart: unless-stopped
     ports:
       - "${STUDIO_PORT:-3000}:3000"
     environment:
+      HOSTNAME: "0.0.0.0"
       STUDIO_PG_META_URL: http://meta:8080
+      POSTGRES_PORT: 5432
+      POSTGRES_HOST: db
+      POSTGRES_DB: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PG_META_CRYPTO_KEY: ${PG_META_CRYPTO_KEY:-${JWT_SECRET}}
       DEFAULT_ORGANIZATION_NAME: "Budget App"
       DEFAULT_PROJECT_NAME: "Budget App VPS"
       SUPABASE_URL: http://kong:8000
@@ -164,8 +169,9 @@ services:
       PG_META_DB_HOST: db
       PG_META_DB_PORT: 5432
       PG_META_DB_NAME: postgres
-      PG_META_DB_USER: supabase_admin
+      PG_META_DB_USER: postgres
       PG_META_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      CRYPTO_KEY: ${PG_META_CRYPTO_KEY:-${JWT_SECRET}}
 
   # Supabase Realtime (WebSockets)
   realtime:
