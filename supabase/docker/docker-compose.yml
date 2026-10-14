@@ -30,16 +30,85 @@ services:
       - "${KONG_HTTPS_PORT:-8443}:8443"
     environment:
       KONG_DATABASE: "off"
-      KONG_DECLARATIVE_CONFIG: /var/lib/kong/kong.yml
+      KONG_DECLARATIVE_CONFIG: /tmp/kong.yml
       KONG_DNS_ORDER: LAST,A,CNAME
       KONG_PLUGINS: request-transformer,cors,key-auth,acl,basic-auth
       KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
       KONG_NGINX_PROXY_PROXY_BUFFERS: 64 160k
       SUPABASE_ANON_KEY: ${ANON_KEY}
       SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY}
-    configs:
-      - source: kong_config
-        target: /var/lib/kong/kong.yml
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        cat <<EOF > /tmp/kong.yml
+        _format_version: '2.1'
+        _transform: true
+
+        consumers:
+          - username: anon
+            keyauth_credentials:
+              - key: ${ANON_KEY}
+          - username: service_role
+            keyauth_credentials:
+              - key: ${SERVICE_ROLE_KEY}
+
+        services:
+          - name: auth-v1
+            url: http://auth:9999/
+            routes:
+              - name: auth-v1-all
+                paths:
+                  - /auth/v1/
+                strip_path: true
+
+          - name: rest-v1
+            url: http://rest:3000/
+            routes:
+              - name: rest-v1-all
+                paths:
+                  - /rest/v1/
+                strip_path: true
+
+          - name: realtime-v1
+            url: http://realtime:4000/socket/
+            routes:
+              - name: realtime-v1-all
+                paths:
+                  - /realtime/v1/
+                strip_path: true
+
+        plugins:
+          - name: cors
+            config:
+              origins:
+                - "*"
+              methods:
+                - GET
+                - POST
+                - PUT
+                - PATCH
+                - DELETE
+                - OPTIONS
+              headers:
+                - Accept
+                - Accept-Version
+                - Content-Length
+                - Content-MD5
+                - Content-Type
+                - Date
+                - ApiKey
+                - Authorization
+                - Range
+                - Prefer
+                - x-client-info
+              exposed_headers:
+                - Content-Range
+                - X-Total-Count
+              credentials: true
+              max_age: 3600
+        EOF
+        /docker-entrypoint.sh kong docker-start
 
   # GoTrue Auth Service (with Anonymous Auth enabled)
   auth:
@@ -137,72 +206,3 @@ services:
 
 volumes:
   supabase-db-data:
-
-configs:
-  kong_config:
-    content: |
-      _format_version: '2.1'
-      _transform: true
-
-      consumers:
-        - username: anon
-          keyauth_credentials:
-            - key: ${ANON_KEY}
-        - username: service_role
-          keyauth_credentials:
-            - key: ${SERVICE_ROLE_KEY}
-
-      services:
-        - name: auth-v1
-          url: http://auth:9999/
-          routes:
-            - name: auth-v1-all
-              paths:
-                - /auth/v1/
-              strip_path: true
-
-        - name: rest-v1
-          url: http://rest:3000/
-          routes:
-            - name: rest-v1-all
-              paths:
-                - /rest/v1/
-              strip_path: true
-
-        - name: realtime-v1
-          url: http://realtime:4000/socket/
-          routes:
-            - name: realtime-v1-all
-              paths:
-                - /realtime/v1/
-              strip_path: true
-
-      plugins:
-        - name: cors
-          config:
-            origins:
-              - "*"
-            methods:
-              - GET
-              - POST
-              - PUT
-              - PATCH
-              - DELETE
-              - OPTIONS
-            headers:
-              - Accept
-              - Accept-Version
-              - Content-Length
-              - Content-MD5
-              - Content-Type
-              - Date
-              - ApiKey
-              - Authorization
-              - Range
-              - Prefer
-              - x-client-info
-            exposed_headers:
-              - Content-Range
-              - X-Total-Count
-            credentials: true
-            max_age: 3600
