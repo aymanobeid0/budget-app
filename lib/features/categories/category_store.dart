@@ -81,6 +81,10 @@ class CategoryStore {
 
     final categories = rows.map((r) => Category.fromMap(r)).toList();
     _controller.add(categories);
+    final hasUnsynced = rows.any((r) => r['synced_at'] == null);
+    if (hasUnsynced) {
+      unawaited(syncEngine?.sync().then((_) {}));
+    }
     return categories;
   }
 
@@ -126,6 +130,7 @@ class CategoryStore {
       batch.insert('categories', map, conflictAlgorithm: ConflictAlgorithm.ignore);
     }
     await batch.commit(noResult: true);
+    unawaited(syncEngine?.sync().then((_) {}));
   }
 
   void dispose() {

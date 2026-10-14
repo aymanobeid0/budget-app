@@ -27,6 +27,10 @@ class ExpenseLedger {
 
     final expenses = rows.map((r) => Expense.fromMap(r)).toList();
     _controller.add(expenses);
+    final hasUnsynced = rows.any((r) => r['synced_at'] == null);
+    if (hasUnsynced) {
+      unawaited(syncEngine?.sync().then((_) {}));
+    }
     return expenses;
   }
 

@@ -43,7 +43,7 @@ create table if not exists public.categories (
   user_id     uuid not null references auth.users (id) on delete cascade default auth.uid(),
   name        text not null,
   icon        text not null,
-  color       integer not null,
+  color       bigint not null,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now(),
   deleted_at  timestamptz

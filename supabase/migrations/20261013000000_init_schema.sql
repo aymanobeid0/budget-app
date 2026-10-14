@@ -1,10 +1,10 @@
 -- Categories: user-owned classification labels.
 create table if not exists public.categories (
-  id          uuid primary key,
+  id          text primary key,
   user_id     uuid not null references auth.users (id) on delete cascade default auth.uid(),
   name        text not null,
   icon        text not null,
-  color       integer not null,
+  color       bigint not null,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now(),
   deleted_at  timestamptz
@@ -12,10 +12,10 @@ create table if not exists public.categories (
 
 -- Expenses: amount + category + date (ADR 0002).
 create table if not exists public.expenses (
-  id           uuid primary key,
+  id           text primary key,
   user_id      uuid not null references auth.users (id) on delete cascade default auth.uid(),
   amount_minor bigint not null check (amount_minor > 0),
-  category_id  uuid not null references public.categories (id),
+  category_id  text not null references public.categories (id),
   spent_on     date not null,
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now(),

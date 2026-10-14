@@ -7,11 +7,15 @@ class AppConfig {
 
   static const supabaseUrl = String.fromEnvironment(
     'SUPABASE_URL',
-    defaultValue: 'http://127.0.0.1:54321',
+    defaultValue: 'https://api.itlabservice.com',
   );
 
   /// Printed by `supabase start` / `supabase status`.
-  static const supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
+  static const supabaseAnonKey = String.fromEnvironment(
+    'SUPABASE_ANON_KEY',
+    defaultValue:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3OTE5OTg1NjQsImV4cCI6MTg5MzQ1NjAwMCwicm9sZSI6ImFub24iLCJpc3MiOiJzdXBhYmFzZSJ9.9eNXKCYAG4MpxmwbdQ1yBg0JTC6R9F_dXrGFIdKsEuI',
+  );
 
   static bool get hasSupabase => supabaseAnonKey.isNotEmpty;
 
