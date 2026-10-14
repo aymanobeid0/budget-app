@@ -14,4 +14,9 @@ class AppConfig {
   static const supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
 
   static bool get hasSupabase => supabaseAnonKey.isNotEmpty;
+
+  /// Google Gemini API key passed via `--dart-define=GEMINI_API_KEY=...`
+  static const geminiApiKey = String.fromEnvironment('GEMINI_API_KEY');
+
+  static bool get hasGemini => geminiApiKey.isNotEmpty;
 }

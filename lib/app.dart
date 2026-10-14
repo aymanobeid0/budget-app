@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'core/config/app_config.dart';
 import 'core/router/app_router.dart';
 import 'core/sync/sync_engine.dart';
 import 'core/theme/app_theme.dart';
 import 'features/categories/category_store.dart';
 import 'features/categories/cubit/category_cubit.dart';
+import 'features/consultant/cubit/consultant_cubit.dart';
+import 'features/consultant/data/consultant_client.dart';
 import 'features/expenses/cubit/expense_cubit.dart';
 import 'features/expenses/expense_ledger.dart';
 
@@ -15,11 +18,13 @@ class BudgetApp extends StatefulWidget {
     this.categoryStore,
     this.expenseLedger,
     this.syncEngine,
+    this.consultantClient,
   });
 
   final CategoryStore? categoryStore;
   final ExpenseLedger? expenseLedger;
   final SyncEngine? syncEngine;
+  final ConsultantClient? consultantClient;
 
   @override
   State<BudgetApp> createState() => _BudgetAppState();
@@ -52,6 +57,20 @@ class _BudgetAppState extends State<BudgetApp> {
         BlocProvider<ExpenseCubit>(
           lazy: false,
           create: (_) => ExpenseCubit(widget.expenseLedger!)..load(),
+        ),
+      );
+    }
+    if (widget.categoryStore != null && widget.expenseLedger != null) {
+      final client = widget.consultantClient ??
+          GeminiConsultantClient(apiKey: AppConfig.geminiApiKey);
+      providers.add(
+        BlocProvider<ConsultantCubit>(
+          lazy: false,
+          create: (_) => ConsultantCubit(
+            ledger: widget.expenseLedger!,
+            categoryStore: widget.categoryStore!,
+            client: client,
+          ),
         ),
       );
     }
