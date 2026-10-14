@@ -86,11 +86,12 @@ The Dokploy Supabase instance has been deployed and verified:
 
 ### Running the App with Supabase Enabled
 
+All credentials are saved in the root `.env` file (ignored by git, template in `.env.example`).
+Run the app using:
+
 ```powershell
-flutter run `
-  --dart-define=SUPABASE_URL=https://api.itlabservice.com `
-  --dart-define=SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3OTE5OTg1NjQsImV4cCI6MTg5MzQ1NjAwMCwicm9sZSI6ImFub24iLCJpc3MiOiJzdXBhYmFzZSJ9.9eNXKCYAG4MpxmwbdQ1yBg0JTC6R9F_dXrGFIdKsEuI
+flutter run --dart-define-from-file=.env
 ```
 
-Pre-configured run profiles have been added to `.vscode/launch.json` and `.idea/runConfigurations/main_dart.xml` for 1-click execution from your IDE.
+Pre-configured run profiles in `.vscode/launch.json` ("Budget App (.env)") and `.idea/runConfigurations/main_dart.xml` automatically pass `--dart-define-from-file=.env` for 1-click execution.
 
