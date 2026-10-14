@@ -4,9 +4,10 @@
 
 **Blocked by:** 03: Expense Logging & Instant Add Slice
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] App signs in anonymously via Supabase Auth on the local Docker container without blocking user interaction
-- [ ] New and updated local expenses sync to the local Supabase Docker container
-- [ ] Offline writes queue in SQLite and sync automatically upon network reconnection
-- [ ] Remote data is protected by user-scoped Row-Level Security (RLS) policies in PostgreSQL
+- [x] App signs in anonymously via Supabase Auth on the local Docker container without blocking user interaction
+- [x] New and updated local expenses sync to the local Supabase Docker container
+- [x] Offline writes queue in SQLite and sync automatically upon network reconnection
+- [x] Remote data is protected by user-scoped Row-Level Security (RLS) policies in PostgreSQL
+

@@ -3,15 +3,17 @@ import 'dart:async';
 import 'package:sqflite/sqflite.dart';
 
 import '../../core/database/app_database.dart';
+import '../../core/sync/sync_engine.dart';
 import 'category.dart';
 
 /// Deep module interface for Category persistence.
 ///
 /// Hides SQLite queries, automatic default seeding, and reactive stream notifications.
 class CategoryStore {
-  CategoryStore(this._db);
+  CategoryStore(this._db, {this.syncEngine});
 
   final AppDatabase _db;
+  final SyncEngine? syncEngine;
   final _controller = StreamController<List<Category>>.broadcast();
 
   static final List<Category> defaultPresets = [
@@ -95,16 +97,23 @@ class CategoryStore {
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
     await loadCategories();
+    unawaited(syncEngine?.sync().then((_) {}));
   }
 
   Future<void> deleteCategory(String id) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
     await _db.raw.update(
       'categories',
-      {'deleted_at': DateTime.now().millisecondsSinceEpoch},
+      {
+        'deleted_at': now,
+        'updated_at': now,
+        'synced_at': null,
+      },
       where: 'id = ?',
       whereArgs: [id],
     );
     await loadCategories();
+    unawaited(syncEngine?.sync().then((_) {}));
   }
 
   Future<void> _seedDefaults() async {

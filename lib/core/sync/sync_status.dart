@@ -1,0 +1,36 @@
+enum SyncState {
+  idle,
+  syncing,
+  success,
+  error,
+  offline,
+}
+
+class SyncResult {
+  const SyncResult({
+    required this.isSuccess,
+    this.categoriesSynced = 0,
+    this.expensesSynced = 0,
+    this.errorMessage,
+  });
+
+  final bool isSuccess;
+  final int categoriesSynced;
+  final int expensesSynced;
+  final String? errorMessage;
+
+  factory SyncResult.success({int categories = 0, int expenses = 0}) {
+    return SyncResult(
+      isSuccess: true,
+      categoriesSynced: categories,
+      expensesSynced: expenses,
+    );
+  }
+
+  factory SyncResult.failure(String message) {
+    return SyncResult(
+      isSuccess: false,
+      errorMessage: message,
+    );
+  }
+}
