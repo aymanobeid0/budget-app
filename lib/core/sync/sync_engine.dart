@@ -51,6 +51,7 @@ class SyncEngine {
       );
 
       if (unsyncedCategories.isNotEmpty) {
+        debugPrint('🔄 [SyncEngine] Pushing ${unsyncedCategories.length} categories to Supabase...');
         final remoteCategories = unsyncedCategories.map((c) {
           final createdAtMs = c['created_at'] as int;
           final updatedAtMs = c['updated_at'] as int;
@@ -71,6 +72,7 @@ class SyncEngine {
         }).toList();
 
         await client.upsertCategories(remoteCategories);
+        debugPrint('✅ [SyncEngine] Successfully synced ${remoteCategories.length} categories.');
 
         // Mark local categories as synced
         final categoryIds = unsyncedCategories.map((c) => c['id'] as String).toList();
@@ -88,6 +90,7 @@ class SyncEngine {
       );
 
       if (unsyncedExpenses.isNotEmpty) {
+        debugPrint('🔄 [SyncEngine] Pushing ${unsyncedExpenses.length} expenses to Supabase...');
         final remoteExpenses = unsyncedExpenses.map((e) {
           final createdAtMs = e['created_at'] as int;
           final updatedAtMs = e['updated_at'] as int;
@@ -108,6 +111,7 @@ class SyncEngine {
         }).toList();
 
         await client.upsertExpenses(remoteExpenses);
+        debugPrint('✅ [SyncEngine] Successfully synced ${remoteExpenses.length} expenses.');
 
         // Mark local expenses as synced
         final expenseIds = unsyncedExpenses.map((e) => e['id'] as String).toList();

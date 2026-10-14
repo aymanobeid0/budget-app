@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'app.dart';
+import 'core/config/app_config.dart';
 import 'core/database/open_app_database.dart';
 import 'core/network/supabase_bootstrap.dart';
 import 'core/sync/cloud_sync_client.dart';
@@ -12,6 +13,7 @@ import 'features/expenses/expense_ledger.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  AppConfig.load();
   // Local-first: SQLite opens before anything else. Feature modules
   // receive the database via constructor injection.
   final db = await openAppDatabase();
