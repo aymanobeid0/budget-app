@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'core/router/app_router.dart';
+import 'core/sync/sync_engine.dart';
 import 'core/theme/app_theme.dart';
 import 'features/categories/category_store.dart';
 import 'features/categories/cubit/category_cubit.dart';
@@ -13,10 +14,12 @@ class BudgetApp extends StatefulWidget {
     super.key,
     this.categoryStore,
     this.expenseLedger,
+    this.syncEngine,
   });
 
   final CategoryStore? categoryStore;
   final ExpenseLedger? expenseLedger;
+  final SyncEngine? syncEngine;
 
   @override
   State<BudgetApp> createState() => _BudgetAppState();
@@ -56,6 +59,13 @@ class _BudgetAppState extends State<BudgetApp> {
     if (providers.isNotEmpty) {
       app = MultiBlocProvider(
         providers: providers,
+        child: app,
+      );
+    }
+
+    if (widget.syncEngine != null) {
+      app = RepositoryProvider<SyncEngine>.value(
+        value: widget.syncEngine!,
         child: app,
       );
     }
