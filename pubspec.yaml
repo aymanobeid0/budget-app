@@ -67,27 +67,21 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
-  # Calm Ledger typography (SIL OFL 1.1, see assets/fonts/OFL.txt).
+  # "Blue" typography: Plus Jakarta Sans (SIL OFL 1.1, assets/fonts/PlusJakartaSans-OFL.txt).
   # Bundled so the offline-first app never needs to fetch fonts.
   fonts:
-    - family: Geist
+    - family: PlusJakartaSans
       fonts:
-        - asset: assets/fonts/Geist-Regular.ttf
+        - asset: assets/fonts/PlusJakartaSans-Regular.ttf
           weight: 400
-        - asset: assets/fonts/Geist-Medium.ttf
+        - asset: assets/fonts/PlusJakartaSans-Medium.ttf
           weight: 500
-        - asset: assets/fonts/Geist-SemiBold.ttf
+        - asset: assets/fonts/PlusJakartaSans-SemiBold.ttf
           weight: 600
-        - asset: assets/fonts/Geist-Bold.ttf
+        - asset: assets/fonts/PlusJakartaSans-Bold.ttf
           weight: 700
-    - family: GeistMono
-      fonts:
-        - asset: assets/fonts/GeistMono-Regular.ttf
-          weight: 400
-        - asset: assets/fonts/GeistMono-Medium.ttf
-          weight: 500
-        - asset: assets/fonts/GeistMono-SemiBold.ttf
-          weight: 600
+        - asset: assets/fonts/PlusJakartaSans-ExtraBold.ttf
+          weight: 800
 
   # To add assets to your application, add an assets section, like this:
   # assets:

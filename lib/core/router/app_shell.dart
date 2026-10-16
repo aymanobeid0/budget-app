@@ -4,8 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../features/expenses/ui/expense_form_sheet.dart';
 import '../theme/tokens.dart';
 
-/// Bottom-navigation scaffold: four tabs with a raised "add expense" button
-/// docked in the centre of the bar.
+/// Bottom-navigation scaffold: four icon-only tabs with a raised blue
+/// "add expense" button in the centre.
 class AppShell extends StatelessWidget {
   const AppShell({super.key, required this.navigationShell});
 
@@ -16,7 +16,7 @@ class AppShell extends StatelessWidget {
     return Scaffold(
       extendBody: true,
       body: navigationShell,
-      bottomNavigationBar: CalmNavBar(
+      bottomNavigationBar: AppNavBar(
         currentIndex: navigationShell.currentIndex,
         onSelect: (i) => navigationShell.goBranch(
           i,
@@ -29,14 +29,16 @@ class AppShell extends StatelessWidget {
 }
 
 class _NavItem {
-  const _NavItem(this.label, this.icon, this.selectedIcon);
+  const _NavItem(this.branch, this.key, this.label, this.icon, this.selectedIcon);
+  final int branch; // index in the router's branches
+  final String key;
   final String label;
   final IconData icon;
   final IconData selectedIcon;
 }
 
-class CalmNavBar extends StatelessWidget {
-  const CalmNavBar({
+class AppNavBar extends StatelessWidget {
+  const AppNavBar({
     super.key,
     required this.currentIndex,
     required this.onSelect,
@@ -47,15 +49,18 @@ class CalmNavBar extends StatelessWidget {
   final ValueChanged<int> onSelect;
   final VoidCallback onAdd;
 
-  static const items = [
-    _NavItem('Expenses', Icons.format_list_bulleted_rounded, Icons.format_list_bulleted_rounded),
-    _NavItem('Categories', Icons.grid_view_outlined, Icons.grid_view_rounded),
-    _NavItem('Consultant', Icons.auto_awesome_outlined, Icons.auto_awesome_rounded),
-    _NavItem('Settings', Icons.tune_rounded, Icons.tune_rounded),
+  // Visual order: Home, Consultant, [+], Categories, Profile.
+  static const _left = [
+    _NavItem(0, 'expenses', 'Home', Icons.home_outlined, Icons.home_rounded),
+    _NavItem(2, 'consultant', 'Consultant', Icons.auto_awesome_outlined, Icons.auto_awesome),
+  ];
+  static const _right = [
+    _NavItem(1, 'categories', 'Categories', Icons.grid_view_outlined, Icons.grid_view_rounded),
+    _NavItem(3, 'settings', 'Profile and settings', Icons.person_outline_rounded, Icons.person_rounded),
   ];
 
   static const _barHeight = 72.0;
-  static const _rise = 26.0; // how far the add button sits above the bar
+  static const _rise = 30.0;
   static const _addSize = 60.0;
   static const _ring = 5.0;
 
@@ -65,11 +70,11 @@ class CalmNavBar extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bottomInset = MediaQuery.of(context).padding.bottom;
 
-    Widget tab(int i) => Expanded(
+    Widget tab(_NavItem item) => Expanded(
           child: _NavTab(
-            item: items[i],
-            selected: currentIndex == i,
-            onTap: () => onSelect(i),
+            item: item,
+            selected: currentIndex == item.branch,
+            onTap: () => onSelect(item.branch),
           ),
         );
 
@@ -84,20 +89,17 @@ class CalmNavBar extends StatelessWidget {
             bottom: 0,
             height: _barHeight + bottomInset,
             child: Container(
-              padding: EdgeInsets.only(left: 6, right: 6, bottom: bottomInset),
+              padding: EdgeInsets.only(left: 12, right: 12, bottom: bottomInset),
               decoration: BoxDecoration(
                 color: scheme.surface,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
                 boxShadow: isDark ? null : AppShadows.navBar,
                 border: isDark ? const Border(top: BorderSide(color: AppColors.darkBorder)) : null,
               ),
               child: Row(
                 children: [
-                  tab(0),
-                  tab(1),
-                  const SizedBox(width: _addSize + _ring * 2 + 8),
-                  tab(2),
-                  tab(3),
+                  ..._left.map(tab),
+                  const SizedBox(width: _addSize + _ring * 2 + 12),
+                  ..._right.map(tab),
                 ],
               ),
             ),
@@ -113,29 +115,21 @@ class CalmNavBar extends StatelessWidget {
                   key: const Key('add-expense-fab'),
                   width: _addSize + _ring * 2,
                   height: _addSize + _ring * 2,
-                  decoration: BoxDecoration(
-                    color: scheme.surface,
-                    shape: BoxShape.circle,
-                  ),
+                  decoration: BoxDecoration(color: scheme.surface, shape: BoxShape.circle),
                   padding: const EdgeInsets.all(_ring),
                   child: DecoratedBox(
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      boxShadow: AppShadows.fab,
+                      boxShadow: isDark ? null : AppShadows.fab,
                     ),
                     child: Material(
-                      color: AppColors.primary,
+                      color: scheme.primary,
                       shape: const CircleBorder(),
                       child: InkWell(
                         customBorder: const CircleBorder(),
                         onTap: onAdd,
                         child: const Center(
-                          child: Icon(
-                            Icons.add_rounded,
-                            size: 30,
-                            color: Colors.white,
-                            semanticLabel: 'Add expense',
-                          ),
+                          child: Icon(Icons.add_rounded, size: 30, color: Colors.white, semanticLabel: 'Add expense'),
                         ),
                       ),
                     ),
@@ -158,41 +152,40 @@ class _NavTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final color = selected ? AppColors.primary : AppColors.textMuted;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final active = isDark ? AppColors.accentTextDark : AppColors.primary;
+    final color = selected ? active : (isDark ? AppColors.darkTextSecondary : AppColors.navInactive);
 
-    return Semantics(
-      button: true,
-      selected: selected,
-      child: InkWell(
-        key: Key('nav-${item.label.toLowerCase()}'),
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              width: 56,
-              height: 30,
-              decoration: BoxDecoration(
-                color: selected ? scheme.primaryContainer : Colors.transparent,
-                borderRadius: BorderRadius.circular(AppRadius.pill),
-              ),
-              child: Icon(selected ? item.selectedIcon : item.icon, size: 21, color: color),
+    return Tooltip(
+      message: item.label,
+      child: Semantics(
+        button: true,
+        selected: selected,
+        label: item.label,
+        excludeSemantics: true,
+        child: InkWell(
+          key: Key('nav-${item.key}'),
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          child: SizedBox(
+            height: 56,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(selected ? item.selectedIcon : item.icon, size: 26, color: color),
+                const SizedBox(height: 5),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  width: 5,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: selected ? active : Colors.transparent,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 4),
-            Text(
-              item.label,
-              maxLines: 1,
-              overflow: TextOverflow.fade,
-              softWrap: false,
-              style: AppType.navLabel.copyWith(
-                color: color,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

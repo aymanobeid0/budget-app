@@ -30,9 +30,45 @@ class SyncEngine {
     _statusController.add(state);
   }
 
+  Future<SyncResult>? _inFlight;
+
+  /// While true, background syncs are skipped. Account switching sets this
+  /// so a stray sync can't push one account's rows into another account or
+  /// sign in anonymously halfway through a switch.
+  bool paused = false;
+
   /// Executes full two-way synchronization: pushes unsynced local changes,
-  /// then pulls remote changes.
-  Future<SyncResult> sync() async {
+  /// then pulls remote changes. Concurrent calls share one run.
+  ///
+  /// [force] runs even while [paused] (used by the account flow itself).
+  Future<SyncResult> sync({bool force = false}) async {
+    if (paused && !force) return SyncResult.failure('Sync paused');
+    if (force) {
+      // A run that started before the caller changed accounts may still be
+      // using the old session: let it finish, then start a fresh run.
+      await idle();
+      return _start();
+    }
+    return _inFlight ?? _start();
+  }
+
+  /// Completes once no sync is running.
+  Future<void> idle() async {
+    while (_inFlight != null) {
+      await _inFlight;
+    }
+  }
+
+  Future<SyncResult> _start() {
+    final run = _run();
+    _inFlight = run;
+    run.whenComplete(() {
+      if (identical(_inFlight, run)) _inFlight = null;
+    });
+    return run;
+  }
+
+  Future<SyncResult> _run() async {
     _setState(SyncState.syncing);
 
     try {

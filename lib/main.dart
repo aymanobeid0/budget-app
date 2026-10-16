@@ -8,6 +8,10 @@ import 'core/database/open_app_database.dart';
 import 'core/network/supabase_bootstrap.dart';
 import 'core/sync/cloud_sync_client.dart';
 import 'core/sync/sync_engine.dart';
+import 'core/theme/theme_cubit.dart';
+import 'features/account/account_service.dart';
+import 'features/account/data/account_prefs.dart';
+import 'features/account/data/auth_gateway.dart';
 import 'features/categories/category_store.dart';
 import 'features/expenses/expense_ledger.dart';
 
@@ -20,18 +24,39 @@ Future<void> main() async {
   final supabaseClient = await initSupabase();
 
   SyncEngine? syncEngine;
+  AccountService? accountService;
   if (supabaseClient != null) {
     final cloudClient = SupabaseCloudSyncClient(supabaseClient);
     syncEngine = SyncEngine(db: db, client: cloudClient);
+    accountService = AccountService(
+      db: db,
+      auth: SupabaseAuthGateway(supabaseClient),
+      syncEngine: syncEngine,
+      prefsStorage: FileAccountPrefsStorage(),
+    );
+    await accountService.init();
     unawaited(syncEngine.sync().then((_) {}));
   }
 
-  final categoryStore = CategoryStore(db, syncEngine: syncEngine);
+  final categoryStore = CategoryStore(
+    db,
+    syncEngine: syncEngine,
+    canSeedDefaults: accountService?.canSeedDefaults,
+  );
   final expenseLedger = ExpenseLedger(db, syncEngine: syncEngine);
+
+  // Light by default; a saved choice from a previous launch wins.
+  final themeStorage = FileThemeStorage();
+  final themeCubit = ThemeCubit(
+    storage: themeStorage,
+    initial: await themeStorage.read() ?? ThemeMode.light,
+  );
 
   runApp(BudgetApp(
     categoryStore: categoryStore,
     expenseLedger: expenseLedger,
     syncEngine: syncEngine,
+    themeCubit: themeCubit,
+    accountService: accountService,
   ));
 }

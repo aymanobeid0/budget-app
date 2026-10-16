@@ -32,13 +32,15 @@ class SupabaseCloudSyncClient implements CloudSyncClient {
   @override
   Future<void> upsertCategories(List<Map<String, dynamic>> categories) async {
     if (categories.isEmpty) return;
-    await _client.from('categories').upsert(categories, onConflict: 'id');
+    // Composite key (see migration 20261016000000_per_user_keys.sql).
+    await _client.from('categories').upsert(categories, onConflict: 'user_id,id');
   }
 
   @override
   Future<void> upsertExpenses(List<Map<String, dynamic>> expenses) async {
     if (expenses.isEmpty) return;
-    await _client.from('expenses').upsert(expenses, onConflict: 'id');
+    // Composite key (see migration 20261016000000_per_user_keys.sql).
+    await _client.from('expenses').upsert(expenses, onConflict: 'user_id,id');
   }
 
   @override

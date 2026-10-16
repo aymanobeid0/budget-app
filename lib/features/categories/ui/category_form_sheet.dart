@@ -24,15 +24,15 @@ class _CategoryFormSheetState extends State<CategoryFormSheet> {
   late int _selectedColor;
 
   static const List<int> _availableColors = [
-    0xFF6C3EE8, // Violet (Primary)
-    0xFFFF5B35, // Coral Red
-    0xFF00BA88, // Mint Emerald
+    0xFF042895, // Brand blue
+    0xFFE97A1F, // Orange (Food)
+    0xFF0F766E, // Teal (Utilities)
     0xFF3B82F6, // Blue
-    0xFF6366F1, // Indigo
-    0xFFEC4899, // Pink
-    0xFFF59E0B, // Amber
-    0xFF14B8A6, // Teal
-    0xFFF97316, // Orange
+    0xFF4F46E5, // Indigo
+    0xFFDB2777, // Pink
+    0xFFE5484D, // Red
+    0xFF92603A, // Brown
+    0xFF16A34A, // Green
   ];
 
   @override
@@ -84,7 +84,7 @@ class _CategoryFormSheetState extends State<CategoryFormSheet> {
                 width: 38,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkBorder : const Color(0xFFE2E4F0),
+                  color: isDark ? AppColors.darkBorder : AppColors.handle,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -168,11 +168,11 @@ class _CategoryFormSheetState extends State<CategoryFormSheet> {
                       height: 48,
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? AppColors.primaryLight
+                            ? theme.colorScheme.primaryContainer
                             : (isDark ? AppColors.darkSurfaceSubtle : AppColors.surfaceSubtle),
                         borderRadius: BorderRadius.circular(AppRadius.md),
                         border: isSelected
-                            ? Border.all(color: AppColors.primary, width: 2)
+                            ? Border.all(color: theme.colorScheme.primary, width: 2)
                             : Border.all(
                                 color: isDark ? AppColors.darkBorder : AppColors.borderLight,
                               ),
@@ -180,7 +180,7 @@ class _CategoryFormSheetState extends State<CategoryFormSheet> {
                       child: Icon(
                         icon,
                         color: isSelected
-                            ? AppColors.primary
+                            ? theme.colorScheme.onPrimaryContainer
                             : (isDark ? AppColors.darkTextSecondary : AppColors.textSecondary),
                       ),
                     ),
@@ -246,10 +246,9 @@ class _CategoryFormSheetState extends State<CategoryFormSheet> {
               icon: const Icon(Icons.check_rounded),
               label: Text(isEditing ? 'Save Changes' : 'Create Category'),
               style: FilledButton.styleFrom(
-                backgroundColor: AppColors.primary,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.xl),
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
                 ),
               ),
             ),

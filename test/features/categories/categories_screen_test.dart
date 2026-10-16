@@ -45,7 +45,11 @@ void main() {
     expect(find.text('Food'), findsOneWidget);
     expect(find.text('Transport'), findsOneWidget);
     expect(find.text('Utilities'), findsOneWidget);
-    expect(find.byType(FloatingActionButton), findsOneWidget);
+    // Shown as one elevated menu card with an add row and a header button.
+    expect(find.byKey(const Key('categories-menu')), findsOneWidget);
+    expect(find.byKey(const Key('add-category-row')), findsOneWidget);
+    expect(find.byKey(const Key('add-category-btn')), findsOneWidget);
+    expect(find.byType(Divider), findsWidgets);
   });
 
   testWidgets('tapping Add Category opens form sheet and adds a new category', (tester) async {
@@ -53,8 +57,8 @@ void main() {
     await tester.pumpWidget(buildTestWidget());
     await tester.pumpAndSettle();
 
-    // Tap the FAB to open the Add Category sheet
-    await tester.tap(find.byType(FloatingActionButton));
+    // Tap the header add button to open the Add Category sheet
+    await tester.tap(find.byKey(const Key('add-category-btn')));
     await tester.pumpAndSettle();
 
     expect(find.text('New Category'), findsOneWidget);
@@ -69,5 +73,25 @@ void main() {
 
     // Verify 'Groceries' now appears in the list
     expect(find.text('Groceries'), findsOneWidget);
+  });
+
+  testWidgets('row menu offers Edit and Delete', (tester) async {
+    await cubit.load();
+    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.descendant(
+      of: find.byKey(const Key('category-item-cat_food')),
+      matching: find.byTooltip('More options'),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Edit'), findsOneWidget);
+
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+    expect(find.text('Delete category?'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('category-item-cat_food')), findsNothing);
   });
 }

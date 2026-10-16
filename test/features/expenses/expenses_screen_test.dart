@@ -1,4 +1,5 @@
 import 'package:budget_app/core/database/app_database.dart';
+import 'package:budget_app/core/theme/theme_cubit.dart';
 import 'package:budget_app/features/categories/category_store.dart';
 import 'package:budget_app/features/categories/cubit/category_cubit.dart';
 import 'package:budget_app/features/expenses/cubit/expense_cubit.dart';
@@ -45,6 +46,7 @@ void main() {
         providers: [
           BlocProvider<CategoryCubit>.value(value: categoryCubit),
           BlocProvider<ExpenseCubit>.value(value: expenseCubit),
+          BlocProvider<ThemeCubit>(create: (_) => ThemeCubit()),
         ],
         child: const ExpensesScreen(),
       ),
@@ -60,7 +62,7 @@ void main() {
     expect(find.byKey(const Key('add-first-expense')), findsOneWidget);
   });
 
-  testWidgets('renders logged expenses grouped with category icon and amount', (tester) async {
+  testWidgets('renders the blue summary card and the transaction row', (tester) async {
     final now = DateTime.now();
     await expenseCubit.addExpense(
       amountMinor: 1550, // 15.50
@@ -71,13 +73,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('month-summary-card')), findsOneWidget);
-    expect(find.text('Today'), findsOneWidget);
-    expect(find.text('15.50'), findsOneWidget);
+    expect(find.text('Transactions'), findsOneWidget);
+    expect(find.text('−15.50'), findsOneWidget); // red expense amount
     expect(find.text('Food'), findsOneWidget);
     expect(find.byType(CategoryIconTile), findsOneWidget);
   });
 
-  testWidgets('add flow: keypad amount, pick category, save', (tester) async {
+  testWidgets('add flow: amount, pick a category, save', (tester) async {
     tester.view.physicalSize = const Size(390 * 3, 844 * 3);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
@@ -88,29 +90,20 @@ void main() {
 
     await tester.tap(find.byKey(const Key('add-first-expense')));
     await tester.pumpAndSettle();
-    expect(find.descendant(
-      of: find.byType(ExpenseFormSheet),
-      matching: find.text('New expense'),
-    ), findsOneWidget);
+    expect(find.descendant(of: find.byType(ExpenseFormSheet), matching: find.text('Add Expense')), findsWidgets);
+    expect(find.byKey(const Key('week-strip')), findsOneWidget);
 
-    // Type 42.5 on the on-screen keypad.
-    for (final k in ['4', '2', '.', '5']) {
-      await tester.tap(find.descendant(of: find.byType(ExpenseFormSheet), matching: find.text(k)));
-      await tester.pump();
-    }
-    expect(find.text('Save · 42.50 MRU'), findsOneWidget);
-
+    await tester.enterText(find.byKey(const Key('expense-amount-field')), '42.50');
     await tester.tap(find.descendant(of: find.byType(ExpenseFormSheet), matching: find.text('Transport')));
     await tester.pumpAndSettle();
-
     await tester.tap(find.byKey(const Key('save-expense-btn')));
     await tester.pumpAndSettle();
 
-    expect(find.text('42.50'), findsOneWidget);
-    expect(find.text('Transport'), findsWidgets);
+    expect(find.text('−42.50'), findsOneWidget);
+    expect(find.text('Transport'), findsOneWidget);
   });
 
-  testWidgets('typing into the amount field still works (hardware keyboard)', (tester) async {
+  testWidgets('saving without an amount shows an error and stays open', (tester) async {
     tester.view.physicalSize = const Size(390 * 3, 844 * 3);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
@@ -121,10 +114,35 @@ void main() {
 
     await tester.tap(find.byKey(const Key('add-first-expense')));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('save-expense-btn')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Enter an amount greater than 0'), findsOneWidget);
+    expect(find.byType(ExpenseFormSheet), findsOneWidget);
+  });
+
+  testWidgets('picking yesterday in the week strip saves it on that date', (tester) async {
+    tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+
+    await expenseCubit.load();
+    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('add-first-expense')));
+    await tester.pumpAndSettle();
+    final y = DateTime.now().subtract(const Duration(days: 1));
+    if (DateTime.now().weekday == DateTime.monday) {
+      await tester.tap(find.byTooltip('Previous week'));
+      await tester.pumpAndSettle();
+    }
+    await tester.tap(find.byKey(Key('day-${y.year}-${y.month}-${y.day}')));
     await tester.enterText(find.byKey(const Key('expense-amount-field')), '1250');
     await tester.tap(find.byKey(const Key('save-expense-btn')));
     await tester.pumpAndSettle();
 
-    expect(find.text('1,250'), findsOneWidget);
+    expect(find.text('−1,250'), findsOneWidget);
+    expect(find.text('Yesterday'), findsOneWidget);
   });
 }

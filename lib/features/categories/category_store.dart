@@ -10,10 +10,15 @@ import 'category.dart';
 ///
 /// Hides SQLite queries, automatic default seeding, and reactive stream notifications.
 class CategoryStore {
-  CategoryStore(this._db, {this.syncEngine});
+  CategoryStore(this._db, {this.syncEngine, bool Function()? canSeedDefaults})
+      : _canSeedDefaults = canSeedDefaults; // ignore: prefer_initializing_formals
 
   final AppDatabase _db;
   final SyncEngine? syncEngine;
+
+  /// When this returns false, an empty table is left empty instead of being
+  /// seeded (an account's own categories are still downloading).
+  final bool Function()? _canSeedDefaults;
   final _controller = StreamController<List<Category>>.broadcast();
 
   static final List<Category> defaultPresets = [
@@ -21,7 +26,7 @@ class CategoryStore {
       id: 'cat_food',
       name: 'Food',
       icon: 'restaurant',
-      color: 0xFFE0712B, // Calm Ledger: Food orange
+      color: 0xFFE97A1F, // Food orange
       createdAt: DateTime.fromMillisecondsSinceEpoch(0),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(0),
     ),
@@ -29,7 +34,7 @@ class CategoryStore {
       id: 'cat_transport',
       name: 'Transport',
       icon: 'directions_car',
-      color: 0xFF2F7FD1, // Calm Ledger: Transport blue
+      color: 0xFF3B82F6, // Transport blue
       createdAt: DateTime.fromMillisecondsSinceEpoch(0),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(0),
     ),
@@ -37,7 +42,7 @@ class CategoryStore {
       id: 'cat_utilities',
       name: 'Utilities',
       icon: 'power',
-      color: 0xFF7A5AD6, // Calm Ledger: Utilities violet
+      color: 0xFF0F766E, // Utilities teal
       createdAt: DateTime.fromMillisecondsSinceEpoch(0),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(0),
     ),
@@ -45,7 +50,7 @@ class CategoryStore {
       id: 'cat_entertainment',
       name: 'Entertainment',
       icon: 'movie',
-      color: 0xFFC08A1E, // Calm Ledger: Entertainment gold
+      color: 0xFF4F46E5, // Entertainment indigo
       createdAt: DateTime.fromMillisecondsSinceEpoch(0),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(0),
     ),
@@ -53,7 +58,7 @@ class CategoryStore {
       id: 'cat_health',
       name: 'Health',
       icon: 'local_hospital',
-      color: 0xFF1E9E6A, // Calm Ledger: Health green
+      color: 0xFFE5484D, // Health red
       createdAt: DateTime.fromMillisecondsSinceEpoch(0),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(0),
     ),
@@ -61,7 +66,7 @@ class CategoryStore {
       id: 'cat_shopping',
       name: 'Shopping',
       icon: 'shopping_bag',
-      color: 0xFFD1497A, // Calm Ledger: Shopping rose
+      color: 0xFFDB2777, // Shopping pink
       createdAt: DateTime.fromMillisecondsSinceEpoch(0),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(0),
     ),
@@ -75,8 +80,14 @@ class CategoryStore {
     );
 
     if (rows.isEmpty) {
-      await _seedDefaults();
-      return loadCategories();
+      final seedCount = await _db.raw.rawQuery('SELECT COUNT(*) AS n FROM categories');
+      final tableEmpty = ((seedCount.first['n'] as int?) ?? 0) == 0;
+      if (tableEmpty && (_canSeedDefaults?.call() ?? true)) {
+        await _seedDefaults();
+        return loadCategories();
+      }
+      _controller.add(const []);
+      return const [];
     }
 
     final categories = rows.map((r) => Category.fromMap(r)).toList();

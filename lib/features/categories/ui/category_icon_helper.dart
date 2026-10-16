@@ -5,33 +5,31 @@ import '../../../core/theme/tokens.dart';
 class CategoryIconHelper {
   const CategoryIconHelper._();
 
-  /// Icon keys are persisted in the database, so keys never change; only the
-  /// glyphs were updated to the rounded set used by Calm Ledger.
+  /// Icon keys are persisted in the database, so keys never change.
   static const Map<String, IconData> availableIcons = {
     'restaurant': Icons.restaurant_rounded,
-    'directions_car': Icons.directions_bus_outlined,
+    'directions_car': Icons.directions_bus_rounded,
     'power': Icons.bolt_rounded,
-    'movie': Icons.movie_outlined,
-    'local_hospital': Icons.favorite_outline_rounded,
-    'shopping_bag': Icons.shopping_bag_outlined,
+    'movie': Icons.movie_rounded,
+    'local_hospital': Icons.favorite_rounded,
+    'shopping_bag': Icons.shopping_bag_rounded,
     'fitness_center': Icons.fitness_center_rounded,
-    'coffee': Icons.coffee_outlined,
+    'coffee': Icons.coffee_rounded,
     'flight': Icons.flight_rounded,
-    'school': Icons.school_outlined,
+    'school': Icons.school_rounded,
     'pets': Icons.pets_rounded,
-    'home': Icons.home_outlined,
-    'work': Icons.work_outline_rounded,
-    'receipt': Icons.receipt_long_outlined,
-    'savings': Icons.savings_outlined,
+    'home': Icons.home_rounded,
+    'work': Icons.work_rounded,
+    'receipt': Icons.receipt_long_rounded,
+    'savings': Icons.savings_rounded,
   };
 
   static IconData getIcon(String iconName) {
-    return availableIcons[iconName] ?? Icons.category_outlined;
+    return availableIcons[iconName] ?? Icons.category_rounded;
   }
 }
 
-/// Rounded tinted square holding a category icon: the Calm Ledger
-/// signature element used in rows, chips and consultant answers.
+/// Soft tinted square holding a category icon (transaction list, chat).
 class CategoryIconTile extends StatelessWidget {
   const CategoryIconTile({
     super.key,
@@ -51,14 +49,10 @@ class CategoryIconTile extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: isDark ? color.withValues(alpha: 0.22) : CategoryPalette.tint(color),
-        borderRadius: BorderRadius.circular(size >= 36 ? AppRadius.sm : AppRadius.xs),
+        color: isDark ? color.withValues(alpha: 0.2) : CategoryPalette.tint(color),
+        borderRadius: BorderRadius.circular(size >= 40 ? AppRadius.lg : AppRadius.xs),
       ),
-      child: Icon(
-        icon,
-        size: size * 0.5,
-        color: isDark ? color : CategoryPalette.onTint(color),
-      ),
+      child: Icon(icon, size: size * 0.48, color: isDark ? color : CategoryPalette.onTint(color)),
     );
   }
 }

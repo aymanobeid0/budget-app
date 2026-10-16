@@ -5,6 +5,9 @@ import 'core/config/app_config.dart';
 import 'core/router/app_router.dart';
 import 'core/sync/sync_engine.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/theme_cubit.dart';
+import 'features/account/account_service.dart';
+import 'features/account/cubit/account_cubit.dart';
 import 'features/categories/category_store.dart';
 import 'features/categories/cubit/category_cubit.dart';
 import 'features/consultant/cubit/consultant_cubit.dart';
@@ -19,6 +22,8 @@ class BudgetApp extends StatefulWidget {
     this.expenseLedger,
     this.syncEngine,
     this.consultantClient,
+    this.themeCubit,
+    this.accountService,
   });
 
   final CategoryStore? categoryStore;
@@ -26,54 +31,77 @@ class BudgetApp extends StatefulWidget {
   final SyncEngine? syncEngine;
   final ConsultantClient? consultantClient;
 
+  /// Light/dark mode. Defaults to light, kept in memory, when not given.
+  final ThemeCubit? themeCubit;
+
+  /// Username/password accounts. Null when Supabase isn't configured.
+  final AccountService? accountService;
+
   @override
   State<BudgetApp> createState() => _BudgetAppState();
 }
 
 class _BudgetAppState extends State<BudgetApp> {
   late final _router = buildRouter();
+  late final ThemeCubit _themeCubit = widget.themeCubit ?? ThemeCubit();
+
+  late final CategoryCubit? _categoryCubit =
+      widget.categoryStore == null ? null : (CategoryCubit(widget.categoryStore!)..load());
+  late final ExpenseCubit? _expenseCubit =
+      widget.expenseLedger == null ? null : (ExpenseCubit(widget.expenseLedger!)..load());
+  late final ConsultantCubit? _consultantCubit =
+      (widget.categoryStore != null && widget.expenseLedger != null)
+          ? ConsultantCubit(
+              ledger: widget.expenseLedger!,
+              categoryStore: widget.categoryStore!,
+              client: widget.consultantClient ??
+                  GeminiConsultantClient(apiKey: AppConfig.geminiApiKey),
+            )
+          : null;
+  late final AccountCubit _accountCubit = AccountCubit(
+    widget.accountService,
+    onDataReplaced: _reloadAfterAccountChange,
+  )..resume();
+
+  /// The phone now holds a different account's data: reload every list and
+  /// drop the previous account's chat.
+  Future<void> _reloadAfterAccountChange() async {
+    await _categoryCubit?.load();
+    await _expenseCubit?.load();
+    _consultantCubit?.clearChat();
+  }
+
+  @override
+  void dispose() {
+    if (widget.themeCubit == null) _themeCubit.close();
+    _categoryCubit?.close();
+    _expenseCubit?.close();
+    _consultantCubit?.close();
+    _accountCubit.close();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    Widget app = MaterialApp.router(
-      title: 'Budget',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      routerConfig: _router,
+    Widget app = BlocBuilder<ThemeCubit, ThemeMode>(
+      bloc: _themeCubit,
+      builder: (context, mode) => MaterialApp.router(
+        title: 'Budget',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
+        themeMode: mode,
+        routerConfig: _router,
+      ),
     );
 
-    final providers = <BlocProvider>[];
-    if (widget.categoryStore != null) {
-      providers.add(
-        BlocProvider<CategoryCubit>(
-          lazy: false,
-          create: (_) => CategoryCubit(widget.categoryStore!)..load(),
-        ),
-      );
-    }
-    if (widget.expenseLedger != null) {
-      providers.add(
-        BlocProvider<ExpenseCubit>(
-          lazy: false,
-          create: (_) => ExpenseCubit(widget.expenseLedger!)..load(),
-        ),
-      );
-    }
-    if (widget.categoryStore != null && widget.expenseLedger != null) {
-      final client = widget.consultantClient ??
-          GeminiConsultantClient(apiKey: AppConfig.geminiApiKey);
-      providers.add(
-        BlocProvider<ConsultantCubit>(
-          lazy: false,
-          create: (_) => ConsultantCubit(
-            ledger: widget.expenseLedger!,
-            categoryStore: widget.categoryStore!,
-            client: client,
-          ),
-        ),
-      );
-    }
+    final providers = <BlocProvider>[
+      BlocProvider<ThemeCubit>.value(value: _themeCubit),
+      BlocProvider<AccountCubit>.value(value: _accountCubit),
+      if (_categoryCubit != null) BlocProvider<CategoryCubit>.value(value: _categoryCubit),
+      if (_expenseCubit != null) BlocProvider<ExpenseCubit>.value(value: _expenseCubit),
+      if (_consultantCubit != null) BlocProvider<ConsultantCubit>.value(value: _consultantCubit),
+    ];
 
     if (providers.isNotEmpty) {
       app = MultiBlocProvider(
