@@ -1,131 +1,205 @@
 import 'package:flutter/material.dart';
 
-/// Design tokens extracted directly from the modern neo-banking design mockups.
+/// Calm Ledger design tokens.
+///
+/// Source of truth: the "Calm Ledger" direction on the redesign canvas.
+/// Reference screenshots live in `docs/design/calm-ledger/`, and every value
+/// here is listed in `docs/design/calm-ledger/DESIGN_TOKENS.md`.
+///
+/// Principles: a quiet warm-grey canvas, white elevated cards, one blue
+/// accent reserved for actions, and category colors as the only other hue.
 class AppColors {
   const AppColors._();
 
-  // Primary & Accents
-  static const primary = Color(0xFF6C3EE8); // Vibrant Electric Violet
-  static const primaryDark = Color(0xFF5328D8);
-  static const primaryLight = Color(0xFFF0EDFF); // Soft Lavender
-  static const primarySubtle = Color(0xFFE8E3FA);
+  // ── Accent ────────────────────────────────────────────────────────────
+  static const primary = Color(0xFF1F4DD8); // Action blue
+  static const primaryDark = Color(0xFF163BA8); // Pressed / hover
+  static const primaryLight = Color(0xFFE8EEFC); // Selected tab pill, chips
+  static const primarySubtle = Color(0xFFEEF2FD); // Badges, info tint
 
-  // Surface & Canvas Backgrounds
-  static const background = Color(0xFFF7F8FD); // Light cool canvas
-  static const surface = Color(0xFFFFFFFF); // Pure white card surface
-  static const surfaceSubtle = Color(0xFFF4F5FB); // Soft grayish-lavender container
+  // ── Canvas & surfaces ─────────────────────────────────────────────────
+  static const background = Color(0xFFF3F3F0); // Warm grey canvas
+  static const surface = Color(0xFFFFFFFF); // Cards, sheets, nav
+  static const surfaceSubtle = Color(0xFFF6F6F3); // Keypad keys, inset fields
+  static const surfaceSunken = Color(0xFFF8F8F6); // Tables inside cards
+  static const scrim = Color(0xFF6E6E6A); // Behind modal sheets
 
-  // Typography Colors
-  static const textPrimary = Color(0xFF1A1D2E); // Deep midnight navy
-  static const textSecondary = Color(0xFF7E84A3); // Cool slate gray
-  static const textMuted = Color(0xFFA5ABC0); // Muted hint gray
+  // ── Text ──────────────────────────────────────────────────────────────
+  static const ink = Color(0xFF111111); // Primary text, selected chip fill
+  static const textPrimary = ink;
+  static const textSecondary = Color(0xFF5F5F5B); // Labels, section headers
+  static const textMuted = Color(0xFF6B6B66); // Timestamps, inactive tabs
 
-  // Borders & Dividers
-  static const borderLight = Color(0xFFECEEF7); // Delicate subtle outline
-  static const borderFocus = Color(0xFF6C3EE8); // Focused violet border
+  // ── Lines ─────────────────────────────────────────────────────────────
+  static const divider = Color(0xFFF0F0ED); // Rows inside a card
+  static const borderLight = Color(0xFFECECE8); // Unselected chips
+  static const borderStrong = Color(0xFFE2E2DE); // Prompt chips
+  static const borderDashed = Color(0xFFC4C4BF); // "+ New" affordances
+  static const handle = Color(0xFFD6D6D2); // Sheet drag handle
+  static const borderFocus = primary;
 
-  // Financial Semantics (Income / Expense)
-  static const expense = Color(0xFFFF5B35); // Coral-red for expenses
-  static const expenseContainer = Color(0xFFFFF0EC); // Soft pastel peach
-  static const income = Color(0xFF00BA88); // Mint emerald for income
-  static const incomeContainer = Color(0xFFE6F9F3); // Soft pastel mint container
+  // ── Semantic ──────────────────────────────────────────────────────────
+  static const expense = Color(0xFFC8372D); // Destructive actions, errors
+  static const expenseContainer = Color(0xFFFCECEA);
+  static const income = Color(0xFF157F55); // Positive / tips
+  static const incomeContainer = Color(0xFFEEF7F2);
+  static const tipText = Color(0xFF14553A);
 
-  // Dark Theme Equivalents
-  static const darkBackground = Color(0xFF10111A);
-  static const darkSurface = Color(0xFF191B28);
-  static const darkSurfaceSubtle = Color(0xFF222436);
-  static const darkTextPrimary = Color(0xFFFFFFFF);
-  static const darkTextSecondary = Color(0xFF9EA3B8);
-  static const darkBorder = Color(0xFF2A2D40);
+  // ── Dark theme ────────────────────────────────────────────────────────
+  static const darkBackground = Color(0xFF111110);
+  static const darkSurface = Color(0xFF1C1C1A);
+  static const darkSurfaceSubtle = Color(0xFF262624);
+  static const darkTextPrimary = Color(0xFFF5F5F2);
+  static const darkTextSecondary = Color(0xFFA3A39D);
+  static const darkBorder = Color(0xFF2E2E2B);
+  static const darkPrimaryLight = Color(0xFF1E2A4F);
 }
 
-/// Gradients used for hero cards and balance widgets.
-class AppGradients {
-  const AppGradients._();
+/// Category hues. The bar/legend uses [swatch]; icon tiles use a soft tint
+/// of it with a darker foreground so icons pass contrast on the tint.
+class CategoryPalette {
+  const CategoryPalette._();
 
-  /// Hero balance card gradient: Indigo -> Violet -> Coral-Peach
-  static const balanceCard = LinearGradient(
-    colors: [
-      Color(0xFF5D5FEF),
-      Color(0xFF984BEE),
-      Color(0xFFFF6F61),
-    ],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    stops: [0.0, 0.52, 1.0],
-  );
+  static const food = Color(0xFFE0712B);
+  static const utilities = Color(0xFF7A5AD6);
+  static const transport = Color(0xFF2F7FD1);
+  static const health = Color(0xFF1E9E6A);
+  static const coffee = Color(0xFF8A6B3F);
+  static const shopping = Color(0xFFD1497A);
+  static const entertainment = Color(0xFF7A5AD6);
+  static const other = Color(0xFFD3D3CE);
 
-  /// Vibrant sunset gradient (Peach / Coral)
-  static const cardSunset = LinearGradient(
-    colors: [Color(0xFFFF9966), Color(0xFFFF5E62)],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
+  /// Background of a category icon tile (≈14% of the hue over white).
+  static Color tint(Color c) => Color.alphaBlend(c.withValues(alpha: 0.14), Colors.white);
 
-  /// Mint-emerald gradient
-  static const cardEmerald = LinearGradient(
-    colors: [Color(0xFF11998E), Color(0xFF38EF7D)],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
-
-  /// Electric purple-blue gradient
-  static const cardViolet = LinearGradient(
-    colors: [Color(0xFF6A11CB), Color(0xFF2575FC)],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
+  /// Icon color on top of [tint]: the hue darkened ~20% for contrast.
+  static Color onTint(Color c) {
+    final hsl = HSLColor.fromColor(c);
+    return hsl.withLightness((hsl.lightness - 0.12).clamp(0.0, 1.0)).toColor();
+  }
 }
 
-/// Standardized corner radii.
+/// Typography families. Geist for UI text, Geist Mono for every amount so
+/// digits line up in columns.
+class AppFonts {
+  const AppFonts._();
+
+  static const sans = 'Geist';
+  static const mono = 'GeistMono';
+}
+
+/// Type scale (px). Weights: 400 body, 500 labels, 600 titles.
+class AppType {
+  const AppType._();
+
+  static const heroAmount = TextStyle(
+    fontFamily: AppFonts.mono,
+    fontSize: 46,
+    fontWeight: FontWeight.w500,
+    letterSpacing: -2,
+    height: 1,
+    color: AppColors.ink,
+  );
+  static const entryAmount = TextStyle(
+    fontFamily: AppFonts.mono,
+    fontSize: 56,
+    fontWeight: FontWeight.w500,
+    letterSpacing: -2.5,
+    height: 1.1,
+    color: AppColors.ink,
+  );
+  static const rowAmount = TextStyle(
+    fontFamily: AppFonts.mono,
+    fontSize: 16,
+    fontWeight: FontWeight.w500,
+    color: AppColors.ink,
+  );
+  static const sectionAmount = TextStyle(
+    fontFamily: AppFonts.mono,
+    fontSize: 13,
+    fontWeight: FontWeight.w500,
+    color: AppColors.textSecondary,
+  );
+  static const title = TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.ink);
+  static const rowTitle = TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.ink);
+  static const body = TextStyle(fontSize: 15, height: 1.55, color: AppColors.ink);
+  static const label = TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textSecondary);
+  static const section = TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary);
+  static const caption = TextStyle(fontSize: 13, color: AppColors.textMuted);
+  static const navLabel = TextStyle(fontSize: 12, fontWeight: FontWeight.w500);
+}
+
+/// Spacing scale (px).
+class AppSpace {
+  const AppSpace._();
+
+  static const xxs = 2.0;
+  static const xs = 4.0;
+  static const sm = 8.0;
+  static const md = 12.0;
+  static const lg = 16.0;
+  static const xl = 20.0;
+  static const xxl = 24.0;
+
+  /// Horizontal page gutter.
+  static const gutter = 16.0;
+}
+
+/// Corner radii.
 class AppRadius {
   const AppRadius._();
 
-  static const xs = 8.0;
-  static const sm = 12.0;
-  static const md = 16.0;
-  static const lg = 20.0;
-  static const xl = 24.0;
-  static const sheet = 28.0;
+  static const xs = 8.0; // Small icon tiles
+  static const sm = 12.0; // Row icon tiles, tip boxes
+  static const md = 14.0; // Chips, keypad keys
+  static const lg = 20.0; // List cards, amount field
+  static const xl = 24.0; // Hero card, nav top corners
+  static const sheet = 28.0; // Bottom sheets
   static const pill = 999.0;
 }
 
-/// Diffused ambient shadows.
+/// Elevation: three levels of soft, layered shadows plus an accent glow.
 class AppShadows {
   const AppShadows._();
 
+  /// Level 1: chips, small buttons sitting just above the canvas.
+  static const raised = [
+    BoxShadow(color: Color(0x0F111111), blurRadius: 2, offset: Offset(0, 1)),
+    BoxShadow(color: Color(0x0D111111), blurRadius: 12, offset: Offset(0, 4)),
+  ];
+
+  /// Level 2: list cards and chat bubbles.
   static const card = [
-    BoxShadow(
-      color: Color(0x081A1D2E),
-      blurRadius: 16,
-      offset: Offset(0, 4),
-      spreadRadius: 0,
-    ),
+    BoxShadow(color: Color(0x0D111111), blurRadius: 2, offset: Offset(0, 1)),
+    BoxShadow(color: Color(0x0D111111), blurRadius: 18, offset: Offset(0, 6)),
   ];
 
+  /// Level 3: hero card and composer.
   static const heroCard = [
-    BoxShadow(
-      color: Color(0x3B6C3EE8),
-      blurRadius: 24,
-      offset: Offset(0, 10),
-      spreadRadius: -2,
-    ),
+    BoxShadow(color: Color(0x0D111111), blurRadius: 2, offset: Offset(0, 1)),
+    BoxShadow(color: Color(0x14111111), blurRadius: 30, offset: Offset(0, 10)),
   ];
 
+  /// Blue glow under primary actions (add button, save, send).
   static const fab = [
-    BoxShadow(
-      color: Color(0x456C3EE8),
-      blurRadius: 18,
-      offset: Offset(0, 6),
-      spreadRadius: 0,
-    ),
+    BoxShadow(color: Color(0x401F4DD8), blurRadius: 4, offset: Offset(0, 2)),
+    BoxShadow(color: Color(0x591F4DD8), blurRadius: 28, offset: Offset(0, 12)),
   ];
 
+  /// Nav bar casts upward.
   static const navBar = [
-    BoxShadow(
-      color: Color(0x0C000000),
-      blurRadius: 24,
-      offset: Offset(0, -4),
-    ),
+    BoxShadow(color: Color(0x0A111111), blurRadius: 0, offset: Offset(0, -1)),
+    BoxShadow(color: Color(0x0F111111), blurRadius: 24, offset: Offset(0, -8)),
+  ];
+
+  /// Modal sheets.
+  static const sheet = [
+    BoxShadow(color: Color(0x40000000), blurRadius: 40, offset: Offset(0, -12)),
+  ];
+
+  /// Selected (ink) category chip.
+  static const inkChip = [
+    BoxShadow(color: Color(0x33111111), blurRadius: 4, offset: Offset(0, 2)),
+    BoxShadow(color: Color(0x2E111111), blurRadius: 14, offset: Offset(0, 6)),
   ];
 }

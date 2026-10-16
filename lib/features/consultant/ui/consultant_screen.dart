@@ -6,7 +6,7 @@ import '../cubit/consultant_cubit.dart';
 import '../cubit/consultant_state.dart';
 import '../models/chat_message.dart';
 
-/// Interactive conversational AI Expense Consultant powered by Google Gemini.
+/// Conversational AI Expense Consultant powered by Google Gemini.
 class ConsultantScreen extends StatefulWidget {
   const ConsultantScreen({super.key, this.cubit});
 
@@ -46,10 +46,7 @@ class _ConsultantScreenState extends State<ConsultantScreen> {
   void _handleSend([String? textToSend]) {
     final text = textToSend ?? _textController.text;
     if (text.trim().isEmpty) return;
-
-    if (textToSend == null) {
-      _textController.clear();
-    }
+    if (textToSend == null) _textController.clear();
     _cubit.sendMessage(text);
     _scrollToBottom();
   }
@@ -58,15 +55,9 @@ class _ConsultantScreenState extends State<ConsultantScreen> {
     showDialog(
       context: context,
       builder: (dialogCtx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-        ),
-        title: const Text(
-          'Clear Conversation',
-          style: TextStyle(fontWeight: FontWeight.w700),
-        ),
+        title: const Text('Clear Conversation', style: TextStyle(fontWeight: FontWeight.w600)),
         content: const Text(
-          'Are you sure you want to clear the current chat history? Your logged expenses will remain safe.',
+          'This clears the chat history. Your logged expenses stay safe.',
         ),
         actions: [
           TextButton(
@@ -76,6 +67,8 @@ class _ConsultantScreenState extends State<ConsultantScreen> {
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.expense,
+              minimumSize: const Size(88, 44),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
             ),
             onPressed: () {
               _cubit.clearChat();
@@ -90,29 +83,22 @@ class _ConsultantScreenState extends State<ConsultantScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    Widget screenContent = BlocConsumer<ConsultantCubit, ConsultantState>(
+    final content = BlocConsumer<ConsultantCubit, ConsultantState>(
       bloc: widget.cubit,
-      listener: (context, state) {
-        _scrollToBottom();
-      },
+      listener: (context, state) => _scrollToBottom(),
       builder: (context, state) {
-        final messages = state.messages;
-        final isStreaming = state.isStreaming;
-
         return Column(
           children: [
+            _buildHeader(context),
             if (state.errorMessage != null && state.status == ConsultantStatus.error)
               _buildErrorBanner(context, state.errorMessage!),
             Expanded(
-              child: messages.isEmpty
-                  ? _buildWelcomeHero(context, isDark, state.suggestedPrompts)
-                  : _buildMessageList(context, isDark, messages),
+              child: state.messages.isEmpty
+                  ? _buildWelcome(context, state.suggestedPrompts)
+                  : _buildMessageList(context, state.messages),
             ),
-            _buildSuggestedChips(context, isDark, state),
-            _buildInputBar(context, isDark, isStreaming),
+            _buildSuggestedChips(context, state),
+            _buildComposer(context, state.isStreaming),
           ],
         );
       },
@@ -120,65 +106,72 @@ class _ConsultantScreenState extends State<ConsultantScreen> {
 
     return Scaffold(
       key: const Key('consultant-screen'),
-      appBar: AppBar(
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: AppColors.primaryLight,
-                borderRadius: BorderRadius.circular(AppRadius.xs),
-              ),
-              child: const Icon(
-                Icons.auto_awesome_rounded,
-                size: 16,
-                color: AppColors.primary,
-              ),
+      body: SafeArea(child: content),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      height: 72,
+      padding: const EdgeInsets.symmetric(horizontal: AppSpace.xl),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        boxShadow: isDark
+            ? null
+            : const [
+                BoxShadow(color: Color(0x0A111111), offset: Offset(0, 1)),
+                BoxShadow(color: Color(0x0D111111), blurRadius: 18, offset: Offset(0, 6)),
+              ],
+        border: isDark ? const Border(bottom: BorderSide(color: AppColors.darkBorder)) : null,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.primary,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+              boxShadow: const [
+                BoxShadow(color: Color(0x4D1F4DD8), blurRadius: 12, offset: Offset(0, 4)),
+              ],
             ),
-            const SizedBox(width: 8),
-            const Text('AI Consultant'),
-          ],
-        ),
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 16),
-          child: Center(
-            child: Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurface : AppColors.surface,
-                borderRadius: BorderRadius.circular(AppRadius.sm),
-                border: Border.all(
-                  color: isDark ? AppColors.darkBorder : AppColors.borderLight,
+            child: const Icon(Icons.auto_awesome_rounded, size: 20, color: Colors.white),
+          ),
+          const SizedBox(width: AppSpace.md),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Consultant', style: AppType.title.copyWith(fontSize: 17, color: scheme.onSurface)),
+                const Text(
+                  'Reads your logged expenses',
+                  style: TextStyle(fontSize: 12, color: AppColors.textMuted),
                 ),
-              ),
-              child: Icon(
-                Icons.grid_view_rounded,
-                size: 18,
-                color: theme.colorScheme.onSurface,
-              ),
+              ],
             ),
           ),
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: Center(
-              child: IconButton(
-                tooltip: 'Clear Chat',
-                icon: Icon(
-                  Icons.refresh_rounded,
-                  color: theme.colorScheme.onSurface,
+          Tooltip(
+            message: 'Clear Chat',
+            child: Material(
+              color: isDark ? AppColors.darkSurfaceSubtle : AppColors.background,
+              shape: const CircleBorder(),
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: _confirmClearChat,
+                child: SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: Icon(Icons.edit_square, size: 18, color: scheme.onSurface),
                 ),
-                onPressed: _confirmClearChat,
               ),
             ),
           ),
         ],
-      ),
-      body: SafeArea(
-        child: screenContent,
       ),
     );
   }
@@ -186,442 +179,313 @@ class _ConsultantScreenState extends State<ConsultantScreen> {
   Widget _buildErrorBanner(BuildContext context, String error) {
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.fromLTRB(14, 6, 6, 6),
       decoration: BoxDecoration(
         color: AppColors.expenseContainer,
         borderRadius: BorderRadius.circular(AppRadius.sm),
-        border: Border.all(color: AppColors.expense.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
-          const Icon(
-            Icons.error_outline_rounded,
-            size: 20,
-            color: AppColors.expense,
-          ),
+          const Icon(Icons.error_outline_rounded, size: 20, color: AppColors.expense),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               error,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: AppColors.expense,
-              ),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.expense),
             ),
           ),
           TextButton(
             onPressed: () => _cubit.retryLastMessage(),
-            child: const Text(
-              'Retry',
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                color: AppColors.expense,
-              ),
-            ),
+            style: TextButton.styleFrom(foregroundColor: AppColors.expense),
+            child: const Text('Retry'),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildWelcomeHero(
-    BuildContext context,
-    bool isDark,
-    List<String> suggestedPrompts,
-  ) {
-    final theme = Theme.of(context);
+  Widget _buildWelcome(BuildContext context, List<String> suggestedPrompts) {
+    final scheme = Theme.of(context).colorScheme;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 28, AppSpace.gutter, 20),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const SizedBox(height: 16),
           Container(
             width: 72,
             height: 72,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: AppGradients.balanceCard,
-              boxShadow: AppShadows.heroCard,
+            decoration: BoxDecoration(
+              color: AppColors.primary,
+              borderRadius: BorderRadius.circular(AppRadius.xl),
+              boxShadow: AppShadows.fab,
             ),
-            child: const Icon(
-              Icons.auto_awesome_rounded,
-              color: Colors.white,
-              size: 36,
-            ),
+            child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 34),
           ),
           const SizedBox(height: 20),
           Text(
             'Meet Your Expense Consultant',
             textAlign: TextAlign.center,
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
-            ),
+            style: AppType.title.copyWith(fontSize: 22, color: scheme.onSurface),
           ),
           const SizedBox(height: 8),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(
-              'Ask any question about your spending habits, top categories, or how to save more effectively.',
+              'Ask about your spending habits, top categories, or how to save more.',
               textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
-                height: 1.4,
-              ),
+              style: TextStyle(fontSize: 14, height: 1.45, color: scheme.onSurfaceVariant),
             ),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 28),
           Align(
             alignment: Alignment.centerLeft,
-            child: Text(
-              'Suggested Questions',
-              style: theme.textTheme.labelLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
-              ),
+            child: Padding(
+              padding: const EdgeInsets.only(left: 4, bottom: 10),
+              child: Text('Try asking', style: AppType.section.copyWith(color: scheme.onSurfaceVariant)),
             ),
           ),
-          const SizedBox(height: 12),
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: suggestedPrompts.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 8),
-            itemBuilder: (context, index) {
-              final prompt = suggestedPrompts[index];
-              return InkWell(
-                onTap: () => _handleSend(prompt),
-                borderRadius: BorderRadius.circular(AppRadius.md),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  decoration: BoxDecoration(
-                    color: isDark ? AppColors.darkSurface : AppColors.surface,
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                    border: Border.all(
-                      color: isDark ? AppColors.darkBorder : AppColors.borderLight,
+          for (final prompt in suggestedPrompts)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Material(
+                color: scheme.surface,
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+                child: InkWell(
+                  onTap: () => _handleSend(prompt),
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
+                      boxShadow: AppShadows.raised,
                     ),
-                    boxShadow: AppShadows.card,
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryLight,
-                          borderRadius: BorderRadius.circular(AppRadius.xs),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: scheme.primaryContainer,
+                            borderRadius: BorderRadius.circular(AppRadius.xs),
+                          ),
+                          child: const Icon(Icons.chat_bubble_outline_rounded, size: 16, color: AppColors.primary),
                         ),
-                        child: const Icon(
-                          Icons.chat_bubble_outline_rounded,
-                          size: 16,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          prompt,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: isDark
-                                ? AppColors.darkTextPrimary
-                                : AppColors.textPrimary,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            prompt,
+                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: scheme.onSurface),
                           ),
                         ),
-                      ),
-                      Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        size: 14,
-                        color: isDark ? AppColors.darkTextSecondary : AppColors.textMuted,
-                      ),
-                    ],
+                        const Icon(Icons.arrow_forward_rounded, size: 18, color: AppColors.textMuted),
+                      ],
+                    ),
                   ),
                 ),
-              );
-            },
-          ),
+              ),
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildMessageList(
-    BuildContext context,
-    bool isDark,
-    List<ChatMessage> messages,
-  ) {
+  Widget _buildMessageList(BuildContext context, List<ChatMessage> messages) {
     return ListView.builder(
       controller: _scrollController,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 20, AppSpace.gutter, 12),
       itemCount: messages.length,
-      itemBuilder: (context, index) {
-        final message = messages[index];
-        return _buildMessageBubble(context, isDark, message);
-      },
+      itemBuilder: (context, index) => _buildBubble(context, messages[index]),
     );
   }
 
-  Widget _buildMessageBubble(
-    BuildContext context,
-    bool isDark,
-    ChatMessage message,
-  ) {
+  Widget _buildBubble(BuildContext context, ChatMessage message) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isUser = message.isUser;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
+    final bubble = Container(
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: isUser ? 12 : 14),
+      decoration: BoxDecoration(
+        color: isUser ? AppColors.primary : scheme.surface,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(isUser ? 20 : 6),
+          topRight: const Radius.circular(20),
+          bottomLeft: const Radius.circular(20),
+          bottomRight: Radius.circular(isUser ? 6 : 20),
+        ),
+        boxShadow: isUser
+            ? const [BoxShadow(color: Color(0x401F4DD8), blurRadius: 16, offset: Offset(0, 6))]
+            : (isDark ? null : AppShadows.card),
+        border: !isUser && isDark ? Border.all(color: AppColors.darkBorder) : null,
+      ),
+      child: Column(
+        crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
-          if (!isUser) ...[
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isDark ? AppColors.darkSurfaceSubtle : AppColors.primaryLight,
-                border: Border.all(
-                  color: isDark ? AppColors.darkBorder : AppColors.primarySubtle,
+          if (message.text.isEmpty && message.isStreaming)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(strokeWidth: 2),
                 ),
-              ),
-              child: const Icon(
-                Icons.auto_awesome_rounded,
-                size: 16,
-                color: AppColors.primary,
-              ),
+                const SizedBox(width: 8),
+                Text(
+                  'Looking at your expenses…',
+                  style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+                ),
+              ],
+            )
+          else
+            SelectableText(
+              message.text,
+              style: AppType.body.copyWith(color: isUser ? Colors.white : scheme.onSurface),
             ),
-            const SizedBox(width: 8),
-          ],
-          Flexible(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: isUser
-                    ? AppColors.primary
-                    : (isDark ? AppColors.darkSurface : AppColors.surface),
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(AppRadius.md),
-                  topRight: const Radius.circular(AppRadius.md),
-                  bottomLeft: Radius.circular(isUser ? AppRadius.md : 4),
-                  bottomRight: Radius.circular(isUser ? 4 : AppRadius.md),
-                ),
-                border: isUser
-                    ? null
-                    : Border.all(
-                        color: isDark ? AppColors.darkBorder : AppColors.borderLight,
-                      ),
-                boxShadow: isUser ? AppShadows.fab : AppShadows.card,
-              ),
-              child: Column(
-                crossAxisAlignment:
-                    isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          if (message.isStreaming && message.text.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (message.text.isEmpty && message.isStreaming)
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Analyzing spending data...',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontStyle: FontStyle.italic,
-                            color: isDark
-                                ? AppColors.darkTextSecondary
-                                : AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    )
-                  else
-                    SelectableText(
-                      message.text,
-                      style: TextStyle(
-                        fontSize: 14,
-                        height: 1.45,
-                        color: isUser
-                            ? Colors.white
-                            : (isDark
-                                ? AppColors.darkTextPrimary
-                                : AppColors.textPrimary),
-                      ),
-                    ),
-                  if (message.isStreaming && message.text.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 6),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 6,
-                            height: 6,
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'streaming...',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: isDark
-                                  ? AppColors.darkTextSecondary
-                                  : AppColors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: const BoxDecoration(shape: BoxShape.circle, color: AppColors.primary),
+                  ),
+                  const SizedBox(width: 6),
+                  Text('Writing…', style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
                 ],
               ),
             ),
-          ),
         ],
+      ),
+    );
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Align(
+        alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * (isUser ? 0.78 : 0.92),
+          ),
+          child: bubble,
+        ),
       ),
     );
   }
 
-  Widget _buildSuggestedChips(
-    BuildContext context,
-    bool isDark,
-    ConsultantState state,
-  ) {
-    if (state.messages.isEmpty) {
-      return const SizedBox.shrink();
-    }
+  Widget _buildSuggestedChips(BuildContext context, ConsultantState state) {
+    if (state.messages.isEmpty) return const SizedBox.shrink();
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final prompts = state.suggestedPrompts;
-    final isStreaming = state.isStreaming;
-
-    return Container(
-      height: 48,
-      padding: const EdgeInsets.symmetric(vertical: 4),
+    return SizedBox(
+      height: 46,
       child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpace.gutter, vertical: 6),
         scrollDirection: Axis.horizontal,
-        itemCount: prompts.length,
+        itemCount: state.suggestedPrompts.length,
         separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
-          final prompt = prompts[index];
-          return ActionChip(
+          final prompt = state.suggestedPrompts[index];
+          return Material(
             key: Key('consultant-chip-$index'),
-            avatar: const Icon(
-              Icons.auto_awesome_rounded,
-              size: 14,
-              color: AppColors.primary,
+            color: isDark ? AppColors.darkSurfaceSubtle : AppColors.background,
+            shape: StadiumBorder(
+              side: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.borderStrong),
             ),
-            label: Text(
-              prompt,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+            child: InkWell(
+              customBorder: const StadiumBorder(),
+              onTap: state.isStreaming ? null : () => _handleSend(prompt),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Center(
+                  child: Text(
+                    prompt,
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: scheme.onSurface),
+                  ),
+                ),
               ),
             ),
-            backgroundColor: isDark ? AppColors.darkSurface : AppColors.surface,
-            side: BorderSide(
-              color: isDark ? AppColors.darkBorder : AppColors.borderLight,
-            ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.pill),
-            ),
-            onPressed: isStreaming ? null : () => _handleSend(prompt),
           );
         },
       ),
     );
   }
 
-  Widget _buildInputBar(BuildContext context, bool isDark, bool isStreaming) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkBackground : AppColors.background,
-        border: Border(
-          top: BorderSide(
-            color: isDark ? AppColors.darkBorder : AppColors.borderLight,
-          ),
+  Widget _buildComposer(BuildContext context, bool isStreaming) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 6, AppSpace.gutter, 12),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(18, 4, 4, 4),
+        decoration: BoxDecoration(
+          color: scheme.surface,
+          borderRadius: BorderRadius.circular(26),
+          boxShadow: isDark
+              ? null
+              : const [
+                  BoxShadow(color: Color(0x0F111111), blurRadius: 2, offset: Offset(0, 1)),
+                  BoxShadow(color: Color(0x1A111111), blurRadius: 28, offset: Offset(0, 10)),
+                ],
+          border: isDark ? Border.all(color: AppColors.darkBorder) : null,
         ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurface : AppColors.surface,
-                borderRadius: BorderRadius.circular(AppRadius.pill),
-                border: Border.all(
-                  color: isDark ? AppColors.darkBorder : AppColors.borderLight,
-                ),
-              ),
+        child: Row(
+          children: [
+            Expanded(
               child: TextField(
                 key: const Key('consultant-input-field'),
                 controller: _textController,
                 focusNode: _focusNode,
                 textInputAction: TextInputAction.send,
-                onSubmitted: isStreaming ? null : (val) => _handleSend(),
-                decoration: InputDecoration(
-                  hintText: 'Ask your consultant...',
-                  hintStyle: TextStyle(
-                    color: isDark ? AppColors.darkTextSecondary : AppColors.textMuted,
-                    fontSize: 14,
-                  ),
+                onSubmitted: isStreaming ? null : (_) => _handleSend(),
+                style: TextStyle(fontSize: 15, color: scheme.onSurface),
+                decoration: const InputDecoration(
+                  hintText: 'Ask about your spending…',
+                  filled: false,
                   border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
                   isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  contentPadding: EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              key: const Key('consultant-send-btn'),
-              borderRadius: BorderRadius.circular(AppRadius.pill),
-              onTap: isStreaming ? null : () => _handleSend(),
-              child: Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: isStreaming
-                      ? (isDark ? AppColors.darkSurfaceSubtle : AppColors.primarySubtle)
-                      : AppColors.primary,
-                  shape: BoxShape.circle,
-                  boxShadow: isStreaming ? null : AppShadows.fab,
+            const SizedBox(width: 8),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: isStreaming
+                    ? null
+                    : const [BoxShadow(color: Color(0x591F4DD8), blurRadius: 12, offset: Offset(0, 4))],
+              ),
+              child: Material(
+                color: isStreaming ? scheme.primaryContainer : AppColors.primary,
+                shape: const CircleBorder(),
+                child: InkWell(
+                  key: const Key('consultant-send-btn'),
+                  customBorder: const CircleBorder(),
+                  onTap: isStreaming ? null : () => _handleSend(),
+                  child: SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: isStreaming
+                        ? const Padding(
+                            padding: EdgeInsets.all(12),
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.send_rounded, color: Colors.white, size: 20, semanticLabel: 'Send'),
+                  ),
                 ),
-                child: isStreaming
-                    ? const Padding(
-                        padding: EdgeInsets.all(12),
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-                        ),
-                      )
-                    : const Icon(
-                        Icons.arrow_upward_rounded,
-                        color: Colors.white,
-                        size: 20,
-                      ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

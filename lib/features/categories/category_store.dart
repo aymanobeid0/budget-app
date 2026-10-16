@@ -21,7 +21,7 @@ class CategoryStore {
       id: 'cat_food',
       name: 'Food',
       icon: 'restaurant',
-      color: 0xFFEF4444, // Red
+      color: 0xFFE0712B, // Calm Ledger: Food orange
       createdAt: DateTime.fromMillisecondsSinceEpoch(0),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(0),
     ),
@@ -29,7 +29,7 @@ class CategoryStore {
       id: 'cat_transport',
       name: 'Transport',
       icon: 'directions_car',
-      color: 0xFF3B82F6, // Blue
+      color: 0xFF2F7FD1, // Calm Ledger: Transport blue
       createdAt: DateTime.fromMillisecondsSinceEpoch(0),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(0),
     ),
@@ -37,7 +37,7 @@ class CategoryStore {
       id: 'cat_utilities',
       name: 'Utilities',
       icon: 'power',
-      color: 0xFFF59E0B, // Amber
+      color: 0xFF7A5AD6, // Calm Ledger: Utilities violet
       createdAt: DateTime.fromMillisecondsSinceEpoch(0),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(0),
     ),
@@ -45,7 +45,7 @@ class CategoryStore {
       id: 'cat_entertainment',
       name: 'Entertainment',
       icon: 'movie',
-      color: 0xFF8B5CF6, // Purple
+      color: 0xFFC08A1E, // Calm Ledger: Entertainment gold
       createdAt: DateTime.fromMillisecondsSinceEpoch(0),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(0),
     ),
@@ -53,7 +53,7 @@ class CategoryStore {
       id: 'cat_health',
       name: 'Health',
       icon: 'local_hospital',
-      color: 0xFF10B981, // Emerald
+      color: 0xFF1E9E6A, // Calm Ledger: Health green
       createdAt: DateTime.fromMillisecondsSinceEpoch(0),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(0),
     ),
@@ -61,7 +61,7 @@ class CategoryStore {
       id: 'cat_shopping',
       name: 'Shopping',
       icon: 'shopping_bag',
-      color: 0xFFEC4899, // Pink
+      color: 0xFFD1497A, // Calm Ledger: Shopping rose
       createdAt: DateTime.fromMillisecondsSinceEpoch(0),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(0),
     ),
