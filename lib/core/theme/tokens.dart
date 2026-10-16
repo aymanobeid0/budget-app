@@ -27,7 +27,12 @@ class AppColors {
   // ── Canvas & surfaces ─────────────────────────────────────────────────
   static const background = Color(0xFFFFFFFF);
   static const surface = Color(0xFFFFFFFF);
-  static const surfaceSubtle = Color(0xFFF3F5FA); // Square buttons, chips, calendar
+  static const surfaceSubtle = Color.fromARGB(
+    255,
+    246,
+    247,
+    249,
+  ); // Square buttons, chips, calendar
   static const surfaceSunken = Color(0xFFF3F5FA);
   static const scrim = Color(0xFF141A2E);
 
@@ -80,7 +85,8 @@ class CategoryPalette {
   static const other = Color(0xFFD0D5DD);
 
   /// Soft background for a category icon tile.
-  static Color tint(Color c) => Color.alphaBlend(c.withValues(alpha: 0.12), Colors.white);
+  static Color tint(Color c) =>
+      Color.alphaBlend(c.withValues(alpha: 0.12), Colors.white);
 
   /// Icon color on top of [tint].
   static Color onTint(Color c) {
@@ -132,14 +138,46 @@ class AppType {
     color: AppColors.textSecondary,
     fontFeatures: AppFonts.tabular,
   );
-  static const screenTitle = TextStyle(fontSize: 19, fontWeight: FontWeight.w600, color: AppColors.ink);
-  static const title = TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.ink);
-  static const fieldLabel = TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.ink);
-  static const rowTitle = TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.ink);
-  static const menuTitle = TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: AppColors.ink);
-  static const body = TextStyle(fontSize: 15, height: 1.5, color: AppColors.ink);
-  static const label = TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textSecondary);
-  static const section = TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary);
+  static const screenTitle = TextStyle(
+    fontSize: 19,
+    fontWeight: FontWeight.w600,
+    color: AppColors.ink,
+  );
+  static const title = TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.w700,
+    color: AppColors.ink,
+  );
+  static const fieldLabel = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w600,
+    color: AppColors.ink,
+  );
+  static const rowTitle = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w600,
+    color: AppColors.ink,
+  );
+  static const menuTitle = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w500,
+    color: AppColors.ink,
+  );
+  static const body = TextStyle(
+    fontSize: 15,
+    height: 1.5,
+    color: AppColors.ink,
+  );
+  static const label = TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.w500,
+    color: AppColors.textSecondary,
+  );
+  static const section = TextStyle(
+    fontSize: 13,
+    fontWeight: FontWeight.w600,
+    color: AppColors.textSecondary,
+  );
   static const caption = TextStyle(fontSize: 13, color: AppColors.textMuted);
   static const navLabel = TextStyle(fontSize: 12, fontWeight: FontWeight.w500);
 }
