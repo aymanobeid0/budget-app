@@ -1,7 +1,9 @@
 import 'package:budget_app/app.dart';
 import 'package:budget_app/core/database/app_database.dart';
+import 'package:budget_app/core/router/app_shell.dart';
 import 'package:budget_app/features/categories/category_store.dart';
 import 'package:budget_app/features/expenses/expense_ledger.dart';
+import 'package:budget_app/features/expenses/ui/expense_form_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -24,14 +26,15 @@ void main() {
 
   tearDown(() => db.close());
 
-  testWidgets('shell shows three tabs and starts on Expenses', (tester) async {
+  testWidgets('shell shows four tabs plus the add button and starts on Expenses', (tester) async {
     await tester.pumpWidget(BudgetApp(categoryStore: store, expenseLedger: ledger));
     await tester.pumpAndSettle();
 
-    expect(find.byType(NavigationBar), findsOneWidget);
-    expect(find.widgetWithText(NavigationDestination, 'Expenses'), findsOneWidget);
-    expect(find.widgetWithText(NavigationDestination, 'Categories'), findsOneWidget);
-    expect(find.widgetWithText(NavigationDestination, 'Consultant'), findsOneWidget);
+    expect(find.byType(CalmNavBar), findsOneWidget);
+    for (final label in ['Expenses', 'Categories', 'Consultant', 'Settings']) {
+      expect(find.byKey(Key('nav-${label.toLowerCase()}')), findsOneWidget);
+    }
+    expect(find.byKey(const Key('add-expense-fab')), findsOneWidget);
     expect(find.byKey(const Key('expenses-screen')), findsOneWidget);
   });
 
@@ -39,12 +42,27 @@ void main() {
     await tester.pumpWidget(BudgetApp(categoryStore: store, expenseLedger: ledger));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Consultant'));
+    await tester.tap(find.byKey(const Key('nav-consultant')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('consultant-screen')), findsOneWidget);
 
-    await tester.tap(find.text('Categories'));
+    await tester.tap(find.byKey(const Key('nav-categories')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('categories-screen')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('nav-settings')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('settings-screen')), findsOneWidget);
+  });
+
+  testWidgets('raised add button in the nav bar opens the expense sheet', (tester) async {
+    await tester.pumpWidget(BudgetApp(categoryStore: store, expenseLedger: ledger));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('add-expense-fab')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ExpenseFormSheet), findsOneWidget);
+    expect(find.text('New expense'), findsOneWidget);
   });
 }

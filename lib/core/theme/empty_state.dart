@@ -2,23 +2,26 @@ import 'package:flutter/material.dart';
 
 import 'tokens.dart';
 
-/// Shared friendly empty-state matching the modern pastel aesthetic.
+/// Shared empty state: an elevated icon tile, title, message and optional
+/// action.
 class EmptyState extends StatelessWidget {
   const EmptyState({
     super.key,
     required this.icon,
     required this.title,
     required this.message,
+    this.action,
   });
 
   final IconData icon;
   final String title;
   final String message;
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final scheme = theme.colorScheme;
 
     return Center(
       child: Padding(
@@ -27,40 +30,31 @@ class EmptyState extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 88,
-              height: 88,
+              width: 80,
+              height: 80,
               decoration: BoxDecoration(
-                color: isDark
-                    ? AppColors.darkSurfaceSubtle
-                    : AppColors.primaryLight,
-                shape: BoxShape.circle,
+                color: scheme.surface,
+                borderRadius: BorderRadius.circular(AppRadius.xl),
+                boxShadow: AppShadows.card,
               ),
-              child: Icon(
-                icon,
-                size: 40,
-                color: isDark ? Colors.white : AppColors.primary,
-              ),
+              child: Icon(icon, size: 36, color: AppColors.primary),
             ),
             const SizedBox(height: 24),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
-              ),
+              style: AppType.title.copyWith(color: scheme.onSurface),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: isDark
-                    ? AppColors.darkTextSecondary
-                    : AppColors.textSecondary,
-                height: 1.4,
-              ),
+              style: TextStyle(fontSize: 14, height: 1.45, color: scheme.onSurfaceVariant),
             ),
+            if (action != null) ...[
+              const SizedBox(height: 20),
+              action!,
+            ],
           ],
         ),
       ),

@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/categories/ui/categories_screen.dart';
 import '../../features/consultant/ui/consultant_screen.dart';
 import '../../features/expenses/ui/expenses_screen.dart';
+import '../../features/settings/ui/settings_screen.dart';
 import 'app_shell.dart';
 
 GoRouter buildRouter() => GoRouter(
@@ -27,6 +28,12 @@ GoRouter buildRouter() => GoRouter(
               GoRoute(
                 path: '/consultant',
                 builder: (_, _) => const ConsultantScreen(),
+              ),
+            ]),
+            StatefulShellBranch(routes: [
+              GoRoute(
+                path: '/settings',
+                builder: (_, _) => const SettingsScreen(),
               ),
             ]),
           ],
