@@ -6,6 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/widgets.dart';
 import '../../expenses/cubit/expense_cubit.dart';
 import '../../expenses/cubit/expense_state.dart';
+import '../../settings/cubit/currency_cubit.dart';
 import '../cubit/income_cubit.dart';
 import '../cubit/income_state.dart';
 import '../cubit/net_period_cubit.dart';
@@ -26,6 +27,7 @@ class NetCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final period = context.watch<NetPeriodCubit>().state;
+    final currency = context.watch<CurrencyCubit>().state;
     final expenseState = context.watch<ExpenseCubit>().state;
     final incomeState = context.watch<IncomeCubit>().state;
 
@@ -68,7 +70,7 @@ class NetCard extends StatelessWidget {
                   const SizedBox(width: 6),
                 ],
                 Text(
-                  '$sign${Money.withLabel(net.netMinor.abs())}',
+                  '$sign${Money.withLabel(net.netMinor.abs(), currency)}',
                   style: AppType.heroAmount.copyWith(color: color, fontSize: 30),
                 ),
               ],
@@ -76,7 +78,8 @@ class NetCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Income ${Money.withLabel(net.incomeMinor)} · Expenses ${Money.withLabel(net.expensesMinor)}',
+            'Income ${Money.withLabel(net.incomeMinor, currency)} · '
+            'Expenses ${Money.withLabel(net.expensesMinor, currency)}',
             style: AppType.caption.copyWith(color: scheme.onSurfaceVariant, fontFeatures: AppFonts.tabular),
           ),
         ],

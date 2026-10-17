@@ -14,6 +14,7 @@ import '../../categories/cubit/category_state.dart';
 import '../../categories/ui/category_icon_helper.dart';
 import '../../income/cubit/income_cubit.dart' show maybeIncomeCubit;
 import '../../income/ui/net_card.dart';
+import '../../settings/cubit/currency_cubit.dart';
 import '../../settings/ui/sync_health.dart';
 import '../cubit/expense_cubit.dart';
 import '../cubit/expense_state.dart';
@@ -123,15 +124,17 @@ class ExpensesScreen extends StatelessWidget {
 
 /// Shared delete confirmation (list swipe and the edit screen).
 Future<bool> confirmDeleteExpense(BuildContext context, Expense expense) =>
-    confirmDeleteEntry(context, noun: 'expense', amountMinor: expense.amountMinor);
+    confirmDeleteEntry(context,
+        noun: 'expense', amountMinor: expense.amountMinor, currency: context.read<CurrencyCubit>().state);
 
 /// Delete confirmation for an Expense or an Income.
-Future<bool> confirmDeleteEntry(BuildContext context, {required String noun, required int amountMinor}) async {
+Future<bool> confirmDeleteEntry(BuildContext context,
+    {required String noun, required int amountMinor, required Currency currency}) async {
   final result = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
       title: Text('Delete $noun?', style: const TextStyle(fontWeight: FontWeight.w700)),
-      content: Text('This removes the ${Money.withLabel(amountMinor)} $noun.'),
+      content: Text('This removes the ${Money.withLabel(amountMinor, currency)} $noun.'),
       actions: [
         TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
         FilledButton(
@@ -191,9 +194,9 @@ class _SpentCard extends StatelessWidget {
             child: Text.rich(
               TextSpan(children: [
                 TextSpan(text: Money.format(month)),
-                const TextSpan(
-                  text: '  ${Money.currencyLabel}',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.onPrimaryMuted),
+                TextSpan(
+                  text: '  ${context.watch<CurrencyCubit>().state.code}',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.onPrimaryMuted),
                 ),
               ]),
               style: AppType.heroAmount,
@@ -236,7 +239,7 @@ class _Stat extends StatelessWidget {
             children: [
               Text(label, style: const TextStyle(fontSize: 13, color: AppColors.onPrimaryMuted)),
               Text(
-                Money.withLabel(minor),
+                Money.withLabel(minor, context.watch<CurrencyCubit>().state),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(

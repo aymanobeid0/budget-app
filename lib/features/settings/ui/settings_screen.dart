@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/format/money.dart';
 import '../../../core/sync/sync_engine.dart';
 import '../../../core/sync/sync_status.dart';
 import '../../../core/theme/app_theme.dart';
@@ -10,6 +9,8 @@ import '../../../core/theme/theme_cubit.dart';
 import '../../../core/theme/theme_toggle_button.dart';
 import '../../../core/theme/widgets.dart';
 import '../../account/ui/account_section.dart';
+import '../cubit/currency_cubit.dart';
+import 'currency_picker.dart';
 import 'sync_health.dart';
 
 /// Profile & settings: avatar header, account actions and preferences as
@@ -79,14 +80,16 @@ class SettingsScreen extends StatelessWidget {
                     ),
                   ),
                   MenuRow(
+                    key: const Key('profile-currency-row'),
                     icon: Icons.payments_rounded,
                     color: CategoryPalette.utilities,
                     title: 'Currency',
-                    subtitle: 'Choosing a currency is coming soon',
+                    subtitle: 'Shown next to every amount',
                     trailing: Text(
-                      Money.currencyLabel,
+                      context.watch<CurrencyCubit>().state.code,
                       style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
                     ),
+                    onTap: () => showCurrencyPicker(context),
                   ),
                   if (engine == null)
                     MenuRow(
