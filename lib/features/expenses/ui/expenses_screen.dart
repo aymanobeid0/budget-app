@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/format/money.dart';
+import '../../../core/theme/animated_entries.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_toggle_button.dart';
 import '../../../core/theme/widgets.dart';
@@ -93,16 +94,19 @@ class ExpensesScreen extends StatelessWidget {
                       padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 26, AppSpace.gutter, 6),
                       child: Text('Transactions', style: AppType.title.copyWith(color: scheme.onSurface)),
                     ),
-                    if (expenses.isEmpty)
-                      _EmptyTransactions(onAdd: () => showExpenseSheet(context))
-                    else
+                    // Kept while the list is empty, so the first Expense animates in too.
+                    AnimatedEntries(children: [
                       for (final e in expenses)
                         _TransactionRow(
+                          key: ValueKey('expense-row-${e.id}'),
                           expense: e,
                           category: catMap[e.categoryId],
                           onTap: () => showExpenseSheet(context, expense: e),
                           onDelete: () => _confirmDelete(context, e),
                         ),
+                    ]),
+                    if (expenses.isEmpty)
+                      _EmptyTransactions(onAdd: () => showExpenseSheet(context)),
                   ],
                 );
               },
@@ -287,6 +291,7 @@ class _EmptyTransactions extends StatelessWidget {
 
 class _TransactionRow extends StatelessWidget {
   const _TransactionRow({
+    super.key,
     required this.expense,
     required this.category,
     required this.onTap,
