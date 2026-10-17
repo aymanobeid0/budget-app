@@ -5,6 +5,10 @@ import '../models/chat_message.dart';
 
 /// Contract for AI Expense Consultant reasoning and streaming responses.
 abstract class ConsultantClient {
+  /// False when the client cannot answer at all (no Gemini key), so the
+  /// screen can say the Consultant is off before the user types.
+  bool get isConfigured;
+
   /// [currency] is the Currency chosen in Settings; amounts in
   /// [contextSummary] are already labelled with it.
   Stream<String> streamConsultantResponse({
@@ -40,6 +44,9 @@ class GeminiConsultantClient implements ConsultantClient {
 
   final String apiKey;
   final String modelName;
+
+  @override
+  bool get isConfigured => apiKey.isNotEmpty;
 
   @override
   Stream<String> streamConsultantResponse({

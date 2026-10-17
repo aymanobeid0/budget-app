@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/sync/sync_engine.dart';
+import '../../../core/sync/sync_status.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_cubit.dart';
 import '../../../core/theme/theme_toggle_button.dart';
@@ -10,19 +11,12 @@ import '../../../core/theme/widgets.dart';
 import '../../account/ui/account_section.dart';
 import '../cubit/currency_cubit.dart';
 import 'currency_picker.dart';
+import 'sync_health.dart';
 
 /// Profile & settings: avatar header, account actions and preferences as
 /// one menu list.
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
-
-  SyncEngine? _syncEngine(BuildContext context) {
-    try {
-      return RepositoryProvider.of<SyncEngine>(context);
-    } catch (_) {
-      return null; // local-only build
-    }
-  }
 
   Future<void> _syncNow(BuildContext context, SyncEngine engine) async {
     final messenger = ScaffoldMessenger.of(context);
@@ -37,7 +31,7 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final isDark = context.watch<ThemeCubit>().isDark;
-    final engine = _syncEngine(context);
+    final engine = maybeSyncEngine(context);
 
     return Scaffold(
       key: const Key('settings-screen'),
@@ -95,19 +89,33 @@ class SettingsScreen extends StatelessWidget {
                       context.watch<CurrencyCubit>().state.code,
                       style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
                     ),
-                    showDivider: engine != null,
                     onTap: () => showCurrencyPicker(context),
                   ),
-                  if (engine != null)
+                  if (engine == null)
                     MenuRow(
-                      key: const Key('sync-now-btn'),
-                      icon: Icons.sync_rounded,
+                      key: const Key('sync-status'),
+                      icon: Icons.cloud_off_rounded,
                       color: CategoryPalette.transport,
-                      title: 'Sync now',
-                      subtitle: 'Upload and download your changes',
-                      trailing: const Chevron(),
+                      title: 'Not connected',
+                      subtitle: 'Your data is kept on this phone only',
                       showDivider: false,
-                      onTap: () => _syncNow(context, engine),
+                    )
+                  else
+                    SyncStateBuilder(
+                      engine: engine,
+                      builder: (context, state) => KeyedSubtree(
+                        key: const Key('sync-status'),
+                        child: MenuRow(
+                          key: const Key('sync-now-btn'),
+                          icon: syncNeedsAttention(state) ? Icons.cloud_off_rounded : Icons.sync_rounded,
+                          color: syncNeedsAttention(state) ? AppColors.expense : CategoryPalette.transport,
+                          title: 'Sync now',
+                          subtitle: syncStateLabel(state),
+                          trailing: const Chevron(),
+                          showDivider: false,
+                          onTap: state == SyncState.syncing ? null : () => _syncNow(context, engine),
+                        ),
+                      ),
                     ),
                 ],
               ),

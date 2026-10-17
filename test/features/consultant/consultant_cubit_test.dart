@@ -20,6 +20,9 @@ class FakeConsultantClient implements ConsultantClient {
   Currency? lastCurrency;
 
   @override
+  bool get isConfigured => true;
+
+  @override
   Stream<String> streamConsultantResponse({
     required String prompt,
     required String contextSummary,

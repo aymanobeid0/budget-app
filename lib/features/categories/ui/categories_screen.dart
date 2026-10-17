@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/empty_state.dart';
 import '../../../core/theme/widgets.dart';
 import '../../expenses/cubit/expense_cubit.dart';
 import '../../expenses/cubit/expense_state.dart';
@@ -125,6 +126,22 @@ class CategoriesScreen extends StatelessWidget {
             if (state is! CategoryLoaded) return const SizedBox.shrink();
 
             final categories = state.categories;
+            if (categories.isEmpty) {
+              return ListView(children: [
+                header,
+                EmptyState(
+                  icon: Icons.category_rounded,
+                  title: 'No Categories yet',
+                  message: 'Every Expense goes in a Category. Add one to start logging.',
+                  action: FilledButton.icon(
+                    key: const Key('add-first-category'),
+                    onPressed: () => _openCategorySheet(context),
+                    icon: const Icon(Icons.add_rounded),
+                    label: const Text('Add a Category'),
+                  ),
+                ),
+              ]);
+            }
             return ListView(
               padding: const EdgeInsets.only(bottom: 130),
               children: [
@@ -132,9 +149,7 @@ class CategoriesScreen extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 18, AppSpace.gutter, 8),
                   child: Text(
-                    categories.isEmpty
-                        ? 'No categories yet'
-                        : '${categories.length} ${categories.length == 1 ? 'category' : 'categories'} · tap one to edit',
+                    '${categories.length} ${categories.length == 1 ? 'category' : 'categories'} · tap one to edit',
                     style: TextStyle(fontSize: 14, color: scheme.onSurfaceVariant),
                   ),
                 ),

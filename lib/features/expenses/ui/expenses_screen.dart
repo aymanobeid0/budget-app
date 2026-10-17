@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/format/money.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/empty_state.dart';
 import '../../../core/theme/theme_toggle_button.dart';
 import '../../../core/theme/widgets.dart';
 import '../../categories/category.dart';
@@ -13,6 +14,7 @@ import '../../categories/ui/category_icon_helper.dart';
 import '../../income/cubit/income_cubit.dart' show maybeIncomeCubit;
 import '../../income/ui/net_card.dart';
 import '../../settings/cubit/currency_cubit.dart';
+import '../../settings/ui/sync_health.dart';
 import '../cubit/expense_cubit.dart';
 import '../cubit/expense_state.dart';
 import '../expense.dart';
@@ -81,6 +83,7 @@ class ExpensesScreen extends StatelessWidget {
                   padding: const EdgeInsets.only(bottom: 130),
                   children: [
                     header,
+                    SyncAttentionIndicator(onTap: router == null ? null : () => router.go('/settings')),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 22, AppSpace.gutter, 0),
                       child: _SpentCard(expenses: expenses),
@@ -256,33 +259,15 @@ class _EmptyTransactions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 28, AppSpace.gutter, 0),
-      child: Column(
-        children: [
-          Container(
-            width: 72,
-            height: 72,
-            decoration: BoxDecoration(color: scheme.primaryContainer, shape: BoxShape.circle),
-            child: Icon(Icons.receipt_long_rounded, size: 32, color: scheme.onPrimaryContainer),
-          ),
-          const SizedBox(height: 16),
-          Text('No expenses yet', style: AppType.title.copyWith(color: scheme.onSurface)),
-          const SizedBox(height: 6),
-          Text(
-            'Tap + to log what you spend. Your month will take shape here.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 14, height: 1.45, color: scheme.onSurfaceVariant),
-          ),
-          const SizedBox(height: 18),
-          FilledButton.icon(
-            key: const Key('add-first-expense'),
-            onPressed: onAdd,
-            icon: const Icon(Icons.add_rounded),
-            label: const Text('Add your first expense'),
-          ),
-        ],
+    return EmptyState(
+      icon: Icons.receipt_long_rounded,
+      title: 'No Expenses yet',
+      message: 'Log what you spend and your month takes shape here.',
+      action: FilledButton.icon(
+        key: const Key('add-first-expense'),
+        onPressed: onAdd,
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('Add your first Expense'),
       ),
     );
   }
