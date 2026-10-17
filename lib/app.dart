@@ -66,6 +66,7 @@ class _BudgetAppState extends State<BudgetApp> {
           ? ConsultantCubit(
               ledger: widget.expenseLedger!,
               categoryStore: widget.categoryStore!,
+              incomeLedger: widget.incomeLedger,
               client: widget.consultantClient ??
                   GeminiConsultantClient(apiKey: AppConfig.geminiApiKey),
             )

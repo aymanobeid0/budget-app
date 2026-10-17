@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../categories/category_store.dart';
 import '../../expenses/expense_ledger.dart';
+import '../../income/income_ledger.dart';
 import '../data/consultant_client.dart';
 import '../data/spending_context_builder.dart';
 import '../models/chat_message.dart';
@@ -13,11 +14,16 @@ class ConsultantCubit extends Cubit<ConsultantState> {
   ConsultantCubit({
     required this.ledger,
     required this.categoryStore,
+    this.incomeLedger,
     required this.client,
   }) : super(const ConsultantState());
 
   final ExpenseLedger ledger;
   final CategoryStore categoryStore;
+
+  /// Gives the consultant the user's Income; without it advice is
+  /// spending-only.
+  final IncomeLedger? incomeLedger;
   final ConsultantClient client;
 
   StreamSubscription<String>? _streamSub;
@@ -60,9 +66,13 @@ class ConsultantCubit extends Cubit<ConsultantState> {
     try {
       final expenses = await ledger.loadExpenses();
       final categories = await categoryStore.loadCategories();
+      final income = await incomeLedger?.loadIncome() ?? const [];
+      final incomeSources = await incomeLedger?.loadSources(includeDeleted: true) ?? const [];
       final contextSummary = SpendingContextBuilder.build(
         expenses: expenses,
         categories: categories,
+        income: income,
+        incomeSources: incomeSources,
       );
 
       final stream = client.streamConsultantResponse(
