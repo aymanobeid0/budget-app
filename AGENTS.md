@@ -4,12 +4,12 @@
 
 ### Issue tracker
 
-GitHub issues via `gh` CLI (with `.scratch/` local markdown support). See [issue-tracker.md](file:///d:/budget-app/docs/agents/issue-tracker.md).
+Local markdown: specs and tickets live under `.scratch/<feature-slug>/`. See [docs/agents/issue-tracker.md](docs/agents/issue-tracker.md).
 
 ### Triage labels
 
-Canonical 5-role vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See [triage-labels.md](file:///d:/budget-app/docs/agents/triage-labels.md).
+Canonical 5-role vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See [docs/agents/triage-labels.md](docs/agents/triage-labels.md).
 
 ### Domain docs
 
-Single-context layout (`GLOSSARY.md` + `docs/adr/` at repo root). See [domain.md](file:///d:/budget-app/docs/agents/domain.md).
+Single-context layout (`GLOSSARY.md` + `docs/adr/` at repo root). See [docs/agents/domain.md](docs/agents/domain.md).

@@ -1,37 +1,30 @@
-# Issue tracker: GitHub & Local Markdown
+# Issue tracker: Local Markdown
 
-Issues and specs for this repo live as GitHub issues managed via `gh` CLI. When working offline or for quick local drafting, markdown files under `.scratch/` are supported.
+Issues and specs for this repo live as markdown files in `.scratch/`.
 
-## GitHub Conventions (`gh` CLI)
-
-- **Create an issue**: `gh issue create --title "..." --body "..."` (use heredoc for multi-line bodies).
-- **Read an issue**: `gh issue view <number> --json number,title,body,labels,comments`.
-- **List issues**: `gh issue list --state open --json number,title,body,labels,comments --jq '[.[] | {number, title, body, labels: [.labels[].name], comments: [.comments[].body]}]'`.
-- **Make an issue a sub-issue of a parent**: `gh issue create --parent <parent> ...`, or `gh issue edit <parent> --add-sub-issue <child>`.
-- **Comment on an issue**: `gh issue comment <number> --body "..."`
-- **Apply / remove labels**: `gh issue edit <number> --add-label "..."` / `--remove-label "..."`
-- **Close**: `gh issue close <number> --comment "..."`
-
-## Pull requests as a triage surface
-
-**PRs as a request surface: no.** *(Set to `yes` if this repo treats external PRs as feature requests; `/triage` reads this flag).*
-
-## Local Markdown Convention (`.scratch/`)
+## Conventions
 
 - One feature per directory: `.scratch/<feature-slug>/`
 - The spec is `.scratch/<feature-slug>/spec.md`
-- Implementation issues are one file per ticket at `.scratch/<feature-slug>/issues/<NN>-<slug>.md`, numbered from `01`.
-- Triage state is recorded as a `Status:` line near the top of each issue file (see [triage-labels.md](file:///d:/budget-app/docs/agents/triage-labels.md) for role strings).
-- Comments append to the bottom of the file under a `## Comments` heading.
+- Implementation issues are one file per ticket at `.scratch/<feature-slug>/issues/<NN>-<slug>.md`, numbered from `01`, never a single combined tickets file
+- Triage state is recorded as a `Status:` line near the top of each issue file (see [triage-labels.md](triage-labels.md) for the role strings)
+- Comments and conversation history append to the bottom of the file under a `## Comments` heading
 
 ## When a skill says "publish to the issue tracker"
 
-Create a GitHub issue (or a local markdown spec/ticket in `.scratch/<feature-slug>/` if offline).
+Create a new file under `.scratch/<feature-slug>/` (creating the directory if needed).
 
 ## When a skill says "fetch the relevant ticket"
 
-Read it via `gh issue view` or the file at the referenced `.scratch/` path.
+Read the file at the referenced path. The user will normally pass the path or the issue number directly.
 
 ## Wayfinding operations
 
-Used by `/wayfinder`. The **map** is tracked via GitHub (issue labeled `wayfinder:map`) or locally under `.scratch/<effort>/map.md`.
+Used by `/wayfinder`. The **map** is a file with one **child** file per ticket.
+
+- **Map**: `.scratch/<effort>/map.md` (the Notes / Decisions-so-far / Fog body).
+- **Child ticket**: `.scratch/<effort>/issues/NN-<slug>.md`, numbered from `01`, with the question in the body. A `Type:` line records the ticket type (`research`/`prototype`/`grilling`/`task`); a `Status:` line records `claimed`/`resolved`.
+- **Blocking**: a `Blocked by: NN, NN` line near the top. A ticket is unblocked when every file it lists is `resolved`.
+- **Frontier**: scan `.scratch/<effort>/issues/` for files that are open, unblocked, and unclaimed; first by number wins.
+- **Claim**: set `Status: claimed` and save before any work.
+- **Resolve**: append the answer under an `## Answer` heading, set `Status: resolved`, then append a context pointer (gist + link) to the map's Decisions-so-far in `map.md`.

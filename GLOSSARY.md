@@ -23,3 +23,15 @@ _Avoid_: Financial advisor, notification bot, budget enforcer
 **Currency**:
 The global monetary unit and symbol configured by the user (e.g., USD $, EUR €, EGP E£) applied across all logged expenses.
 _Avoid_: Exchange rate, multi-currency conversion
+
+**Income**:
+Money the user received, recorded on the day it was paid, with an amount and an Income Source. The amount is always the user's own share as they typed it.
+_Avoid_: Transaction, credit, earning, revenue, salary entry
+
+**Income Source**:
+A user-managed label for where money comes from (e.g., Salary, Freelance, Dental clinic). Removing a source hides it from pickers but keeps its past Income.
+_Avoid_: Category, account, employer, income type
+
+**Net**:
+Income minus Expenses over a chosen period (this week, this month, or all time).
+_Avoid_: Balance, savings, profit
