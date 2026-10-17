@@ -9,6 +9,9 @@ import '../../categories/category.dart';
 import '../../categories/cubit/category_cubit.dart';
 import '../../categories/cubit/category_state.dart';
 import '../../categories/ui/category_icon_helper.dart';
+import '../../income/cubit/income_cubit.dart';
+import '../../income/cubit/income_state.dart';
+import '../../income/income_source.dart';
 import '../cubit/expense_cubit.dart';
 import '../expense.dart';
 import 'expenses_screen.dart' show confirmDeleteExpense;
@@ -18,18 +21,47 @@ const _months = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
 
-/// Opens the full-screen add/edit expense page. Used by the nav bar's add
-/// button and by tapping a transaction.
-Future<void> showExpenseSheet(BuildContext context, {Expense? expense}) {
+/// What the Add sheet is logging.
+enum EntryKind { expense, income }
+
+/// The Add sheet opens on the kind used last, so several Income in a row
+/// don't need a switch each time. Kept for the app's lifetime.
+class AddSheetMemory {
+  const AddSheetMemory._();
+
+  static EntryKind lastKind = EntryKind.expense;
+
+  @visibleForTesting
+  static void reset() => lastKind = EntryKind.expense;
+}
+
+/// Opens the full-screen add/edit page. Used by the nav bar's add button and
+/// by tapping a transaction. [kind] forces a mode; otherwise a new entry
+/// opens on the mode used last.
+Future<void> showExpenseSheet(BuildContext context, {Expense? expense, EntryKind? kind}) {
   final categoryState = context.read<CategoryCubit>().state;
   final categories = categoryState is CategoryLoaded ? categoryState.categories : <Category>[];
   final expenseCubit = context.read<ExpenseCubit>();
+  IncomeCubit? incomeCubit;
+  try {
+    incomeCubit = context.read<IncomeCubit>();
+  } catch (_) {
+    incomeCubit = null; // built without the income feature (tests)
+  }
+  final incomeState = incomeCubit?.state;
+  final sources = incomeState is IncomeLoaded ? incomeState.sources : <IncomeSource>[];
 
   return Navigator.of(context).push(MaterialPageRoute<void>(
     fullscreenDialog: true,
     builder: (_) => ExpenseFormSheet(
       expense: expense,
+      initialKind: kind,
       categories: categories,
+      incomeSources: sources,
+      onSaveIncome: incomeCubit == null
+          ? null
+          : (amountMinor, sourceId, paidOn) =>
+              incomeCubit!.addIncome(amountMinor: amountMinor, sourceId: sourceId, paidOn: paidOn),
       onSave: (amountMinor, categoryId, spentOn) {
         if (expense == null) {
           expenseCubit.addExpense(amountMinor: amountMinor, categoryId: categoryId, spentOn: spentOn);
@@ -44,19 +76,27 @@ Future<void> showExpenseSheet(BuildContext context, {Expense? expense}) {
   ));
 }
 
-/// Add / edit expense page (kept under its original name for callers).
+/// Add / edit page for an Expense or an Income (kept under its original
+/// name for callers). A new entry can switch between the two when
+/// [onSaveIncome] is given.
 class ExpenseFormSheet extends StatefulWidget {
   const ExpenseFormSheet({
     super.key,
     this.expense,
+    this.initialKind,
     required this.categories,
+    this.incomeSources = const [],
     required this.onSave,
+    this.onSaveIncome,
     this.onDelete,
   });
 
   final Expense? expense;
+  final EntryKind? initialKind;
   final List<Category> categories;
+  final List<IncomeSource> incomeSources;
   final void Function(int amountMinor, String categoryId, DateTime spentOn) onSave;
+  final void Function(int amountMinor, String sourceId, DateTime paidOn)? onSaveIncome;
   final VoidCallback? onDelete;
 
   @override
@@ -65,11 +105,16 @@ class ExpenseFormSheet extends StatefulWidget {
 
 class _ExpenseFormSheetState extends State<ExpenseFormSheet> {
   late final TextEditingController _amount;
+  late EntryKind _kind;
   late String _categoryId;
+  String _sourceId = '';
   late DateTime _date;
   late DateTime _weekStart;
   String? _amountError;
-  String? _categoryError;
+  String? _pickError;
+
+  bool get _isIncome => _kind == EntryKind.income;
+  bool get _canSwitch => widget.expense == null && widget.onSaveIncome != null;
 
   static DateTime _day(DateTime d) => DateTime(d.year, d.month, d.day);
   static DateTime _mondayOf(DateTime d) => _day(d).subtract(Duration(days: d.weekday - 1));
@@ -80,6 +125,7 @@ class _ExpenseFormSheetState extends State<ExpenseFormSheet> {
     final e = widget.expense;
     _amount = TextEditingController(text: e != null ? Money.format(e.amountMinor).replaceAll(',', '') : '');
     _categoryId = e?.categoryId ?? (widget.categories.isNotEmpty ? widget.categories.first.id : '');
+    _kind = _canSwitch ? (widget.initialKind ?? AddSheetMemory.lastKind) : EntryKind.expense;
     _date = _day(e?.spentOn ?? DateTime.now());
     _weekStart = _mondayOf(_date);
   }
@@ -92,13 +138,60 @@ class _ExpenseFormSheetState extends State<ExpenseFormSheet> {
 
   void _submit() {
     final parsed = double.tryParse(_amount.text.trim().replaceAll(',', '.'));
+    final pickedId = _isIncome ? _sourceId : _categoryId;
     setState(() {
       _amountError = parsed == null || parsed <= 0 ? 'Enter an amount greater than 0' : null;
-      _categoryError = _categoryId.isEmpty ? 'Pick a category' : null;
+      _pickError = pickedId.isEmpty ? (_isIncome ? 'Pick an Income Source' : 'Pick a category') : null;
     });
-    if (_amountError != null || _categoryError != null) return;
-    widget.onSave((parsed! * 100).round(), _categoryId, _date);
+    if (_amountError != null || _pickError != null) return;
+    final amountMinor = (parsed! * 100).round();
+    if (_isIncome) {
+      widget.onSaveIncome!(amountMinor, _sourceId, _date);
+    } else {
+      widget.onSave(amountMinor, _categoryId, _date);
+    }
     Navigator.of(context).pop();
+  }
+
+  void _switchKind(EntryKind kind) {
+    AddSheetMemory.lastKind = kind;
+    setState(() {
+      _kind = kind;
+      _pickError = null;
+    });
+  }
+
+  /// Chips for the current mode: Categories for an Expense, Income Sources
+  /// for an Income. The two lists never mix.
+  List<Widget> _pickerChips() {
+    if (_isIncome) {
+      return [
+        for (final s in widget.incomeSources)
+          _PickerChip(
+            name: s.name,
+            icon: s.icon,
+            color: s.color,
+            selected: s.id == _sourceId,
+            onTap: () => setState(() {
+              _sourceId = s.id;
+              _pickError = null;
+            }),
+          ),
+      ];
+    }
+    return [
+      for (final c in widget.categories)
+        _PickerChip(
+          name: c.name,
+          icon: c.icon,
+          color: c.color,
+          selected: c.id == _categoryId,
+          onTap: () => setState(() {
+            _categoryId = c.id;
+            _pickError = null;
+          }),
+        ),
+    ];
   }
 
   Future<void> _delete() async {
@@ -129,13 +222,14 @@ class _ExpenseFormSheetState extends State<ExpenseFormSheet> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final isEditing = widget.expense != null;
+    final noun = _isIncome ? 'Income' : 'Expense';
 
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: [
             ScreenHeader(
-              title: isEditing ? 'Edit Expense' : 'Add Expense',
+              title: isEditing ? 'Edit $noun' : 'Add $noun',
               leading: SquareIconButton(
                 icon: Icons.chevron_left_rounded,
                 tooltip: 'Back',
@@ -155,6 +249,25 @@ class _ExpenseFormSheetState extends State<ExpenseFormSheet> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 22, AppSpace.gutter, 16),
                 children: [
+                  if (_canSwitch) ...[
+                    SegmentedButton<EntryKind>(
+                      key: const Key('entry-kind-switch'),
+                      segments: const [
+                        ButtonSegment(
+                          value: EntryKind.expense,
+                          label: Text('Expense', key: Key('entry-kind-expense')),
+                        ),
+                        ButtonSegment(
+                          value: EntryKind.income,
+                          label: Text('Income', key: Key('entry-kind-income')),
+                        ),
+                      ],
+                      selected: {_kind},
+                      showSelectedIcon: false,
+                      onSelectionChanged: (s) => _switchKind(s.first),
+                    ),
+                    const SizedBox(height: 18),
+                  ],
                   _WeekStrip(
                     weekStart: _weekStart,
                     selected: _date,
@@ -191,27 +304,16 @@ class _ExpenseFormSheetState extends State<ExpenseFormSheet> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  Text('Category', style: AppType.fieldLabel.copyWith(color: scheme.onSurface)),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: [
-                      for (final c in widget.categories)
-                        _CategoryChip(
-                          category: c,
-                          selected: c.id == _categoryId,
-                          onTap: () => setState(() {
-                            _categoryId = c.id;
-                            _categoryError = null;
-                          }),
-                        ),
-                    ],
+                  Text(
+                    _isIncome ? 'Income Source' : 'Category',
+                    style: AppType.fieldLabel.copyWith(color: scheme.onSurface),
                   ),
-                  if (_categoryError != null)
+                  const SizedBox(height: 12),
+                  Wrap(spacing: 10, runSpacing: 10, children: _pickerChips()),
+                  if (_pickError != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
-                      child: Text(_categoryError!, style: const TextStyle(fontSize: 13, color: AppColors.expense)),
+                      child: Text(_pickError!, style: const TextStyle(fontSize: 13, color: AppColors.expense)),
                     ),
                 ],
               ),
@@ -220,7 +322,7 @@ class _ExpenseFormSheetState extends State<ExpenseFormSheet> {
               padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 8, AppSpace.gutter, 20),
               child: PrimaryButton(
                 key: const Key('save-expense-btn'),
-                label: isEditing ? 'Save Changes' : 'Add Expense',
+                label: isEditing ? 'Save Changes' : 'Add $noun',
                 onPressed: _submit,
               ),
             ),
@@ -343,16 +445,25 @@ class _WeekStrip extends StatelessWidget {
   }
 }
 
-class _CategoryChip extends StatelessWidget {
-  const _CategoryChip({required this.category, required this.selected, required this.onTap});
-  final Category category;
+/// A Category or Income Source chip in the Add sheet picker.
+class _PickerChip extends StatelessWidget {
+  const _PickerChip({
+    required this.name,
+    required this.icon,
+    required this.color,
+    required this.selected,
+    required this.onTap,
+  });
+  final String name;
+  final String icon;
+  final int color;
   final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final color = Color(category.color);
+    final color = Color(this.color);
     return Material(
       color: selected ? scheme.primary : raisedColor(context),
       elevation: selected ? 0 : raisedElevation(context),
@@ -368,7 +479,7 @@ class _CategoryChip extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                CategoryIconHelper.getIcon(category.icon),
+                CategoryIconHelper.getIcon(icon),
                 size: 17,
                 color: selected
                     ? Colors.white
@@ -378,7 +489,7 @@ class _CategoryChip extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                category.name,
+                name,
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: selected ? FontWeight.w600 : FontWeight.w500,

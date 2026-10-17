@@ -14,12 +14,15 @@ import 'features/consultant/cubit/consultant_cubit.dart';
 import 'features/consultant/data/consultant_client.dart';
 import 'features/expenses/cubit/expense_cubit.dart';
 import 'features/expenses/expense_ledger.dart';
+import 'features/income/cubit/income_cubit.dart';
+import 'features/income/income_ledger.dart';
 
 class BudgetApp extends StatefulWidget {
   const BudgetApp({
     super.key,
     this.categoryStore,
     this.expenseLedger,
+    this.incomeLedger,
     this.syncEngine,
     this.consultantClient,
     this.themeCubit,
@@ -28,6 +31,7 @@ class BudgetApp extends StatefulWidget {
 
   final CategoryStore? categoryStore;
   final ExpenseLedger? expenseLedger;
+  final IncomeLedger? incomeLedger;
   final SyncEngine? syncEngine;
   final ConsultantClient? consultantClient;
 
@@ -49,6 +53,8 @@ class _BudgetAppState extends State<BudgetApp> {
       widget.categoryStore == null ? null : (CategoryCubit(widget.categoryStore!)..load());
   late final ExpenseCubit? _expenseCubit =
       widget.expenseLedger == null ? null : (ExpenseCubit(widget.expenseLedger!)..load());
+  late final IncomeCubit? _incomeCubit =
+      widget.incomeLedger == null ? null : (IncomeCubit(widget.incomeLedger!)..load());
   late final ConsultantCubit? _consultantCubit =
       (widget.categoryStore != null && widget.expenseLedger != null)
           ? ConsultantCubit(
@@ -68,6 +74,7 @@ class _BudgetAppState extends State<BudgetApp> {
   Future<void> _reloadAfterAccountChange() async {
     await _categoryCubit?.load();
     await _expenseCubit?.load();
+    await _incomeCubit?.load();
     _consultantCubit?.clearChat();
   }
 
@@ -76,6 +83,7 @@ class _BudgetAppState extends State<BudgetApp> {
     if (widget.themeCubit == null) _themeCubit.close();
     _categoryCubit?.close();
     _expenseCubit?.close();
+    _incomeCubit?.close();
     _consultantCubit?.close();
     _accountCubit.close();
     super.dispose();
@@ -100,6 +108,7 @@ class _BudgetAppState extends State<BudgetApp> {
       BlocProvider<AccountCubit>.value(value: _accountCubit),
       if (_categoryCubit != null) BlocProvider<CategoryCubit>.value(value: _categoryCubit),
       if (_expenseCubit != null) BlocProvider<ExpenseCubit>.value(value: _expenseCubit),
+      if (_incomeCubit != null) BlocProvider<IncomeCubit>.value(value: _incomeCubit),
       if (_consultantCubit != null) BlocProvider<ConsultantCubit>.value(value: _consultantCubit),
     ];
 

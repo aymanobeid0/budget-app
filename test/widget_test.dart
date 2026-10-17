@@ -27,12 +27,12 @@ void main() {
 
   tearDown(() => db.close());
 
-  testWidgets('shell shows Home, Consultant and Profile tabs plus the add button and starts on Expenses', (tester) async {
+  testWidgets('shell shows Home, Income, Consultant and Profile tabs plus the add button and starts on Expenses', (tester) async {
     await tester.pumpWidget(BudgetApp(categoryStore: store, expenseLedger: ledger));
     await tester.pumpAndSettle();
 
     expect(find.byType(AppNavBar), findsOneWidget);
-    for (final label in ['Expenses', 'Consultant', 'Settings']) {
+    for (final label in ['Expenses', 'Income', 'Consultant', 'Settings']) {
       expect(find.byKey(Key('nav-${label.toLowerCase()}')), findsOneWidget);
     }
     expect(find.byKey(const Key('nav-categories')), findsNothing);

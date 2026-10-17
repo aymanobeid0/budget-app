@@ -14,6 +14,7 @@ import 'features/account/data/account_prefs.dart';
 import 'features/account/data/auth_gateway.dart';
 import 'features/categories/category_store.dart';
 import 'features/expenses/expense_ledger.dart';
+import 'features/income/income_ledger.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -44,6 +45,11 @@ Future<void> main() async {
     canSeedDefaults: accountService?.canSeedDefaults,
   );
   final expenseLedger = ExpenseLedger(db, syncEngine: syncEngine);
+  final incomeLedger = IncomeLedger(
+    db,
+    syncEngine: syncEngine,
+    canSeedDefaults: accountService?.canSeedDefaults,
+  );
 
   // Light by default; a saved choice from a previous launch wins.
   final themeStorage = FileThemeStorage();
@@ -55,6 +61,7 @@ Future<void> main() async {
   runApp(BudgetApp(
     categoryStore: categoryStore,
     expenseLedger: expenseLedger,
+    incomeLedger: incomeLedger,
     syncEngine: syncEngine,
     themeCubit: themeCubit,
     accountService: accountService,

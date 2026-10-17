@@ -49,13 +49,15 @@ class AppNavBar extends StatelessWidget {
   final ValueChanged<int> onSelect;
   final VoidCallback onAdd;
 
-  // Visual order: Home, [+], Consultant, Profile. Categories live in Profile.
+  // Visual order: Home, Income, [+], Consultant, Profile. Categories live
+  // in Profile.
   static const _left = [
     _NavItem(0, 'expenses', 'Home', Icons.home_outlined, Icons.home_rounded),
+    _NavItem(1, 'income', 'Income', Icons.payments_outlined, Icons.payments_rounded),
   ];
   static const _right = [
-    _NavItem(1, 'consultant', 'Consultant', Icons.auto_awesome_outlined, Icons.auto_awesome),
-    _NavItem(2, 'settings', 'Profile and settings', Icons.person_outline_rounded, Icons.person_rounded),
+    _NavItem(2, 'consultant', 'Consultant', Icons.auto_awesome_outlined, Icons.auto_awesome),
+    _NavItem(3, 'settings', 'Profile and settings', Icons.person_outline_rounded, Icons.person_rounded),
   ];
 
   static const _barHeight = 72.0;
