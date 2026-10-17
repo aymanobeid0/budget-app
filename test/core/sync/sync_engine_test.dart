@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:budget_app/core/database/app_database.dart';
 import 'package:budget_app/core/sync/cloud_sync_client.dart';
 import 'package:budget_app/core/sync/sync_engine.dart';
@@ -9,7 +11,7 @@ class FakeCloudSyncClient implements CloudSyncClient {
   FakeCloudSyncClient({this.userId = 'test_user_123', this.shouldFail = false});
 
   final String? userId;
-  final bool shouldFail;
+  bool shouldFail;
 
   final List<Map<String, dynamic>> upsertedCategories = [];
   final List<Map<String, dynamic>> upsertedExpenses = [];
@@ -60,6 +62,43 @@ class FakeCloudSyncClient implements CloudSyncClient {
 
   @override
   Future<List<Map<String, dynamic>>> fetchIncome() async => [];
+}
+
+/// A timer the test fires by hand, so backoff runs without waiting.
+class FakeTimer implements Timer {
+  FakeTimer(this.delay, this._callback);
+
+  final Duration delay;
+  final void Function() _callback;
+  bool _active = true;
+
+  void fire() {
+    if (!_active) return;
+    _active = false;
+    _callback();
+  }
+
+  @override
+  void cancel() => _active = false;
+
+  @override
+  bool get isActive => _active;
+
+  @override
+  int get tick => 0;
+}
+
+/// Records every retry timer the engine starts.
+class FakeRetryTimers {
+  final List<FakeTimer> started = [];
+
+  Timer call(Duration delay, void Function() callback) {
+    final timer = FakeTimer(delay, callback);
+    started.add(timer);
+    return timer;
+  }
+
+  List<FakeTimer> get pending => started.where((t) => t.isActive).toList();
 }
 
 void main() {
@@ -199,5 +238,98 @@ void main() {
 
     failingEngine.dispose();
   });
-}
 
+  group('retry after an offline or failed sync', () {
+    late FakeRetryTimers timers;
+    late FakeCloudSyncClient cloud;
+    late SyncEngine engine;
+
+    setUp(() {
+      timers = FakeRetryTimers();
+      cloud = FakeCloudSyncClient(shouldFail: true);
+      engine = SyncEngine(db: db, client: cloud, startTimer: timers.call);
+    });
+
+    tearDown(() => engine.dispose());
+
+    Future<void> insertUnsyncedCategory() async {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      await db.raw.insert('categories', {
+        'id': 'cat_offline',
+        'name': 'Coffee',
+        'icon': 'coffee',
+        'color': 0xFF3B82F6,
+        'created_at': now,
+        'updated_at': now,
+        'deleted_at': null,
+        'synced_at': null,
+      });
+    }
+
+    test('an offline sync is retried and succeeds once the cloud is reachable', () async {
+      await insertUnsyncedCategory();
+
+      await engine.sync();
+      expect(engine.currentState, SyncState.error);
+      expect(timers.pending.single.delay, const Duration(seconds: 5));
+
+      cloud.shouldFail = false;
+      timers.pending.single.fire();
+      await engine.idle();
+
+      expect(engine.currentState, SyncState.success);
+      expect(cloud.upsertedCategories.single['id'], 'cat_offline');
+      expect(timers.pending, isEmpty);
+    });
+
+    test('retries back off 5s, 15s, 1 min, then every 5 min', () async {
+      await engine.sync();
+      for (var i = 0; i < 5; i++) {
+        timers.pending.single.fire();
+        await engine.idle();
+      }
+
+      expect(timers.started.map((t) => t.delay), const [
+        Duration(seconds: 5),
+        Duration(seconds: 15),
+        Duration(minutes: 1),
+        Duration(minutes: 5),
+        Duration(minutes: 5),
+        Duration(minutes: 5),
+      ]);
+    });
+
+    test('a successful sync resets the backoff and leaves no retry timer running', () async {
+      await engine.sync();
+      timers.pending.single.fire();
+      await engine.idle();
+      expect(timers.pending.single.delay, const Duration(seconds: 15));
+
+      cloud.shouldFail = false;
+      await engine.sync(); // e.g. after a new Expense
+      expect(engine.currentState, SyncState.success);
+      expect(timers.pending, isEmpty);
+
+      cloud.shouldFail = true;
+      await engine.sync();
+      expect(timers.pending.single.delay, const Duration(seconds: 5));
+    });
+
+    test('no retry runs while background syncs are paused, and retrying resumes after', () async {
+      await engine.sync();
+      engine.paused = true; // an account switch starts
+      expect(timers.pending, isEmpty);
+
+      // The switch's own forced sync fails too: still no retry while paused.
+      await engine.sync(force: true);
+      expect(timers.pending, isEmpty);
+
+      cloud.shouldFail = false;
+      engine.paused = false;
+      expect(timers.pending, hasLength(1));
+      timers.pending.single.fire();
+      await engine.idle();
+      expect(engine.currentState, SyncState.success);
+    });
+  });
+}
