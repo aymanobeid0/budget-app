@@ -89,7 +89,7 @@ void main() {
 
     await ledger.logExpense(expense);
 
-    await Future<void>.delayed(const Duration(milliseconds: 50));
+    await syncEngine.idle(); // the save kicked a background sync
 
     expect(mockClient.upsertExpensesCalls, greaterThanOrEqualTo(1));
   });

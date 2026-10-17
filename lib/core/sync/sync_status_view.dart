@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../core/sync/sync_engine.dart';
-import '../../../core/sync/sync_status.dart';
+import 'sync_engine.dart';
+import 'sync_status.dart';
 
 /// The app's [SyncEngine], or null in a local-only build (no Supabase).
 SyncEngine? maybeSyncEngine(BuildContext context) {
@@ -32,13 +32,15 @@ class SyncStateBuilder extends StatelessWidget {
 /// the account.
 bool syncNeedsAttention(SyncState state) => state == SyncState.offline || state == SyncState.error;
 
-/// One line for Settings saying where the user's data is.
-String syncStateLabel(SyncState state) => switch (state) {
+/// One line saying where the user's data is. [short] drops the "not yet in
+/// your account" tail, for Home's chip.
+String syncStateLabel(SyncState state, {bool short = false}) => switch (state) {
       SyncState.idle => 'Waiting to sync',
       SyncState.syncing => 'Syncing…',
       SyncState.success => 'Synced · your data is in your account',
-      SyncState.offline => 'Offline · saved on this phone, not yet in your account',
-      SyncState.error => "Couldn't sync · saved on this phone, not yet in your account",
+      SyncState.offline || SyncState.error =>
+        '${state == SyncState.offline ? 'Offline' : "Couldn't sync"} · saved on this phone'
+            '${short ? '' : ', not yet in your account'}',
     };
 
 /// Home's quiet "not synced" chip, shown only while [syncNeedsAttention].
@@ -72,7 +74,7 @@ class SyncAttentionIndicator extends StatelessWidget {
                     const SizedBox(width: 6),
                     Flexible(
                       child: Text(
-                        state == SyncState.offline ? 'Offline · saved on this phone' : 'Not synced · saved on this phone',
+                        syncStateLabel(state, short: true),
                         style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
                       ),
                     ),

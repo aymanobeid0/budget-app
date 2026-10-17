@@ -1,22 +1,28 @@
+/// The Currency the user picked in Settings. A display label only: amounts
+/// are never converted.
+enum Currency {
+  mru('MRU', 'Mauritanian ouguiya'),
+  usd('USD', 'US dollar'),
+  eur('EUR', 'Euro'),
+  egp('EGP', 'Egyptian pound'),
+  sar('SAR', 'Saudi riyal');
+
+  const Currency(this.code, this.label);
+
+  /// Shown until the user picks another.
+  static const fallback = Currency.mru;
+
+  /// Shown next to amounts, e.g. "3,980 MRU".
+  final String code;
+
+  /// The full name, shown in the picker, e.g. "US dollar".
+  final String label;
+}
+
 /// Amount formatting for the Calm Ledger UI.
 ///
 /// Amounts are shown in Geist Mono with thousands separators and decimals
 /// only when they carry a value (450 → "450", 1550 minor → "15.50").
-/// The Currency the user picked in Settings. A display label only: amounts
-/// are never converted.
-enum Currency {
-  mru('MRU'),
-  usd('USD'),
-  eur('EUR'),
-  egp('EGP'),
-  sar('SAR');
-
-  const Currency(this.code);
-
-  /// Shown next to amounts, e.g. "3,980 MRU".
-  final String code;
-}
-
 class Money {
   const Money._();
 

@@ -214,6 +214,7 @@ void main() {
   test('handles offline/network failure gracefully, leaving local items queued for future sync', () async {
     final failingClient = FakeCloudSyncClient(shouldFail: true);
     final failingEngine = SyncEngine(db: db, client: failingClient);
+    addTearDown(failingEngine.dispose);
 
     final now = DateTime.now().millisecondsSinceEpoch;
     await db.raw.insert('categories', {
@@ -235,8 +236,6 @@ void main() {
     // Verify local item is still marked as unsynced
     final item = await db.raw.query('categories', where: 'id = ?', whereArgs: ['cat_offline']);
     expect(item.first['synced_at'], isNull);
-
-    failingEngine.dispose();
   });
 
   group('retry after an offline or failed sync', () {
@@ -330,6 +329,31 @@ void main() {
       timers.pending.single.fire();
       await engine.idle();
       expect(engine.currentState, SyncState.success);
+    });
+
+    test('a disposed engine schedules no further sync and throws nothing', () async {
+      final run = engine.sync(); // fails after the screen has gone away
+      engine.dispose();
+
+      final result = await run;
+
+      expect(result.isSuccess, isFalse);
+      expect(timers.started, isEmpty);
+    });
+
+    test('disposing cancels a waiting retry, and a later sync call does nothing', () async {
+      await insertUnsyncedCategory();
+      await engine.sync();
+      expect(timers.pending, hasLength(1));
+
+      engine.dispose();
+      expect(timers.pending, isEmpty);
+
+      cloud.shouldFail = false;
+      final late = await engine.sync(); // e.g. a mutation racing the dispose
+      expect(late.isSuccess, isFalse);
+      expect(cloud.upsertedCategories, isEmpty);
+      expect(timers.pending, isEmpty);
     });
   });
 }

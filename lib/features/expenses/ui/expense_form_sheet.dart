@@ -111,7 +111,7 @@ class ExpenseFormSheet extends StatefulWidget {
     required this.onSave,
     this.onSaveIncome,
     this.onDelete,
-    this.currency = Currency.mru,
+    this.currency = Currency.fallback,
   });
 
   final Expense? expense;

@@ -11,7 +11,7 @@ void main() {
   });
 
   test('a picked Currency is remembered on the device', () async {
-    final storage = InMemoryCurrencyStorage();
+    final storage = CurrencyStorage.inMemory();
     final cubit = CurrencyCubit(storage: storage);
     addTearDown(cubit.close);
 

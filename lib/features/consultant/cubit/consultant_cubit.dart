@@ -18,7 +18,7 @@ class ConsultantCubit extends Cubit<ConsultantState> {
     this.incomeLedger,
     Currency Function()? currency,
     required this.client,
-  })  : _currency = currency ?? (() => Currency.mru),
+  })  : _currency = currency ?? (() => Currency.fallback),
         super(const ConsultantState());
 
   final ExpenseLedger ledger;

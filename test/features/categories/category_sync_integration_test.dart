@@ -77,8 +77,7 @@ void main() {
 
     await store.saveCategory(cat);
 
-    // Give asynchronous unawaited sync microtask a moment to execute
-    await Future<void>.delayed(const Duration(milliseconds: 50));
+    await syncEngine.idle(); // the save kicked a background sync
 
     expect(mockClient.upsertCategoriesCalls, greaterThanOrEqualTo(1));
   });

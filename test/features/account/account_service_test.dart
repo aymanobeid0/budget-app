@@ -177,6 +177,7 @@ class Phone {
     final db = await AppDatabase.open(factory: databaseFactoryFfiNoIsolate, path: '${dir.path}/app.db');
     final auth = FakeAuth(server);
     final engine = SyncEngine(db: db, client: FakeCloud(server, auth));
+    addTearDown(engine.dispose);
     final service = AccountService(
       db: db,
       auth: auth,

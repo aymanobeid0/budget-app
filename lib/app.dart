@@ -45,7 +45,7 @@ class BudgetApp extends StatefulWidget {
   /// Home's Net period. Defaults to this month, kept in memory, when not given.
   final NetPeriodCubit? netPeriodCubit;
 
-  /// The Currency amounts are labelled with. Defaults to MRU, kept in
+  /// The Currency amounts are labelled with. Defaults to `Currency.fallback`, kept in
   /// memory, when not given.
   final CurrencyCubit? currencyCubit;
 

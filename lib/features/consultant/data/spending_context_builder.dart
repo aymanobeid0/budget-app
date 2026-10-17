@@ -19,7 +19,7 @@ class SpendingContextBuilder {
     required List<Category> categories,
     List<Income> income = const [],
     List<IncomeSource> incomeSources = const [],
-    Currency currency = Currency.mru,
+    Currency currency = Currency.fallback,
     DateTime? today,
   }) {
     String money(int minor) => Money.withLabel(minor, currency);

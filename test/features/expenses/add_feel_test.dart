@@ -145,6 +145,23 @@ void main() {
     expect(await fadesOut(tester, find.text('+3,500', skipOffstage: false)), isTrue);
   });
 
+  testWidgets('the last Income leaves above the empty state, as on Home', (tester) async {
+    await pumpApp(tester);
+    await addIncomeOnIncomeTab(tester, '3500');
+    await tester.pumpAndSettle();
+
+    await deleteFromSheet(tester, find.text('+3,500'));
+    final leaving = find.text('+3,500', skipOffstage: false);
+    final empty = find.text('No Income yet', skipOffstage: false);
+    for (var i = 0; i < 120 && empty.evaluate().isEmpty; i++) {
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+
+    expect(leaving, findsOneWidget, reason: 'still fading out when the empty state shows');
+    expect(tester.getTopLeft(leaving).dy, lessThan(tester.getTopLeft(empty).dy));
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('with reduced motion, Expenses appear and vanish without animating', (tester) async {
     await pumpApp(tester, reducedMotion: true);
 

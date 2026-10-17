@@ -70,8 +70,10 @@ class IncomeScreen extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 130),
               children: [
                 header,
+                // Always a child, so the list below keeps its place (and its
+                // leaving rows) when the last Income goes.
                 if (days.isEmpty)
-                  _EmptyIncome(onAdd: () => showExpenseSheet(context, kind: EntryKind.income))
+                  const SizedBox.shrink()
                 else
                   Padding(
                     padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 22, AppSpace.gutter, 0),
@@ -94,6 +96,9 @@ class IncomeScreen extends StatelessWidget {
                       ),
                   ],
                 ]),
+                // After the list, so a deleted last Income leaves above it.
+                if (days.isEmpty)
+                  _EmptyIncome(onAdd: () => showExpenseSheet(context, kind: EntryKind.income)),
               ],
             );
           },

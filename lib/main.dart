@@ -63,17 +63,17 @@ Future<void> main() async {
   );
 
   // This month by default; the period picked last time wins.
-  final netPeriodStorage = FileNetPeriodStorage();
+  final netPeriodStorage = NetPeriodStorage.file();
   final netPeriodCubit = NetPeriodCubit(
     storage: netPeriodStorage,
     initial: await netPeriodStorage.read() ?? NetPeriod.month,
   );
 
-  // MRU by default; the Currency picked last time wins.
-  final currencyStorage = FileCurrencyStorage();
+  // Currency.fallback (MRU) by default; the Currency picked last time wins.
+  final currencyStorage = CurrencyStorage.file();
   final currencyCubit = CurrencyCubit(
     storage: currencyStorage,
-    initial: await currencyStorage.read() ?? Currency.mru,
+    initial: await currencyStorage.read() ?? Currency.fallback,
   );
 
   runApp(BudgetApp(

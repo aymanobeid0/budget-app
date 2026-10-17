@@ -42,7 +42,12 @@ class SyncEngine {
   SyncState get currentState => _currentState;
   Stream<SyncState> get statusStream => _statusController.stream;
 
+  /// Set by [dispose]. A run still in flight then finishes quietly: no
+  /// state events, no retry.
+  bool _disposed = false;
+
   void _setState(SyncState state) {
+    if (_disposed) return;
     _currentState = state;
     _statusController.add(state);
   }
@@ -52,6 +57,7 @@ class SyncEngine {
   void _afterRun(bool succeeded) {
     _retryTimer?.cancel();
     _retryTimer = null;
+    if (_disposed) return;
     if (succeeded) {
       _retryAttempt = 0;
       return;
@@ -62,7 +68,9 @@ class SyncEngine {
 
   void _scheduleRetry() {
     final delay = retryDelays[(_retryAttempt - 1).clamp(0, retryDelays.length - 1)];
-    _retryTimer = startTimer(delay, () => unawaited(sync()));
+    _retryTimer = startTimer(delay, () {
+      if (!_disposed) unawaited(sync());
+    });
   }
 
   Future<SyncResult>? _inFlight;
@@ -77,7 +85,7 @@ class SyncEngine {
     _paused = value;
     _retryTimer?.cancel();
     _retryTimer = null;
-    if (!value && _retryAttempt > 0) _scheduleRetry();
+    if (!value && _retryAttempt > 0 && !_disposed) _scheduleRetry();
   }
 
   /// Executes full two-way synchronization: pushes unsynced local changes,
@@ -85,11 +93,13 @@ class SyncEngine {
   ///
   /// [force] runs even while [paused] (used by the account flow itself).
   Future<SyncResult> sync({bool force = false}) async {
+    if (_disposed) return SyncResult.failure('Sync stopped');
     if (paused && !force) return SyncResult.failure('Sync paused');
     if (force) {
       // A run that started before the caller changed accounts may still be
       // using the old session: let it finish, then start a fresh run.
       await idle();
+      if (_disposed) return SyncResult.failure('Sync stopped');
       return _start();
     }
     return _inFlight ?? _start();
@@ -213,8 +223,13 @@ class SyncEngine {
     return remote.length;
   }
 
+  /// Stops the engine for good: cancels any waiting retry, and later
+  /// [sync] calls (including a timer that already fired) do nothing.
   void dispose() {
+    if (_disposed) return;
+    _disposed = true;
     _retryTimer?.cancel();
+    _retryTimer = null;
     _statusController.close();
   }
 }

@@ -27,7 +27,7 @@ void main() {
     tester.view.physicalSize = const Size(390 * 3, 844 * 3);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
-    final cubit = CurrencyCubit(storage: storage, initial: await storage.read() ?? Currency.mru);
+    final cubit = CurrencyCubit(storage: storage, initial: await storage.read() ?? Currency.fallback);
     addTearDown(cubit.close);
     await tester.pumpWidget(BudgetApp(
       categoryStore: CategoryStore(db),
@@ -51,13 +51,13 @@ void main() {
   }
 
   testWidgets('first launch shows amounts in MRU', (tester) async {
-    await launch(tester, InMemoryCurrencyStorage());
+    await launch(tester, CurrencyStorage.inMemory());
 
     expect(onHome('MRU'), findsWidgets);
   });
 
   testWidgets('picking a Currency in Settings relabels amounts right away', (tester) async {
-    await launch(tester, InMemoryCurrencyStorage());
+    await launch(tester, CurrencyStorage.inMemory());
 
     await pickCurrency(tester, Currency.eur);
     expect(find.descendant(of: find.byKey(const Key('profile-currency-row')), matching: find.text('EUR')),
@@ -76,7 +76,7 @@ void main() {
   });
 
   testWidgets('Income totals use the chosen Currency', (tester) async {
-    await launch(tester, InMemoryCurrencyStorage(Currency.usd));
+    await launch(tester, CurrencyStorage.inMemory(Currency.usd));
     await tester.tap(find.byKey(const Key('add-expense-fab')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('entry-kind-income')));
@@ -94,7 +94,7 @@ void main() {
   });
 
   testWidgets('the chosen Currency survives a restart', (tester) async {
-    final storage = InMemoryCurrencyStorage();
+    final storage = CurrencyStorage.inMemory();
     await launch(tester, storage);
     await pickCurrency(tester, Currency.sar);
 

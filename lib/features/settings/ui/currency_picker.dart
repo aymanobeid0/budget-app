@@ -5,14 +5,6 @@ import '../../../core/format/money.dart';
 import '../../../core/theme/app_theme.dart';
 import '../cubit/currency_cubit.dart';
 
-const _names = {
-  Currency.mru: 'Mauritanian ouguiya',
-  Currency.usd: 'US dollar',
-  Currency.eur: 'Euro',
-  Currency.egp: 'Egyptian pound',
-  Currency.sar: 'Saudi riyal',
-};
-
 /// Lets the user pick the Currency every amount is labelled with. Closes on
 /// a pick.
 Future<void> showCurrencyPicker(BuildContext context) {
@@ -44,7 +36,7 @@ Future<void> showCurrencyPicker(BuildContext context) {
               ListTile(
                 key: Key('currency-option-${c.name}'),
                 title: Text(c.code, style: const TextStyle(fontWeight: FontWeight.w700)),
-                subtitle: Text(_names[c]!),
+                subtitle: Text(c.label),
                 trailing: c == cubit.state ? Icon(Icons.check_rounded, color: scheme.primary) : null,
                 onTap: () {
                   cubit.select(c);

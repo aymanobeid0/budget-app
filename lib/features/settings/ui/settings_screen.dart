@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/sync/sync_engine.dart';
 import '../../../core/sync/sync_status.dart';
+import '../../../core/sync/sync_status_view.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_cubit.dart';
 import '../../../core/theme/theme_toggle_button.dart';
@@ -11,7 +12,6 @@ import '../../../core/theme/widgets.dart';
 import '../../account/ui/account_section.dart';
 import '../cubit/currency_cubit.dart';
 import 'currency_picker.dart';
-import 'sync_health.dart';
 
 /// Profile & settings: avatar header, account actions and preferences as
 /// one menu list.

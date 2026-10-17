@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/format/money.dart';
+import '../../../core/sync/sync_status_view.dart';
 import '../../../core/theme/animated_entries.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/empty_state.dart';
@@ -15,7 +16,6 @@ import '../../categories/ui/category_icon_helper.dart';
 import '../../income/cubit/income_cubit.dart' show maybeIncomeCubit;
 import '../../income/ui/net_card.dart';
 import '../../settings/cubit/currency_cubit.dart';
-import '../../settings/ui/sync_health.dart';
 import '../cubit/expense_cubit.dart';
 import '../cubit/expense_state.dart';
 import '../expense.dart';
