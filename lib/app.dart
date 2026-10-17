@@ -15,6 +15,7 @@ import 'features/consultant/data/consultant_client.dart';
 import 'features/expenses/cubit/expense_cubit.dart';
 import 'features/expenses/expense_ledger.dart';
 import 'features/income/cubit/income_cubit.dart';
+import 'features/income/cubit/net_period_cubit.dart';
 import 'features/income/income_ledger.dart';
 
 class BudgetApp extends StatefulWidget {
@@ -26,6 +27,7 @@ class BudgetApp extends StatefulWidget {
     this.syncEngine,
     this.consultantClient,
     this.themeCubit,
+    this.netPeriodCubit,
     this.accountService,
   });
 
@@ -38,6 +40,9 @@ class BudgetApp extends StatefulWidget {
   /// Light/dark mode. Defaults to light, kept in memory, when not given.
   final ThemeCubit? themeCubit;
 
+  /// Home's Net period. Defaults to this month, kept in memory, when not given.
+  final NetPeriodCubit? netPeriodCubit;
+
   /// Username/password accounts. Null when Supabase isn't configured.
   final AccountService? accountService;
 
@@ -48,6 +53,7 @@ class BudgetApp extends StatefulWidget {
 class _BudgetAppState extends State<BudgetApp> {
   late final _router = buildRouter();
   late final ThemeCubit _themeCubit = widget.themeCubit ?? ThemeCubit();
+  late final NetPeriodCubit _netPeriodCubit = widget.netPeriodCubit ?? NetPeriodCubit();
 
   late final CategoryCubit? _categoryCubit =
       widget.categoryStore == null ? null : (CategoryCubit(widget.categoryStore!)..load());
@@ -81,6 +87,7 @@ class _BudgetAppState extends State<BudgetApp> {
   @override
   void dispose() {
     if (widget.themeCubit == null) _themeCubit.close();
+    if (widget.netPeriodCubit == null) _netPeriodCubit.close();
     _categoryCubit?.close();
     _expenseCubit?.close();
     _incomeCubit?.close();
@@ -105,6 +112,7 @@ class _BudgetAppState extends State<BudgetApp> {
 
     final providers = <BlocProvider>[
       BlocProvider<ThemeCubit>.value(value: _themeCubit),
+      BlocProvider<NetPeriodCubit>.value(value: _netPeriodCubit),
       BlocProvider<AccountCubit>.value(value: _accountCubit),
       if (_categoryCubit != null) BlocProvider<CategoryCubit>.value(value: _categoryCubit),
       if (_expenseCubit != null) BlocProvider<ExpenseCubit>.value(value: _expenseCubit),

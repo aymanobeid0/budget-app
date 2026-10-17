@@ -37,7 +37,7 @@ I can log Income the same quick way I log an Expense: I open the Add sheet, flip
 23. As a user, I want Home to show my Net (Income minus Expenses), so that I see at a glance whether I'm ahead or behind.
 24. As a user, I want to switch the Net between this week, this month and all time, so that I can look at the period I care about.
 25. As a user, I want Home to open on this month the first time, and on the period I last picked after that, so that it shows what I usually look at.
-26. As a user, I want "this week" to start on Saturday, so that it matches my work week.
+26. As a user, I want "this week" to start on Monday, so that it matches my work week.
 27. As a user, I want a negative Net to look clearly different from a positive one, so that overspending stands out.
 28. As a user, I want the Net to show in my configured Currency, so that it matches the rest of the app.
 29. As a user, I want the Net to update immediately when I add, edit or delete an Income or Expense, so that the number is always current.
@@ -59,7 +59,7 @@ I can log Income the same quick way I log an Expense: I open the Add sheet, flip
 - **Local schema**: two new SQLite tables (income sources, income), with an index on the paid-on date. This is the first schema upgrade, so the database version goes from 1 to 2 with an upgrade step that creates the new tables, and fresh installs create everything.
 - **Cloud schema**: a new Supabase migration adds income source and income tables mirroring the categories and expenses tables, scoped by user id with row-level security matching the per-user rules already in place.
 - **Sync**: the Sync Engine and the cloud sync client gain push/pull for income sources (before income, as categories go before expenses), following the existing unsynced-rows and last-write-wins rules. Guest-to-account migration and account switching include the new tables.
-- **Net calculation**: a pure function taking Income, Expenses, a period (week/month/all time), "today" and a week-start day (Saturday), returning total income, total expenses and Net in minor units. Calendar boundaries use local calendar dates, matching how paid-on and spent-on dates are stored.
+- **Net calculation**: a pure function taking Income, Expenses, a period (week/month/all time), "today" and a week-start day (Monday), returning total income, total expenses and Net in minor units. Calendar boundaries use local calendar dates, matching how paid-on and spent-on dates are stored.
 - **Net period preference** is stored locally on the device with the other local prefs; the default is month.
 - **Add sheet**: the existing expense sheet gains an Expense / Income switch. In Income mode the category picker is replaced by an Income Source picker; amount pad and date picker are shared. The sheet opens on the last mode used.
 - **Navigation**: Home, Income, [+], Consultant, Profile. Categories and Income Sources management move into Profile. The + button opens the Add sheet from every tab.
@@ -73,7 +73,7 @@ I can log Income the same quick way I log an Expense: I open the Add sheet, flip
 - **Income Ledger**: tested against an in-memory SQLite database (sqflite ffi) like the existing expense ledger and category store tests. Covers log/edit/delete, ordering, preset seeding and the no-seed guard, source soft delete keeping past Income, and that deleted sources still resolve by id.
 - **Income sync**: an integration test with a fake cloud sync client, like the existing expense and category sync integration tests. Covers push of unsynced Income and sources, sources pushed before income, pull, and soft deletes propagating.
 - **Database upgrade**: extend the database test to open a version-1 database with data, upgrade to version 2, and check existing Expenses and Categories survive alongside empty income tables.
-- **Net calculation**: plain unit tests with fixed "today" dates covering Saturday week boundaries, month boundaries, all time, negative Net, and deleted entries excluded.
+- **Net calculation**: plain unit tests with fixed "today" dates covering Monday week boundaries, month boundaries, all time, negative Net, and deleted entries excluded.
 - **Add sheet switch**: one widget test, like the existing expenses screen test: switch to Income, enter an amount, pick a source, save, and see the Income in the ledger.
 - **Consultant context**: extend the spending context builder test to check the income section appears, and that it reads correctly with no Income.
 
@@ -90,5 +90,5 @@ I can log Income the same quick way I log an Expense: I open the Add sheet, flip
 ## Further Notes
 
 - Design was settled in the grilling session on 2026-10-17; see ADR 0006 and the glossary terms Income, Income Source and Net.
-- The week start (Saturday) was recommended but not yet confirmed on its card; it's one constant in the Net calculation.
+- The week start is Monday (confirmed by the user on 2026-10-17, replacing the earlier Saturday recommendation); it's one constant in the Net calculation.
 - This spec builds on the existing tickets in `.scratch/personal-expense-tracker/`; issue 04 (Supabase sync and anonymous auth) and issue 06 (currency and settings) are the closest prior art.

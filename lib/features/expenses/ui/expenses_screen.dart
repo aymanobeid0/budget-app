@@ -10,6 +10,8 @@ import '../../categories/category.dart';
 import '../../categories/cubit/category_cubit.dart';
 import '../../categories/cubit/category_state.dart';
 import '../../categories/ui/category_icon_helper.dart';
+import '../../income/cubit/income_cubit.dart';
+import '../../income/ui/net_card.dart';
 import '../cubit/expense_cubit.dart';
 import '../cubit/expense_state.dart';
 import '../expense.dart';
@@ -36,6 +38,7 @@ class ExpensesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final router = GoRouter.maybeOf(context);
+    final hasIncome = _hasIncome(context);
 
     return Scaffold(
       key: const Key('expenses-screen'),
@@ -80,6 +83,11 @@ class ExpensesScreen extends StatelessWidget {
                       padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 22, AppSpace.gutter, 0),
                       child: _SpentCard(expenses: expenses),
                     ),
+                    if (hasIncome)
+                      const Padding(
+                        padding: EdgeInsets.fromLTRB(AppSpace.gutter, 16, AppSpace.gutter, 0),
+                        child: NetCard(),
+                      ),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 26, AppSpace.gutter, 6),
                       child: Text('Transactions', style: AppType.title.copyWith(color: scheme.onSurface)),
@@ -102,6 +110,16 @@ class ExpensesScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Net needs Income; Home without the income feature (tests) skips it.
+bool _hasIncome(BuildContext context) {
+  try {
+    context.read<IncomeCubit>();
+    return true;
+  } catch (_) {
+    return false;
   }
 }
 

@@ -14,7 +14,9 @@ import 'features/account/data/account_prefs.dart';
 import 'features/account/data/auth_gateway.dart';
 import 'features/categories/category_store.dart';
 import 'features/expenses/expense_ledger.dart';
+import 'features/income/cubit/net_period_cubit.dart';
 import 'features/income/income_ledger.dart';
+import 'features/income/net.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -58,12 +60,20 @@ Future<void> main() async {
     initial: await themeStorage.read() ?? ThemeMode.light,
   );
 
+  // This month by default; the period picked last time wins.
+  final netPeriodStorage = FileNetPeriodStorage();
+  final netPeriodCubit = NetPeriodCubit(
+    storage: netPeriodStorage,
+    initial: await netPeriodStorage.read() ?? NetPeriod.month,
+  );
+
   runApp(BudgetApp(
     categoryStore: categoryStore,
     expenseLedger: expenseLedger,
     incomeLedger: incomeLedger,
     syncEngine: syncEngine,
     themeCubit: themeCubit,
+    netPeriodCubit: netPeriodCubit,
     accountService: accountService,
   ));
 }
