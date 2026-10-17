@@ -4,9 +4,11 @@
 
 **Blocked by:** 04: Supabase Cloud Sync & Anonymous Auth Slice, 05: AI Expense Consultant Chat Slice
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Settings view allows selecting default currency formatted throughout the app
-- [ ] Visual indicator shows local-first and Supabase sync health
-- [ ] Smooth transitions, micro-animations, and haptic feedback on adding expenses
-- [ ] Clean empty states with intuitive onboarding callouts
+- [x] Settings view allows selecting default currency formatted throughout the app
+- [x] Visual indicator shows local-first and Supabase sync health
+- [x] Smooth transitions, micro-animations, and haptic feedback on adding expenses
+- [x] Clean empty states with intuitive onboarding callouts
+
+Done through `.scratch/settings-and-polish/` (tickets 01 to 05).
