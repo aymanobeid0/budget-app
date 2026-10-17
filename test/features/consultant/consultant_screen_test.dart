@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:budget_app/core/database/app_database.dart';
+import 'package:budget_app/core/theme/empty_state.dart';
 import 'package:budget_app/features/categories/category_store.dart';
 import 'package:budget_app/features/consultant/cubit/consultant_cubit.dart';
 import 'package:budget_app/features/consultant/data/consultant_client.dart';
@@ -17,11 +18,15 @@ class FakeConsultantClient implements ConsultantClient {
   FakeConsultantClient({
     this.chunks = const ['Your highest spend was on ', 'Food.'],
     this.shouldThrow = false,
+    this.isConfigured = true,
   });
 
   List<String> chunks;
   bool shouldThrow;
   String? lastPrompt;
+
+  @override
+  bool isConfigured;
 
   @override
   Stream<String> streamConsultantResponse({
@@ -85,6 +90,26 @@ void main() {
     expect(find.text('Where did I spend the most?'), findsWidgets);
     expect(find.byKey(const Key('consultant-input-field')), findsOneWidget);
     expect(find.byKey(const Key('consultant-send-btn')), findsOneWidget);
+  });
+
+  testWidgets('before the first message the shared empty state offers the suggested questions', (tester) async {
+    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpAndSettle();
+
+    final empty = find.byType(EmptyState);
+    expect(find.descendant(of: empty, matching: find.text('Where did I spend the most?')), findsOneWidget);
+  });
+
+  testWidgets('without a Gemini key the Consultant says it is off before anything is typed', (tester) async {
+    client.isConfigured = false;
+
+    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpAndSettle();
+
+    final empty = find.byType(EmptyState);
+    expect(find.descendant(of: empty, matching: find.text('The Consultant is off')), findsOneWidget);
+    expect(find.text('Where did I spend the most?'), findsNothing);
+    expect(tester.widget<TextField>(find.byKey(const Key('consultant-input-field'))).enabled, isFalse);
   });
 
   testWidgets('tapping a suggested question sends prompt and renders messages', (tester) async {

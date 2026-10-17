@@ -1,5 +1,6 @@
 import 'package:budget_app/app.dart';
 import 'package:budget_app/core/database/app_database.dart';
+import 'package:budget_app/core/theme/empty_state.dart';
 import 'package:budget_app/features/categories/category_store.dart';
 import 'package:budget_app/features/expenses/expense_ledger.dart';
 import 'package:budget_app/features/expenses/ui/expense_form_sheet.dart';
@@ -39,6 +40,19 @@ void main() {
   }
 
   Finder inSheet(Finder f) => find.descendant(of: find.byType(ExpenseFormSheet), matching: f);
+
+  testWidgets('the Income tab with no Income shows the shared empty state, and its action opens the Add sheet on Income', (tester) async {
+    await pumpApp(tester);
+    await tester.tap(find.byKey(const Key('nav-income')));
+    await tester.pumpAndSettle();
+
+    final empty = find.byType(EmptyState);
+    expect(find.descendant(of: empty, matching: find.text('No Income yet')), findsOneWidget);
+    await tester.tap(find.descendant(of: empty, matching: find.byKey(const Key('add-first-income'))));
+    await tester.pumpAndSettle();
+
+    expect(inSheet(find.text('Income Source')), findsOneWidget);
+  });
 
   testWidgets('switching the Add sheet to Income logs an Income from a picked source', (tester) async {
     await pumpApp(tester);
@@ -135,7 +149,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(await incomeLedger.loadIncome(), isEmpty);
-    expect(find.text('No income yet'), findsOneWidget);
+    expect(find.text('No Income yet'), findsOneWidget);
   });
 
   testWidgets('the Income Source picker follows source changes while the sheet is open', (tester) async {
