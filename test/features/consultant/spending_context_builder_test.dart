@@ -32,7 +32,7 @@ void main() {
         categories: categories,
       );
 
-      expect(contextText, contains('Total recorded expenses: \$0.00'));
+      expect(contextText, contains('Total recorded expenses: 0 MRU'));
       expect(contextText, contains('No expenses recorded yet'));
     });
 
@@ -69,12 +69,12 @@ void main() {
         categories: categories,
       );
 
-      // Total is $50.50
-      expect(contextText, contains('Total recorded expenses: \$50.50'));
-      // Food total is $40.50
-      expect(contextText, contains('Food: \$40.50'));
-      // Transport total is $10.00
-      expect(contextText, contains('Transport: \$10.00'));
+      // Total is 50.50
+      expect(contextText, contains('Total recorded expenses: 50.50 MRU'));
+      // Food total is 40.50
+      expect(contextText, contains('Food: 40.50 MRU'));
+      // Transport total is 10.00
+      expect(contextText, contains('Transport: 10 MRU'));
       // Top category is Food
       expect(contextText, contains('Highest spending category: Food'));
     });
@@ -124,12 +124,15 @@ void main() {
         );
 
         expect(text, contains('[USER INCOME SUMMARY]'));
-        expect(text, contains('Total recorded income: \$2250.00'));
-        expect(text, contains('- Salary: \$2000.00'));
-        expect(text, contains('- Dental clinic: \$250.00'));
-        expect(text, contains('- 2026-10-12: \$250.00 (Dental clinic)'));
-        // October: 1250.00 in, 300.00 out.
-        expect(text, contains('Net this month (income minus expenses): \$950.00'));
+        expect(text, contains('Total recorded income: 2,250 MRU'));
+        expect(text, contains('- Salary: 2,000 MRU'));
+        expect(text, contains('- Dental clinic: 250 MRU'));
+        expect(text, contains('- 2026-10-12: 250 MRU (Dental clinic)'));
+        // October: 1250 in, 300 out.
+        expect(text, contains('Net this month (income minus expenses): 950 MRU'));
+        // Per source and month, so a drop month-on-month is visible.
+        expect(text, contains('- 2026-10: Salary 1,000 MRU, Dental clinic 250 MRU'));
+        expect(text, contains('- 2026-09: Salary 1,000 MRU'));
       });
 
       test('a negative Net is shown with a minus sign', () {
@@ -141,7 +144,7 @@ void main() {
           today: DateTime(2026, 10, 17),
         );
 
-        expect(text, contains('Net this month (income minus expenses): -\$200.00'));
+        expect(text, contains('Net this month (income minus expenses): -200 MRU'));
       });
 
       test('with no Income the section says so and spending is still summarised', () {
@@ -152,7 +155,7 @@ void main() {
           today: DateTime(2026, 10, 17),
         );
 
-        expect(text, contains('Total recorded expenses: \$300.00'));
+        expect(text, contains('Total recorded expenses: 300 MRU'));
         expect(text, contains('[USER INCOME SUMMARY]'));
         expect(text, contains('No income recorded yet'));
         expect(text, isNot(contains('Net this month')));

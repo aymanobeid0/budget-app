@@ -88,6 +88,8 @@ class AccountCubit extends Cubit<AccountState> {
 
   Future<int> localExpenseCount() async => await _service?.localExpenseCount() ?? 0;
 
+  Future<int> localIncomeCount() async => await _service?.localIncomeCount() ?? 0;
+
   /// Returns null on success, or an error message for the form.
   Future<String?> createAccount(String username, String password) =>
       _run(() => _service!.createAccount(username: username, password: password));

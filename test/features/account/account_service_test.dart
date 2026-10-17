@@ -468,5 +468,17 @@ void main() {
 
       expect(find.byKey(const Key('guest-data-warning')), findsOneWidget);
     });
+
+    testWidgets('signing in as a guest with only Income also warns', (tester) async {
+      final (phone, _) = await pumpSettings(tester);
+      await tester.runAsync(() => phone.addIncome('g1', 50000));
+
+      await tester.tap(find.byKey(const Key('sign-in-btn')));
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('guest-data-warning')), findsOneWidget);
+      expect(find.textContaining('1 income'), findsOneWidget);
+    });
   });
 }

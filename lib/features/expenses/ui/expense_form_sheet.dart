@@ -37,24 +37,26 @@ class AddSheetMemory {
 }
 
 /// Opens the full-screen add/edit page. Used by the nav bar's add button and
-/// by tapping a transaction. [kind] forces a mode; otherwise a new entry
-/// opens on the mode used last.
+/// by tapping an Expense or Income in a list. [kind] forces a mode;
+/// otherwise a new entry opens on the mode used last.
 Future<void> showExpenseSheet(BuildContext context, {Expense? expense, Income? income, EntryKind? kind}) {
   final categoryState = context.read<CategoryCubit>().state;
   final categories = categoryState is CategoryLoaded ? categoryState.categories : <Category>[];
   final expenseCubit = context.read<ExpenseCubit>();
-  IncomeCubit? incomeCubit;
-  try {
-    incomeCubit = context.read<IncomeCubit>();
-  } catch (_) {
-    incomeCubit = null; // built without the income feature (tests)
-  }
-  final incomeState = incomeCubit?.state;
-  final sources = incomeState is IncomeLoaded ? incomeState.sources : <IncomeSource>[];
+  final incomeCubit = maybeIncomeCubit(context);
 
-  return Navigator.of(context).push(MaterialPageRoute<void>(
-    fullscreenDialog: true,
-    builder: (_) => ExpenseFormSheet(
+  // Sources the picker offers: the active ones, plus a deleted one the edited
+  // Income still points at, so it shows as picked.
+  List<IncomeSource> pickable(IncomeState state) {
+    if (state is! IncomeLoaded) return const [];
+    final current = income == null ? null : state.sourceById[income.sourceId];
+    return [
+      ...state.sources,
+      if (current != null && current.isDeleted) current,
+    ];
+  }
+
+  Widget sheet(List<IncomeSource> sources) => ExpenseFormSheet(
       expense: expense,
       income: income,
       initialKind: kind,
@@ -63,8 +65,8 @@ Future<void> showExpenseSheet(BuildContext context, {Expense? expense, Income? i
       onSaveIncome: incomeCubit == null
           ? null
           : (amountMinor, sourceId, paidOn) => income == null
-              ? incomeCubit!.addIncome(amountMinor: amountMinor, sourceId: sourceId, paidOn: paidOn)
-              : incomeCubit!.updateIncome(income.copyWith(amountMinor: amountMinor, sourceId: sourceId, paidOn: paidOn)),
+              ? incomeCubit.addIncome(amountMinor: amountMinor, sourceId: sourceId, paidOn: paidOn)
+              : incomeCubit.updateIncome(income.copyWith(amountMinor: amountMinor, sourceId: sourceId, paidOn: paidOn)),
       onSave: (amountMinor, categoryId, spentOn) {
         if (expense == null) {
           expenseCubit.addExpense(amountMinor: amountMinor, categoryId: categoryId, spentOn: spentOn);
@@ -77,7 +79,18 @@ Future<void> showExpenseSheet(BuildContext context, {Expense? expense, Income? i
       onDelete: expense != null
           ? () => expenseCubit.deleteExpense(expense.id)
           : (income != null ? () => incomeCubit?.deleteIncome(income.id) : null),
-    ),
+    );
+
+  return Navigator.of(context).push(MaterialPageRoute<void>(
+    fullscreenDialog: true,
+    // Rebuilt as sources load or change, so the picker is never a stale
+    // snapshot (e.g. opened right after launch or an account switch).
+    builder: (_) => incomeCubit == null
+        ? sheet(const [])
+        : BlocBuilder<IncomeCubit, IncomeState>(
+            bloc: incomeCubit,
+            builder: (_, state) => sheet(pickable(state)),
+          ),
   ));
 }
 

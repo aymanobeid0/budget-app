@@ -1,6 +1,6 @@
-import 'dart:math';
-
 import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../../../core/ids.dart';
 
 import '../expense.dart';
 import '../expense_ledger.dart';
@@ -30,7 +30,7 @@ class ExpenseCubit extends Cubit<ExpenseState> {
     required DateTime spentOn,
   }) async {
     try {
-      final id = _generateId();
+      final id = randomId('exp_');
       final now = DateTime.now();
       final expense = Expense(
         id: id,
@@ -73,15 +73,5 @@ class ExpenseCubit extends Cubit<ExpenseState> {
       if (isClosed) return;
       emit(ExpenseError(e.toString()));
     }
-  }
-
-  String _generateId() {
-    final rand = Random();
-    final chars = '0123456789abcdef';
-    final buffer = StringBuffer('exp_');
-    for (var i = 0; i < 16; i++) {
-      buffer.write(chars[rand.nextInt(chars.length)]);
-    }
-    return buffer.toString();
   }
 }

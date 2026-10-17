@@ -68,6 +68,17 @@ void main() {
     expect(inSheet(find.text('Dental clinic')), findsOneWidget);
   });
 
+  testWidgets('Income Sources are also reachable from the Income tab', (tester) async {
+    await pumpApp(tester);
+    await tester.tap(find.byKey(const Key('nav-income')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('income-sources-btn')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('income-sources-screen')), findsOneWidget);
+  });
+
   testWidgets('a deleted source leaves the picker but its past Income keeps its name', (tester) async {
     await incomeLedger.loadSources();
     await pumpApp(tester);

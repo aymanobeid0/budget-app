@@ -1,3 +1,4 @@
+import '../../../core/format/money.dart';
 import '../../categories/category.dart';
 import '../../expenses/expense.dart';
 import '../../income/income.dart';
@@ -23,7 +24,8 @@ class SpendingContextBuilder {
         '${_income(income, incomeSources, expenses, today ?? DateTime.now())}';
   }
 
-  static String _money(int minor) => '${minor < 0 ? '-' : ''}\$${(minor.abs() / 100.0).toStringAsFixed(2)}';
+  /// Amounts in the configured Currency, as the rest of the app shows them.
+  static String _money(int minor) => Money.withLabel(minor);
 
   /// Income totals by source, recent Income and this month's Net, so the
   /// consultant can judge affordability and spot changes in income.
@@ -58,6 +60,20 @@ class SpendingContextBuilder {
     }
     buffer
       ..writeln('')
+      ..writeln('Income by Month and Source (latest 3 months):');
+    final byMonth = <String, Map<String, int>>{};
+    for (final i in recent) {
+      final month = i.paidOnIso.substring(0, 7);
+      final sources = byMonth.putIfAbsent(month, () => {});
+      sources[nameOf(i)] = (sources[nameOf(i)] ?? 0) + i.amountMinor;
+    }
+    for (final month in byMonth.entries.take(3)) {
+      final parts = month.value.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+      buffer.writeln('- ${month.key}: ${parts.map((e) => '${e.key} ${_money(e.value)}').join(', ')}');
+    }
+
+    buffer
+      ..writeln('')
       ..writeln('Recent Income:');
     for (final i in recent.take(10)) {
       buffer.writeln('- ${i.paidOnIso}: ${_money(i.amountMinor)} (${nameOf(i)})');
@@ -69,7 +85,7 @@ class SpendingContextBuilder {
     if (expenses.isEmpty) {
       return '''
 [USER SPENDING SUMMARY]
-Total recorded expenses: \$0.00
+Total recorded expenses: ${_money(0)}
 No expenses recorded yet.
 ''';
     }
@@ -87,8 +103,6 @@ No expenses recorded yet.
       categoryTotalsMinor[catName] = (categoryTotalsMinor[catName] ?? 0) + exp.amountMinor;
     }
 
-    final totalDollars = (totalMinor / 100.0).toStringAsFixed(2);
-
     // Sort categories by highest spend
     final sortedCategories = categoryTotalsMinor.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
@@ -97,15 +111,14 @@ No expenses recorded yet.
 
     final buffer = StringBuffer()
       ..writeln('[USER SPENDING SUMMARY]')
-      ..writeln('Total recorded expenses: \$$totalDollars')
+      ..writeln('Total recorded expenses: ${_money(totalMinor)}')
       ..writeln('Highest spending category: $highestCategory')
       ..writeln('')
       ..writeln('Category Breakdown:');
 
     for (final entry in sortedCategories) {
-      final amount = (entry.value / 100.0).toStringAsFixed(2);
       final pct = totalMinor > 0 ? ((entry.value / totalMinor) * 100).toStringAsFixed(1) : '0.0';
-      buffer.writeln('- ${entry.key}: \$$amount ($pct%)');
+      buffer.writeln('- ${entry.key}: ${_money(entry.value)} ($pct%)');
     }
 
     buffer
@@ -114,8 +127,7 @@ No expenses recorded yet.
 
     for (final exp in recentExpenses.take(10)) {
       final cat = categoryMap[exp.categoryId] ?? 'Uncategorized';
-      final amount = (exp.amountMinor / 100.0).toStringAsFixed(2);
-      buffer.writeln('- ${exp.spentOnIso}: \$$amount ($cat)');
+      buffer.writeln('- ${exp.spentOnIso}: ${_money(exp.amountMinor)} ($cat)');
     }
 
     return buffer.toString();

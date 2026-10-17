@@ -91,9 +91,12 @@ class SyncEngine {
       }
 
       _setState(SyncState.success);
+      int synced(String table) => pushed[table]! + pulled[table]!;
       return SyncResult.success(
-        categories: pushed['categories']! + pulled['categories']!,
-        expenses: pushed['expenses']! + pulled['expenses']!,
+        categories: synced('categories'),
+        expenses: synced('expenses'),
+        incomeSources: synced('income_sources'),
+        income: synced('income'),
       );
     } catch (e, st) {
       debugPrint('SyncEngine error: $e\n$st');

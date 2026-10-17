@@ -10,7 +10,7 @@ import '../../categories/category.dart';
 import '../../categories/cubit/category_cubit.dart';
 import '../../categories/cubit/category_state.dart';
 import '../../categories/ui/category_icon_helper.dart';
-import '../../income/cubit/income_cubit.dart';
+import '../../income/cubit/income_cubit.dart' show maybeIncomeCubit;
 import '../../income/ui/net_card.dart';
 import '../cubit/expense_cubit.dart';
 import '../cubit/expense_state.dart';
@@ -38,7 +38,8 @@ class ExpensesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final router = GoRouter.maybeOf(context);
-    final hasIncome = _hasIncome(context);
+    // Net needs Income; Home without the income feature (tests) skips it.
+    final hasIncome = maybeIncomeCubit(context) != null;
 
     return Scaffold(
       key: const Key('expenses-screen'),
@@ -110,16 +111,6 @@ class ExpensesScreen extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-/// Net needs Income; Home without the income feature (tests) skips it.
-bool _hasIncome(BuildContext context) {
-  try {
-    context.read<IncomeCubit>();
-    return true;
-  } catch (_) {
-    return false;
   }
 }
 

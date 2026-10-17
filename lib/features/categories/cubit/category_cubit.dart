@@ -1,6 +1,6 @@
-import 'dart:math';
-
 import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../../../core/ids.dart';
 
 import '../category.dart';
 import '../category_store.dart';
@@ -30,7 +30,7 @@ class CategoryCubit extends Cubit<CategoryState> {
     required int color,
   }) async {
     try {
-      final id = _generateId();
+      final id = randomId('cat_');
       final now = DateTime.now();
       final category = Category(
         id: id,
@@ -73,15 +73,5 @@ class CategoryCubit extends Cubit<CategoryState> {
       if (isClosed) return;
       emit(CategoryError(e.toString()));
     }
-  }
-
-  String _generateId() {
-    final rand = Random();
-    final chars = '0123456789abcdef';
-    final buffer = StringBuffer('cat_');
-    for (var i = 0; i < 16; i++) {
-      buffer.write(chars[rand.nextInt(chars.length)]);
-    }
-    return buffer.toString();
   }
 }

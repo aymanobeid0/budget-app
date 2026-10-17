@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/format/money.dart';
 import '../../../core/theme/app_theme.dart';
@@ -21,7 +22,16 @@ class IncomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    const header = ScreenHeader(title: 'Income');
+    final router = GoRouter.maybeOf(context);
+    final header = ScreenHeader(
+      title: 'Income',
+      trailing: SquareIconButton(
+        key: const Key('income-sources-btn'),
+        icon: Icons.tune_rounded,
+        tooltip: 'Income Sources',
+        onTap: router == null ? null : () => router.go('/settings/income-sources'),
+      ),
+    );
 
     return Scaffold(
       key: const Key('income-screen'),
@@ -42,10 +52,10 @@ class IncomeScreen extends StatelessWidget {
               );
             }
             if (state is! IncomeLoaded) {
-              return const Column(
+              return Column(
                 children: [
                   header,
-                  Expanded(child: Center(child: CircularProgressIndicator())),
+                  const Expanded(child: Center(child: CircularProgressIndicator())),
                 ],
               );
             }

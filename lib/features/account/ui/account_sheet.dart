@@ -39,8 +39,15 @@ class _AccountSheetState extends State<AccountSheet> {
   String? _passwordError;
   String? _confirmError;
   int _guestExpenses = 0;
+  int _guestIncome = 0;
 
   bool get _isCreate => _mode == AccountSheetMode.create;
+
+  /// "3 expenses and 1 income": what a sign-in would replace.
+  String _guestEntries() => [
+        if (_guestExpenses > 0) '$_guestExpenses ${_guestExpenses == 1 ? 'expense' : 'expenses'}',
+        if (_guestIncome > 0) '$_guestIncome income',
+      ].join(' and ');
 
   @override
   void initState() {
@@ -49,6 +56,9 @@ class _AccountSheetState extends State<AccountSheet> {
     if (cubit.state.status == AccountStatus.guest) {
       cubit.localExpenseCount().then((n) {
         if (mounted) setState(() => _guestExpenses = n);
+      });
+      cubit.localIncomeCount().then((n) {
+        if (mounted) setState(() => _guestIncome = n);
       });
     }
   }
@@ -141,13 +151,13 @@ class _AccountSheetState extends State<AccountSheet> {
             Text(subtitle, style: TextStyle(fontSize: 14, height: 1.4, color: scheme.onSurfaceVariant)),
             const SizedBox(height: AppSpace.lg),
 
-            if (!_isCreate && signedInAs == null && _guestExpenses > 0) ...[
+            if (!_isCreate && signedInAs == null && (_guestExpenses > 0 || _guestIncome > 0)) ...[
               _Callout(
                 key: const Key('guest-data-warning'),
                 icon: Icons.warning_amber_rounded,
                 color: AppColors.expense,
                 background: isDark ? const Color(0xFF3A1F1C) : AppColors.expenseContainer,
-                text: '$_guestExpenses ${_guestExpenses == 1 ? 'expense' : 'expenses'} on this phone '
+                text: '${_guestEntries()} on this phone '
                     "aren't in an account and will be replaced. To keep them, create an account instead.",
               ),
               const SizedBox(height: AppSpace.lg),

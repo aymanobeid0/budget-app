@@ -88,8 +88,10 @@ void main() {
     await ledger.loadSources();
     await ledger.logIncome(income('i1', 350000));
 
-    await engine.sync();
+    final result = await engine.sync();
 
+    expect(result.incomeSynced, 1);
+    expect(result.incomeSourcesSynced, 3);
     expect(cloud.calls.indexOf('push income sources'), lessThan(cloud.calls.indexOf('push income')));
     expect(cloud.pushedSources.map((r) => r['name']), containsAll(<String>['Salary', 'Freelance', 'Other']));
     final row = cloud.pushedIncome.single;

@@ -1,11 +1,21 @@
-import 'dart:math';
-
+import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/ids.dart';
 import '../income.dart';
 import '../income_ledger.dart';
 import '../income_source.dart';
 import 'income_state.dart';
+
+/// The [IncomeCubit] above [context], or null when the app runs without the
+/// income feature (screens shared with expenses, tests).
+IncomeCubit? maybeIncomeCubit(BuildContext context) {
+  try {
+    return context.read<IncomeCubit>();
+  } catch (_) {
+    return null;
+  }
+}
 
 /// Income tab state, read from the Income Ledger.
 class IncomeCubit extends Cubit<IncomeState> {
@@ -26,7 +36,7 @@ class IncomeCubit extends Cubit<IncomeState> {
   }) async {
     final now = DateTime.now();
     await _guard(() => _ledger.logIncome(Income(
-          id: _generateId('inc_'),
+          id: randomId('inc_'),
           amountMinor: amountMinor,
           sourceId: sourceId,
           paidOn: paidOn,
@@ -43,7 +53,7 @@ class IncomeCubit extends Cubit<IncomeState> {
   Future<void> addSource({required String name, required String icon, required int color}) {
     final now = DateTime.now();
     return _guard(() => _ledger.saveSource(IncomeSource(
-          id: _generateId('src_'),
+          id: randomId('src_'),
           name: name,
           icon: icon,
           color: color,
@@ -81,15 +91,5 @@ class IncomeCubit extends Cubit<IncomeState> {
     } catch (e) {
       if (!isClosed) emit(IncomeError(e.toString()));
     }
-  }
-
-  String _generateId(String prefix) {
-    final rand = Random();
-    const chars = '0123456789abcdef';
-    final buffer = StringBuffer(prefix);
-    for (var i = 0; i < 16; i++) {
-      buffer.write(chars[rand.nextInt(chars.length)]);
-    }
-    return buffer.toString();
   }
 }

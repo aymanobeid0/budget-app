@@ -94,6 +94,6 @@ void main() {
     expect(cubit.state.messages[1].isStreaming, isFalse);
 
     // Verify context summary had the expense
-    expect(client.lastContextSummary, contains('Food: \$50.00'));
+    expect(client.lastContextSummary, contains('Food: 50 MRU'));
   });
 }

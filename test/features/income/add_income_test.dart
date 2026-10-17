@@ -3,7 +3,9 @@ import 'package:budget_app/core/database/app_database.dart';
 import 'package:budget_app/features/categories/category_store.dart';
 import 'package:budget_app/features/expenses/expense_ledger.dart';
 import 'package:budget_app/features/expenses/ui/expense_form_sheet.dart';
+import 'package:budget_app/features/income/cubit/income_cubit.dart';
 import 'package:budget_app/features/income/income_ledger.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -134,5 +136,43 @@ void main() {
 
     expect(await incomeLedger.loadIncome(), isEmpty);
     expect(find.text('No income yet'), findsOneWidget);
+  });
+
+  testWidgets('the Income Source picker follows source changes while the sheet is open', (tester) async {
+    await pumpApp(tester);
+    await tester.tap(find.byKey(const Key('add-expense-fab')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('entry-kind-income')));
+    await tester.pumpAndSettle();
+
+    final cubit = tester.element(find.byType(ExpenseFormSheet)).read<IncomeCubit>();
+    await tester.runAsync(() => cubit.addSource(name: 'Dental clinic', icon: 'work', color: 0xFF0F766E));
+    await tester.pumpAndSettle();
+
+    expect(inSheet(find.text('Dental clinic')), findsOneWidget);
+  });
+
+  testWidgets('editing Income from a deleted source still shows that source picked', (tester) async {
+    await pumpApp(tester);
+    await tester.tap(find.byKey(const Key('add-expense-fab')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('entry-kind-income')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('expense-amount-field')), '75');
+    await tester.tap(inSheet(find.text('Freelance')));
+    await tester.tap(find.byKey(const Key('save-expense-btn')));
+    await tester.pumpAndSettle();
+
+    final cubit = tester.element(find.byType(MaterialApp).first).read<IncomeCubit>();
+    await tester.runAsync(() => cubit.deleteSource('src_freelance'));
+    await tester.tap(find.byKey(const Key('nav-income')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Freelance'));
+    await tester.pumpAndSettle();
+
+    expect(inSheet(find.text('Freelance')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('save-expense-btn')));
+    await tester.pumpAndSettle();
+    expect((await incomeLedger.loadIncome()).single.sourceId, 'src_freelance');
   });
 }

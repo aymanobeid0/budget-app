@@ -86,8 +86,12 @@ class AccountService {
     _prefs = await _prefsStorage.read();
   }
 
-  Future<int> localExpenseCount() async {
-    final rows = await _db.raw.rawQuery('SELECT COUNT(*) AS n FROM expenses WHERE deleted_at IS NULL');
+  Future<int> localExpenseCount() => _countActive('expenses');
+
+  Future<int> localIncomeCount() => _countActive('income');
+
+  Future<int> _countActive(String table) async {
+    final rows = await _db.raw.rawQuery('SELECT COUNT(*) AS n FROM $table WHERE deleted_at IS NULL');
     return (rows.first['n'] as int?) ?? 0;
   }
 
