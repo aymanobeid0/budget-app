@@ -7,6 +7,7 @@ import 'package:budget_app/features/expenses/expense_ledger.dart';
 import 'package:budget_app/features/categories/ui/category_icon_helper.dart';
 import 'package:budget_app/features/expenses/ui/expense_form_sheet.dart';
 import 'package:budget_app/features/expenses/ui/expenses_screen.dart';
+import 'package:budget_app/features/settings/cubit/currency_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -47,6 +48,7 @@ void main() {
           BlocProvider<CategoryCubit>.value(value: categoryCubit),
           BlocProvider<ExpenseCubit>.value(value: expenseCubit),
           BlocProvider<ThemeCubit>(create: (_) => ThemeCubit()),
+          BlocProvider<CurrencyCubit>(create: (_) => CurrencyCubit()),
         ],
         child: const ExpensesScreen(),
       ),

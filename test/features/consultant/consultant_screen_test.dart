@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:budget_app/core/database/app_database.dart';
+import 'package:budget_app/core/format/money.dart';
 import 'package:budget_app/features/categories/category_store.dart';
 import 'package:budget_app/features/consultant/cubit/consultant_cubit.dart';
 import 'package:budget_app/features/consultant/data/consultant_client.dart';
@@ -27,6 +28,7 @@ class FakeConsultantClient implements ConsultantClient {
   Stream<String> streamConsultantResponse({
     required String prompt,
     required String contextSummary,
+    required Currency currency,
     List<ChatMessage> conversationHistory = const [],
   }) async* {
     lastPrompt = prompt;

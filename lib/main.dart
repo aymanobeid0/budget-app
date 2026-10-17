@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'app.dart';
 import 'core/config/app_config.dart';
 import 'core/database/open_app_database.dart';
+import 'core/format/money.dart';
 import 'core/network/supabase_bootstrap.dart';
 import 'core/sync/cloud_sync_client.dart';
 import 'core/sync/sync_engine.dart';
@@ -17,6 +18,7 @@ import 'features/expenses/expense_ledger.dart';
 import 'features/income/cubit/net_period_cubit.dart';
 import 'features/income/income_ledger.dart';
 import 'features/income/net.dart';
+import 'features/settings/cubit/currency_cubit.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -67,6 +69,13 @@ Future<void> main() async {
     initial: await netPeriodStorage.read() ?? NetPeriod.month,
   );
 
+  // MRU by default; the Currency picked last time wins.
+  final currencyStorage = FileCurrencyStorage();
+  final currencyCubit = CurrencyCubit(
+    storage: currencyStorage,
+    initial: await currencyStorage.read() ?? Currency.mru,
+  );
+
   runApp(BudgetApp(
     categoryStore: categoryStore,
     expenseLedger: expenseLedger,
@@ -74,6 +83,7 @@ Future<void> main() async {
     syncEngine: syncEngine,
     themeCubit: themeCubit,
     netPeriodCubit: netPeriodCubit,
+    currencyCubit: currencyCubit,
     accountService: accountService,
   ));
 }

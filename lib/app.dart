@@ -17,6 +17,7 @@ import 'features/expenses/expense_ledger.dart';
 import 'features/income/cubit/income_cubit.dart';
 import 'features/income/cubit/net_period_cubit.dart';
 import 'features/income/income_ledger.dart';
+import 'features/settings/cubit/currency_cubit.dart';
 
 class BudgetApp extends StatefulWidget {
   const BudgetApp({
@@ -28,6 +29,7 @@ class BudgetApp extends StatefulWidget {
     this.consultantClient,
     this.themeCubit,
     this.netPeriodCubit,
+    this.currencyCubit,
     this.accountService,
   });
 
@@ -43,6 +45,10 @@ class BudgetApp extends StatefulWidget {
   /// Home's Net period. Defaults to this month, kept in memory, when not given.
   final NetPeriodCubit? netPeriodCubit;
 
+  /// The Currency amounts are labelled with. Defaults to MRU, kept in
+  /// memory, when not given.
+  final CurrencyCubit? currencyCubit;
+
   /// Username/password accounts. Null when Supabase isn't configured.
   final AccountService? accountService;
 
@@ -54,6 +60,7 @@ class _BudgetAppState extends State<BudgetApp> {
   late final _router = buildRouter();
   late final ThemeCubit _themeCubit = widget.themeCubit ?? ThemeCubit();
   late final NetPeriodCubit _netPeriodCubit = widget.netPeriodCubit ?? NetPeriodCubit();
+  late final CurrencyCubit _currencyCubit = widget.currencyCubit ?? CurrencyCubit();
 
   late final CategoryCubit? _categoryCubit =
       widget.categoryStore == null ? null : (CategoryCubit(widget.categoryStore!)..load());
@@ -67,6 +74,7 @@ class _BudgetAppState extends State<BudgetApp> {
               ledger: widget.expenseLedger!,
               categoryStore: widget.categoryStore!,
               incomeLedger: widget.incomeLedger,
+              currency: () => _currencyCubit.state,
               client: widget.consultantClient ??
                   GeminiConsultantClient(apiKey: AppConfig.geminiApiKey),
             )
@@ -89,6 +97,7 @@ class _BudgetAppState extends State<BudgetApp> {
   void dispose() {
     if (widget.themeCubit == null) _themeCubit.close();
     if (widget.netPeriodCubit == null) _netPeriodCubit.close();
+    if (widget.currencyCubit == null) _currencyCubit.close();
     _categoryCubit?.close();
     _expenseCubit?.close();
     _incomeCubit?.close();
@@ -114,6 +123,7 @@ class _BudgetAppState extends State<BudgetApp> {
     final providers = <BlocProvider>[
       BlocProvider<ThemeCubit>.value(value: _themeCubit),
       BlocProvider<NetPeriodCubit>.value(value: _netPeriodCubit),
+      BlocProvider<CurrencyCubit>.value(value: _currencyCubit),
       BlocProvider<AccountCubit>.value(value: _accountCubit),
       if (_categoryCubit != null) BlocProvider<CategoryCubit>.value(value: _categoryCubit),
       if (_expenseCubit != null) BlocProvider<ExpenseCubit>.value(value: _expenseCubit),

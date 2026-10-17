@@ -12,6 +12,7 @@ import '../../categories/ui/category_icon_helper.dart';
 import '../../income/cubit/income_cubit.dart';
 import '../../income/cubit/income_state.dart';
 import '../../income/income_source.dart';
+import '../../settings/cubit/currency_cubit.dart';
 import '../cubit/expense_cubit.dart';
 import '../expense.dart';
 import '../../income/income.dart';
@@ -44,6 +45,7 @@ Future<void> showExpenseSheet(BuildContext context, {Expense? expense, Income? i
   final categories = categoryState is CategoryLoaded ? categoryState.categories : <Category>[];
   final expenseCubit = context.read<ExpenseCubit>();
   final incomeCubit = maybeIncomeCubit(context);
+  final currency = context.read<CurrencyCubit>().state;
 
   // Sources the picker offers: the active ones, plus a deleted one the edited
   // Income still points at, so it shows as picked.
@@ -62,6 +64,7 @@ Future<void> showExpenseSheet(BuildContext context, {Expense? expense, Income? i
       initialKind: kind,
       categories: categories,
       incomeSources: sources,
+      currency: currency,
       onSaveIncome: incomeCubit == null
           ? null
           : (amountMinor, sourceId, paidOn) => income == null
@@ -108,6 +111,7 @@ class ExpenseFormSheet extends StatefulWidget {
     required this.onSave,
     this.onSaveIncome,
     this.onDelete,
+    this.currency = Currency.mru,
   });
 
   final Expense? expense;
@@ -118,6 +122,9 @@ class ExpenseFormSheet extends StatefulWidget {
   final void Function(int amountMinor, String categoryId, DateTime spentOn) onSave;
   final void Function(int amountMinor, String sourceId, DateTime paidOn)? onSaveIncome;
   final VoidCallback? onDelete;
+
+  /// Labels the amount field.
+  final Currency currency;
 
   @override
   State<ExpenseFormSheet> createState() => _ExpenseFormSheetState();
@@ -224,7 +231,8 @@ class _ExpenseFormSheetState extends State<ExpenseFormSheet> {
     final amountMinor = widget.expense?.amountMinor ?? widget.income?.amountMinor;
     if (amountMinor == null) return;
     final noun = _isIncome ? 'income' : 'expense';
-    if (await confirmDeleteEntry(context, noun: noun, amountMinor: amountMinor) && mounted) {
+    if (await confirmDeleteEntry(context, noun: noun, amountMinor: amountMinor, currency: widget.currency) &&
+        mounted) {
       widget.onDelete?.call();
       Navigator.of(context).pop();
     }
@@ -323,7 +331,7 @@ class _ExpenseFormSheetState extends State<ExpenseFormSheet> {
                       prefixIcon: Padding(
                         padding: const EdgeInsets.only(left: 16, right: 10),
                         child: Text(
-                          Money.currencyLabel,
+                          widget.currency.code,
                           style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: scheme.onPrimaryContainer),
                         ),
                       ),

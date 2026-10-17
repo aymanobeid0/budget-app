@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:budget_app/core/database/app_database.dart';
+import 'package:budget_app/core/format/money.dart';
 import 'package:budget_app/features/categories/category_store.dart';
 import 'package:budget_app/features/consultant/cubit/consultant_cubit.dart';
 import 'package:budget_app/features/consultant/data/consultant_client.dart';
@@ -16,15 +17,18 @@ class FakeConsultantClient implements ConsultantClient {
   final List<String> chunks;
   String? lastPrompt;
   String? lastContextSummary;
+  Currency? lastCurrency;
 
   @override
   Stream<String> streamConsultantResponse({
     required String prompt,
     required String contextSummary,
+    required Currency currency,
     List<ChatMessage> conversationHistory = const [],
   }) async* {
     lastPrompt = prompt;
     lastContextSummary = contextSummary;
+    lastCurrency = currency;
     for (final chunk in chunks) {
       yield chunk;
     }
@@ -95,5 +99,44 @@ void main() {
 
     // Verify context summary had the expense
     expect(client.lastContextSummary, contains('Food: 50 MRU'));
+  });
+
+  test('the consultant is told amounts are in the chosen Currency', () async {
+    var currency = Currency.egp;
+    final cubitWithCurrency = ConsultantCubit(
+      ledger: ledger,
+      categoryStore: store,
+      client: client,
+      currency: () => currency,
+    );
+    addTearDown(cubitWithCurrency.close);
+    await store.loadCategories();
+    await ledger.logExpense(Expense(
+      id: 'e1',
+      amountMinor: 5000,
+      categoryId: 'cat_food',
+      spentOn: DateTime.now(),
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    ));
+
+    await cubitWithCurrency.sendMessage('Where did I spend the most?');
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    expect(client.lastContextSummary, contains('Food: 50 EGP'));
+    expect(client.lastCurrency, Currency.egp);
+
+    currency = Currency.sar;
+    await cubitWithCurrency.sendMessage('And now?');
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    expect(client.lastContextSummary, contains('Food: 50 SAR'));
+    expect(client.lastCurrency, Currency.sar);
+  });
+
+  test('the system prompt names the chosen Currency, not dollars', () {
+    final prompt = consultantSystemInstruction(contextSummary: 'Total recorded expenses: 0 EUR', currency: Currency.eur);
+
+    expect(prompt, contains('EUR'));
+    expect(prompt, contains('25 EUR'));
+    expect(prompt, isNot(contains('\$')));
   });
 }

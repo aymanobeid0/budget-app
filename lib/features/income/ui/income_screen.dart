@@ -7,6 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/widgets.dart';
 import '../../categories/ui/category_icon_helper.dart';
 import '../../expenses/ui/expense_form_sheet.dart';
+import '../../settings/cubit/currency_cubit.dart';
 import '../cubit/income_cubit.dart';
 import '../cubit/income_state.dart';
 import '../income.dart';
@@ -116,7 +117,7 @@ class _TotalCard extends StatelessWidget {
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
-            child: Text(Money.withLabel(totalMinor), style: AppType.heroAmount.copyWith(color: AppColors.income)),
+            child: Text(Money.withLabel(totalMinor, context.watch<CurrencyCubit>().state), style: AppType.heroAmount.copyWith(color: AppColors.income)),
           ),
         ],
       ),
@@ -151,7 +152,7 @@ class _DayHeader extends StatelessWidget {
             child: Text(_label(), style: AppType.caption.copyWith(color: scheme.onSurfaceVariant)),
           ),
           Text(
-            Money.withLabel(totalMinor),
+            Money.withLabel(totalMinor, context.watch<CurrencyCubit>().state),
             style: AppType.caption.copyWith(color: scheme.onSurfaceVariant, fontFeatures: AppFonts.tabular),
           ),
         ],
