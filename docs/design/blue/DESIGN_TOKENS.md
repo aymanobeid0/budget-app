@@ -18,7 +18,7 @@ The code version of these tokens is `lib/core/theme/tokens.dart`, and `lib/core/
 | `primaryLight` | `#E6EBF8` | `#1A2A5C` | Tinted icon backgrounds, first prompt chip |
 | `onPrimaryMuted` | `#D6DEF7` | — | Secondary text on the blue card |
 | `background` / `surface` | `#FFFFFF` | `#0B1020` / `#141A2E` | Screens |
-| `surfaceSubtle` | `#F3F5FA` | `#1E2640` | Square header buttons, chips, calendar strip, assistant bubbles |
+| `surfaceSubtle` | `#F6F7F9` | `#1E2640` | Rarely used. Icon buttons, chips and panels are **white with a drop shadow**, not grey (see Elevation) |
 | `ink` | `#141A2E` | `#F4F6FB` | Text |
 | `textSecondary` | `#667085` | `#A3ABC2` | Captions, timestamps |
 | `navInactive` | `#A9B0C2` | `#A3ABC2` | Inactive nav icons |
@@ -67,6 +67,8 @@ The app uses **Plus Jakarta Sans**, bundled in `assets/fonts` (SIL OFL). Amounts
 | `heroCard` | `0 14 30` `#042895` at 28% | Spent card |
 | `fab` | `0 10 24` `#042895` at 40% | Add button, send button |
 | `button` | `0 12 26` `#042895` at 32% | Primary buttons |
+| `iconButton` | `0 4 14` ink at 10% + `0 1 3` ink at 8% | Square header buttons, unselected chips (raised, 3D look) |
+| `panel` | `0 6 20` ink at 8% + `0 1 3` ink at 6% | Week strip, prompt cards |
 | `navBar` | `0 −6 24` ink at 6% | Bottom nav |
 
 In dark mode, shadows are dropped and thin borders are used instead.

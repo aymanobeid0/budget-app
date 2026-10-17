@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'theme_cubit.dart';
-import 'tokens.dart';
+import 'widgets.dart';
 
 /// Square sun/moon header button that flips between light and dark mode.
 class ThemeToggleButton extends StatelessWidget {
@@ -16,14 +16,10 @@ class ThemeToggleButton extends StatelessWidget {
 
     return Tooltip(
       message: label,
-      child: Material(
-        color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        child: InkWell(
-          key: const Key('theme-toggle'),
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          onTap: () => context.read<ThemeCubit>().toggle(),
-          child: SizedBox(
+      child: RaisedSurface(
+        inkKey: const Key('theme-toggle'),
+        onTap: () => context.read<ThemeCubit>().toggle(),
+        child: SizedBox(
             width: 44,
             height: 44,
             child: AnimatedSwitcher(
@@ -41,7 +37,6 @@ class ThemeToggleButton extends StatelessWidget {
               ),
             ),
           ),
-        ),
       ),
     );
   }

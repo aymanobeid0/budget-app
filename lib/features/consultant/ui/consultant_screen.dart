@@ -193,7 +193,9 @@ class _ConsultantScreenState extends State<ConsultantScreen> {
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: Material(
-                color: scheme.surfaceContainerHighest,
+                color: raisedColor(context),
+                elevation: raisedElevation(context),
+                shadowColor: raisedShadowColor,
                 borderRadius: BorderRadius.circular(AppRadius.lg),
                 child: InkWell(
                   onTap: () => _handleSend(prompt),
@@ -238,7 +240,7 @@ class _ConsultantScreenState extends State<ConsultantScreen> {
     final bubble = Container(
       padding: EdgeInsets.symmetric(horizontal: 16, vertical: isUser ? 12 : 14),
       decoration: BoxDecoration(
-        color: isUser ? scheme.primary : scheme.surfaceContainerHighest,
+        color: isUser ? scheme.primary : (isDarkOf(context) ? AppColors.darkSurfaceSubtle : const Color(0xFFF7F8FC)),
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(isUser ? 18 : 4),
           topRight: const Radius.circular(18),
@@ -299,7 +301,9 @@ class _ConsultantScreenState extends State<ConsultantScreen> {
           final first = index == 0;
           return Material(
             key: Key('consultant-chip-$index'),
-            color: first ? scheme.primaryContainer : scheme.surfaceContainerHighest,
+            color: first ? scheme.primaryContainer : raisedColor(context),
+            elevation: first ? 0 : raisedElevation(context),
+            shadowColor: raisedShadowColor,
             borderRadius: BorderRadius.circular(10),
             child: InkWell(
               borderRadius: BorderRadius.circular(10),

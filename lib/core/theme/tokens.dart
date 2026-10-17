@@ -245,4 +245,17 @@ class AppShadows {
   ];
 
   static const inkChip = <BoxShadow>[];
+
+  /// White icon buttons, chips and small cards: a soft drop shadow gives
+  /// the raised, 3D look instead of a grey fill.
+  static const iconButton = [
+    BoxShadow(color: Color(0x1A141A2E), blurRadius: 14, offset: Offset(0, 4)),
+    BoxShadow(color: Color(0x14141A2E), blurRadius: 3, offset: Offset(0, 1)),
+  ];
+
+  /// Larger white panels (week strip, prompt cards).
+  static const panel = [
+    BoxShadow(color: Color(0x14141A2E), blurRadius: 20, offset: Offset(0, 6)),
+    BoxShadow(color: Color(0x0F141A2E), blurRadius: 3, offset: Offset(0, 1)),
+  ];
 }

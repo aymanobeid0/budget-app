@@ -34,7 +34,7 @@ class AccountProfileHeader extends StatelessWidget {
                 width: 104,
                 height: 104,
                 decoration: BoxDecoration(
-                  color: signedIn ? scheme.primary : scheme.surfaceContainerHighest,
+                  color: signedIn ? scheme.primary : scheme.primaryContainer,
                   shape: BoxShape.circle,
                 ),
                 alignment: Alignment.center,
@@ -43,7 +43,7 @@ class AccountProfileHeader extends StatelessWidget {
                         name.isEmpty ? '?' : name[0].toUpperCase(),
                         style: const TextStyle(fontSize: 42, fontWeight: FontWeight.w700, color: Colors.white),
                       )
-                    : Icon(Icons.person_rounded, size: 52, color: scheme.onSurfaceVariant),
+                    : Icon(Icons.person_rounded, size: 52, color: scheme.onPrimaryContainer),
               ),
               if (signedIn)
                 Positioned(

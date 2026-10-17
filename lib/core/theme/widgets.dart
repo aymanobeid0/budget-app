@@ -4,6 +4,62 @@ import 'tokens.dart';
 
 bool isDarkOf(BuildContext context) => Theme.of(context).brightness == Brightness.dark;
 
+/// Raised surface for icon buttons, chips and small panels: white with a
+/// soft drop shadow in light mode (no grey fill); a lifted dark tone in dark.
+BoxDecoration raisedDecoration(
+  BuildContext context, {
+  double radius = AppRadius.md,
+  List<BoxShadow> shadow = AppShadows.iconButton,
+  BoxShape shape = BoxShape.rectangle,
+}) {
+  final dark = isDarkOf(context);
+  return BoxDecoration(
+    color: dark ? AppColors.darkSurfaceSubtle : Colors.white,
+    shape: shape,
+    borderRadius: shape == BoxShape.circle ? null : BorderRadius.circular(radius),
+    boxShadow: dark ? null : shadow,
+  );
+}
+
+/// For [Material]-based chips and cards: white, lifted by elevation.
+Color raisedColor(BuildContext context) => isDarkOf(context) ? AppColors.darkSurfaceSubtle : Colors.white;
+double raisedElevation(BuildContext context) => isDarkOf(context) ? 0 : 3;
+const raisedShadowColor = Color(0x66141A2E);
+
+/// [Material] + [InkWell] on top of [raisedDecoration] so taps ripple.
+class RaisedSurface extends StatelessWidget {
+  const RaisedSurface({
+    super.key,
+    required this.child,
+    this.onTap,
+    this.radius = AppRadius.md,
+    this.shadow = AppShadows.iconButton,
+    this.inkKey,
+  });
+
+  final Widget child;
+  final VoidCallback? onTap;
+  final double radius;
+  final List<BoxShadow> shadow;
+  final Key? inkKey;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: raisedDecoration(context, radius: radius, shadow: shadow),
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          key: inkKey,
+          borderRadius: BorderRadius.circular(radius),
+          onTap: onTap,
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
 /// 44px soft-grey square icon button used in every screen header.
 class SquareIconButton extends StatelessWidget {
   const SquareIconButton({
@@ -24,17 +80,12 @@ class SquareIconButton extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Tooltip(
       message: tooltip,
-      child: Material(
-        color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          onTap: onTap,
-          child: SizedBox(
-            width: 44,
-            height: 44,
-            child: Icon(icon, size: 21, color: color ?? scheme.onSurface, semanticLabel: tooltip),
-          ),
+      child: RaisedSurface(
+        onTap: onTap,
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Icon(icon, size: 21, color: color ?? scheme.onSurface, semanticLabel: tooltip),
         ),
       ),
     );

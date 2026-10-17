@@ -260,10 +260,7 @@ class _WeekStrip extends StatelessWidget {
     return Container(
       key: const Key('week-strip'),
       padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(18),
-      ),
+      decoration: raisedDecoration(context, radius: 18, shadow: AppShadows.panel),
       child: Column(
         children: [
           Row(
@@ -357,7 +354,9 @@ class _CategoryChip extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final color = Color(category.color);
     return Material(
-      color: selected ? scheme.primary : scheme.surfaceContainerHighest,
+      color: selected ? scheme.primary : raisedColor(context),
+      elevation: selected ? 0 : raisedElevation(context),
+      shadowColor: raisedShadowColor,
       borderRadius: BorderRadius.circular(AppRadius.md),
       child: InkWell(
         borderRadius: BorderRadius.circular(AppRadius.md),
