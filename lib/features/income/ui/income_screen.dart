@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/format/money.dart';
+import '../../../core/theme/animated_entries.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/empty_state.dart';
 import '../../../core/theme/widgets.dart';
@@ -70,21 +71,28 @@ class IncomeScreen extends StatelessWidget {
                 header,
                 if (days.isEmpty)
                   _EmptyIncome(onAdd: () => showExpenseSheet(context, kind: EntryKind.income))
-                else ...[
+                else
                   Padding(
                     padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 22, AppSpace.gutter, 0),
                     child: _TotalCard(totalMinor: state.totalMinor),
                   ),
+                // Kept while the list is empty, so the first Income animates in too.
+                AnimatedEntries(children: [
                   for (final day in days.entries) ...[
-                    _DayHeader(day: day.value.first.paidOn, totalMinor: dayTotals[day.key]!),
+                    _DayHeader(
+                      key: ValueKey('income-day-${day.key}'),
+                      day: day.value.first.paidOn,
+                      totalMinor: dayTotals[day.key]!,
+                    ),
                     for (final i in day.value)
                       _IncomeRow(
+                        key: ValueKey('income-row-${i.id}'),
                         income: i,
                         source: sources[i.sourceId],
                         onTap: () => showExpenseSheet(context, income: i),
                       ),
                   ],
-                ],
+                ]),
               ],
             );
           },
@@ -126,7 +134,7 @@ class _TotalCard extends StatelessWidget {
 }
 
 class _DayHeader extends StatelessWidget {
-  const _DayHeader({required this.day, required this.totalMinor});
+  const _DayHeader({super.key, required this.day, required this.totalMinor});
   final DateTime day;
   final int totalMinor;
 
@@ -162,7 +170,7 @@ class _DayHeader extends StatelessWidget {
 }
 
 class _IncomeRow extends StatelessWidget {
-  const _IncomeRow({required this.income, required this.source, required this.onTap});
+  const _IncomeRow({super.key, required this.income, required this.source, required this.onTap});
 
   final Income income;
   final IncomeSource? source;

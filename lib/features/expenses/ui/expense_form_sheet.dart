@@ -176,6 +176,7 @@ class _ExpenseFormSheetState extends State<ExpenseFormSheet> {
     } else {
       widget.onSave(amountMinor, _categoryId, _date);
     }
+    HapticFeedback.lightImpact();
     Navigator.of(context).pop();
   }
 
