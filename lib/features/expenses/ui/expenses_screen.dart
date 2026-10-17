@@ -13,6 +13,7 @@ import '../../categories/cubit/category_state.dart';
 import '../../categories/ui/category_icon_helper.dart';
 import '../../income/cubit/income_cubit.dart' show maybeIncomeCubit;
 import '../../income/ui/net_card.dart';
+import '../../settings/ui/sync_health.dart';
 import '../cubit/expense_cubit.dart';
 import '../cubit/expense_state.dart';
 import '../expense.dart';
@@ -81,6 +82,7 @@ class ExpensesScreen extends StatelessWidget {
                   padding: const EdgeInsets.only(bottom: 130),
                   children: [
                     header,
+                    SyncAttentionIndicator(onTap: router == null ? null : () => router.go('/settings')),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 22, AppSpace.gutter, 0),
                       child: _SpentCard(expenses: expenses),
