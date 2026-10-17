@@ -76,6 +76,16 @@ class _BudgetAppState extends State<BudgetApp> {
     onDataReplaced: _reloadAfterAccountChange,
   )..resume();
 
+  /// Coming back to the foreground is the cheapest sign the connection may be
+  /// back: sync whatever was changed while away.
+  late final AppLifecycleListener _lifecycle;
+
+  @override
+  void initState() {
+    super.initState();
+    _lifecycle = AppLifecycleListener(onResume: () => widget.syncEngine?.sync());
+  }
+
   /// The phone now holds a different account's data: reload every list and
   /// drop the previous account's chat.
   Future<void> _reloadAfterAccountChange() async {
@@ -87,6 +97,7 @@ class _BudgetAppState extends State<BudgetApp> {
 
   @override
   void dispose() {
+    _lifecycle.dispose();
     if (widget.themeCubit == null) _themeCubit.close();
     if (widget.netPeriodCubit == null) _netPeriodCubit.close();
     _categoryCubit?.close();

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/empty_state.dart';
 import '../../../core/theme/widgets.dart';
 import '../../categories/ui/category_form_sheet.dart';
 import '../../categories/ui/category_icon_helper.dart';
@@ -104,6 +105,22 @@ class IncomeSourcesScreen extends StatelessWidget {
             }
 
             final sources = state.sources;
+            if (sources.isEmpty) {
+              return ListView(children: [
+                header,
+                EmptyState(
+                  icon: Icons.work_rounded,
+                  title: 'No Income Sources yet',
+                  message: 'Every Income comes from an Income Source, like Salary or Freelance. Add one to log Income.',
+                  action: FilledButton.icon(
+                    key: const Key('add-first-income-source'),
+                    onPressed: () => _openSheet(context),
+                    icon: const Icon(Icons.add_rounded),
+                    label: const Text('Add an Income Source'),
+                  ),
+                ),
+              ]);
+            }
             return ListView(
               padding: const EdgeInsets.only(bottom: 130),
               children: [
@@ -111,9 +128,7 @@ class IncomeSourcesScreen extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 18, AppSpace.gutter, 8),
                   child: Text(
-                    sources.isEmpty
-                        ? 'No Income Sources yet'
-                        : '${sources.length} ${sources.length == 1 ? 'source' : 'sources'} · tap one to edit',
+                    '${sources.length} ${sources.length == 1 ? 'source' : 'sources'} · tap one to edit',
                     style: TextStyle(fontSize: 14, color: scheme.onSurfaceVariant),
                   ),
                 ),
