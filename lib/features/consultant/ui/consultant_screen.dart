@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/empty_state.dart';
 import '../../../core/theme/widgets.dart';
 import '../cubit/consultant_cubit.dart';
 import '../cubit/consultant_state.dart';
@@ -88,6 +89,7 @@ class _ConsultantScreenState extends State<ConsultantScreen> {
           bloc: widget.cubit,
           listener: (context, state) => _scrollToBottom(),
           builder: (context, state) {
+            final isOn = _cubit.client.isConfigured;
             return Column(
               children: [
                 ScreenHeader(
@@ -110,12 +112,14 @@ class _ConsultantScreenState extends State<ConsultantScreen> {
                 if (state.errorMessage != null && state.status == ConsultantStatus.error)
                   _buildErrorBanner(state.errorMessage!),
                 Expanded(
-                  child: state.messages.isEmpty
-                      ? _buildWelcome(state.suggestedPrompts)
-                      : _buildMessageList(state.messages),
+                  child: !isOn && state.messages.isEmpty
+                      ? _buildOff()
+                      : state.messages.isEmpty
+                          ? _buildWelcome(state.suggestedPrompts)
+                          : _buildMessageList(state.messages),
                 ),
                 _buildSuggestedChips(state),
-                _buildComposer(state.isStreaming),
+                _buildComposer(state.isStreaming, enabled: isOn),
               ],
             );
           },
@@ -153,73 +157,63 @@ class _ConsultantScreenState extends State<ConsultantScreen> {
     );
   }
 
+  Widget _buildOff() {
+    return const SingleChildScrollView(
+      child: EmptyState(
+        icon: Icons.cloud_off_rounded,
+        title: 'The Consultant is off',
+        message: 'No Gemini API key is set, so the Expense Consultant cannot answer. '
+            'Add GEMINI_API_KEY to .env and restart the app. Your Expenses and Income keep working offline.',
+      ),
+    );
+  }
+
   Widget _buildWelcome(List<String> prompts) {
     final scheme = Theme.of(context).colorScheme;
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 28, AppSpace.gutter, 20),
-      child: Column(
-        children: [
-          Container(
-            width: 76,
-            height: 76,
-            decoration: BoxDecoration(
-              color: scheme.primary,
-              shape: BoxShape.circle,
-              boxShadow: isDarkOf(context) ? null : AppShadows.fab,
-            ),
-            child: const Icon(Icons.auto_awesome, color: Colors.white, size: 34),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            'Meet Your Expense Consultant',
-            textAlign: TextAlign.center,
-            style: AppType.title.copyWith(fontSize: 22, color: scheme.onSurface),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Ask about your spending habits, top categories, or how to save more.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 14, height: 1.45, color: scheme.onSurfaceVariant),
-          ),
-          const SizedBox(height: 28),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Padding(
+      child: EmptyState(
+        icon: Icons.auto_awesome,
+        title: 'Meet Your Expense Consultant',
+        message: 'Ask about your Expenses, your Income, your Net, or how to save more.',
+        action: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: Text('Try asking', style: AppType.fieldLabel.copyWith(color: scheme.onSurface)),
             ),
-          ),
-          for (final prompt in prompts)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Material(
-                color: raisedColor(context),
-                elevation: raisedElevation(context),
-                shadowColor: raisedShadowColor,
-                borderRadius: BorderRadius.circular(AppRadius.lg),
-                child: InkWell(
-                  onTap: () => _handleSend(prompt),
+            for (final prompt in prompts)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Material(
+                  color: raisedColor(context),
+                  elevation: raisedElevation(context),
+                  shadowColor: raisedShadowColor,
                   borderRadius: BorderRadius.circular(AppRadius.lg),
-                  child: Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Row(
-                      children: [
-                        SolidIconTile(icon: Icons.chat_bubble_rounded, color: scheme.primary, size: 32),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            prompt,
-                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: scheme.onSurface),
+                  child: InkWell(
+                    onTap: () => _handleSend(prompt),
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Row(
+                        children: [
+                          SolidIconTile(icon: Icons.chat_bubble_rounded, color: scheme.primary, size: 32),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              prompt,
+                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: scheme.onSurface),
+                            ),
                           ),
-                        ),
-                        const Chevron(),
-                      ],
+                          const Chevron(),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -328,7 +322,7 @@ class _ConsultantScreenState extends State<ConsultantScreen> {
     );
   }
 
-  Widget _buildComposer(bool isStreaming) {
+  Widget _buildComposer(bool isStreaming, {required bool enabled}) {
     final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 6, AppSpace.gutter, 12),
@@ -339,12 +333,13 @@ class _ConsultantScreenState extends State<ConsultantScreen> {
               key: const Key('consultant-input-field'),
               controller: _textController,
               focusNode: _focusNode,
+              enabled: enabled,
               textInputAction: TextInputAction.send,
               onSubmitted: isStreaming ? null : (_) => _handleSend(),
               style: TextStyle(fontSize: 15, color: scheme.onSurface),
-              decoration: const InputDecoration(
-                hintText: 'Ask about your spending…',
-                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+              decoration: InputDecoration(
+                hintText: enabled ? 'Ask about your spending…' : 'The Consultant is off',
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
               ),
             ),
           ),
@@ -360,7 +355,7 @@ class _ConsultantScreenState extends State<ConsultantScreen> {
               child: InkWell(
                 key: const Key('consultant-send-btn'),
                 borderRadius: BorderRadius.circular(AppRadius.lg),
-                onTap: isStreaming ? null : () => _handleSend(),
+                onTap: isStreaming || !enabled ? null : () => _handleSend(),
                 child: SizedBox(
                   width: 52,
                   height: 52,

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/format/money.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/empty_state.dart';
 import '../../../core/theme/widgets.dart';
 import '../../categories/ui/category_icon_helper.dart';
 import '../../expenses/ui/expense_form_sheet.dart';
@@ -199,33 +200,15 @@ class _EmptyIncome extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 40, AppSpace.gutter, 0),
-      child: Column(
-        children: [
-          Container(
-            width: 72,
-            height: 72,
-            decoration: BoxDecoration(color: scheme.primaryContainer, shape: BoxShape.circle),
-            child: Icon(Icons.payments_rounded, size: 32, color: scheme.onPrimaryContainer),
-          ),
-          const SizedBox(height: 16),
-          Text('No income yet', style: AppType.title.copyWith(color: scheme.onSurface)),
-          const SizedBox(height: 6),
-          Text(
-            'Tap + and switch to Income to log money you were paid.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 14, height: 1.45, color: scheme.onSurfaceVariant),
-          ),
-          const SizedBox(height: 18),
-          FilledButton.icon(
-            key: const Key('add-first-income'),
-            onPressed: onAdd,
-            icon: const Icon(Icons.add_rounded),
-            label: const Text('Log your first income'),
-          ),
-        ],
+    return EmptyState(
+      icon: Icons.payments_rounded,
+      title: 'No Income yet',
+      message: 'Log money you were paid and see what comes in next to what you spend.',
+      action: FilledButton.icon(
+        key: const Key('add-first-income'),
+        onPressed: onAdd,
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('Log your first Income'),
       ),
     );
   }

@@ -18,6 +18,9 @@ class FakeConsultantClient implements ConsultantClient {
   String? lastContextSummary;
 
   @override
+  bool get isConfigured => true;
+
+  @override
   Stream<String> streamConsultantResponse({
     required String prompt,
     required String contextSummary,
