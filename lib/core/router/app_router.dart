@@ -20,12 +20,6 @@ GoRouter buildRouter() => GoRouter(
             ]),
             StatefulShellBranch(routes: [
               GoRoute(
-                path: '/categories',
-                builder: (_, _) => const CategoriesScreen(),
-              ),
-            ]),
-            StatefulShellBranch(routes: [
-              GoRoute(
                 path: '/consultant',
                 builder: (_, _) => const ConsultantScreen(),
               ),
@@ -34,6 +28,12 @@ GoRouter buildRouter() => GoRouter(
               GoRoute(
                 path: '/settings',
                 builder: (_, _) => const SettingsScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'categories',
+                    builder: (_, _) => const CategoriesScreen(),
+                  ),
+                ],
               ),
             ]),
           ],

@@ -27,14 +27,15 @@ void main() {
 
   tearDown(() => db.close());
 
-  testWidgets('shell shows four tabs plus the add button and starts on Expenses', (tester) async {
+  testWidgets('shell shows Home, Consultant and Profile tabs plus the add button and starts on Expenses', (tester) async {
     await tester.pumpWidget(BudgetApp(categoryStore: store, expenseLedger: ledger));
     await tester.pumpAndSettle();
 
     expect(find.byType(AppNavBar), findsOneWidget);
-    for (final label in ['Expenses', 'Categories', 'Consultant', 'Settings']) {
+    for (final label in ['Expenses', 'Consultant', 'Settings']) {
       expect(find.byKey(Key('nav-${label.toLowerCase()}')), findsOneWidget);
     }
+    expect(find.byKey(const Key('nav-categories')), findsNothing);
     expect(find.byKey(const Key('add-expense-fab')), findsOneWidget);
     expect(find.byKey(const Key('expenses-screen')), findsOneWidget);
   });
@@ -47,13 +48,32 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('consultant-screen')), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('nav-categories')));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('categories-screen')), findsOneWidget);
-
     await tester.tap(find.byKey(const Key('nav-settings')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('settings-screen')), findsOneWidget);
+  });
+
+  testWidgets('Categories open from Profile, keep working, and go back', (tester) async {
+    await tester.pumpWidget(BudgetApp(categoryStore: store, expenseLedger: ledger));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('nav-settings')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('profile-categories-row')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('categories-screen')), findsOneWidget);
+    expect(find.text('Food'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('settings-screen')), findsOneWidget);
+
+    // The add button still opens the Add sheet from Categories.
+    await tester.tap(find.byKey(const Key('profile-categories-row')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('add-expense-fab')));
+    await tester.pumpAndSettle();
+    expect(find.byType(ExpenseFormSheet), findsOneWidget);
   });
 
   testWidgets('raised add button in the nav bar opens the expense sheet', (tester) async {

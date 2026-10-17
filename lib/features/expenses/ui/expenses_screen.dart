@@ -53,7 +53,7 @@ class ExpensesScreen extends StatelessWidget {
                   leading: SquareIconButton(
                     icon: Icons.grid_view_rounded,
                     tooltip: 'Categories',
-                    onTap: router == null ? null : () => router.go('/categories'),
+                    onTap: router == null ? null : () => router.go('/settings/categories'),
                   ),
                   trailing: const ThemeToggleButton(),
                 );

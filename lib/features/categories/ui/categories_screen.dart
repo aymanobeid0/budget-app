@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/widgets.dart';
@@ -85,6 +86,8 @@ class CategoriesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final counts = _monthCounts(context);
+    // Reached from Profile; standalone (tests) there is nothing to go back to.
+    final canPop = Navigator.of(context).canPop();
 
     return Scaffold(
       key: const Key('categories-screen'),
@@ -94,6 +97,13 @@ class CategoriesScreen extends StatelessWidget {
           builder: (context, state) {
             final header = ScreenHeader(
               title: 'Categories',
+              leading: canPop
+                  ? IconButton(
+                      tooltip: 'Back',
+                      icon: const Icon(Icons.arrow_back_rounded),
+                      onPressed: () => context.pop(),
+                    )
+                  : null,
               trailing: SquareIconButton(
                 key: const Key('add-category-btn'),
                 icon: Icons.add_rounded,

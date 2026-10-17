@@ -4,9 +4,13 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Categories tab is gone from the bottom bar; Profile has an entry that opens Categories management
-- [ ] Creating, editing and deleting a Category from Profile works exactly as before
-- [ ] The centre + button still opens the Add sheet from every tab
-- [ ] Existing categories screen and widget tests pass, updated only for the new route
+- [x] Categories tab is gone from the bottom bar; Profile has an entry that opens Categories management
+- [x] Creating, editing and deleting a Category from Profile works exactly as before
+- [x] The centre + button still opens the Add sheet from every tab
+- [x] Existing categories screen and widget tests pass, updated only for the new route
+
+## Answer
+
+Categories moved under Profile at `/settings/categories` (bar: Home, [+], Consultant, Profile; Income slot comes in 02). Profile has a Categories row; the screen shows Back when pushed.

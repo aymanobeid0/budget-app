@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/expenses/ui/expense_form_sheet.dart';
 import '../theme/tokens.dart';
 
-/// Bottom-navigation scaffold: four icon-only tabs with a raised blue
+/// Bottom-navigation scaffold: icon-only tabs with a raised blue
 /// "add expense" button in the centre.
 class AppShell extends StatelessWidget {
   const AppShell({super.key, required this.navigationShell});
@@ -49,14 +49,13 @@ class AppNavBar extends StatelessWidget {
   final ValueChanged<int> onSelect;
   final VoidCallback onAdd;
 
-  // Visual order: Home, Consultant, [+], Categories, Profile.
+  // Visual order: Home, [+], Consultant, Profile. Categories live in Profile.
   static const _left = [
     _NavItem(0, 'expenses', 'Home', Icons.home_outlined, Icons.home_rounded),
-    _NavItem(2, 'consultant', 'Consultant', Icons.auto_awesome_outlined, Icons.auto_awesome),
   ];
   static const _right = [
-    _NavItem(1, 'categories', 'Categories', Icons.grid_view_outlined, Icons.grid_view_rounded),
-    _NavItem(3, 'settings', 'Profile and settings', Icons.person_outline_rounded, Icons.person_rounded),
+    _NavItem(1, 'consultant', 'Consultant', Icons.auto_awesome_outlined, Icons.auto_awesome),
+    _NavItem(2, 'settings', 'Profile and settings', Icons.person_outline_rounded, Icons.person_rounded),
   ];
 
   static const _barHeight = 72.0;

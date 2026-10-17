@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/format/money.dart';
 import '../../../core/sync/sync_engine.dart';
@@ -53,6 +54,15 @@ class SettingsScreen extends StatelessWidget {
               child: Column(
                 children: [
                   const AccountSection(),
+                  MenuRow(
+                    key: const Key('profile-categories-row'),
+                    icon: Icons.grid_view_rounded,
+                    color: scheme.primary,
+                    title: 'Categories',
+                    subtitle: 'Add, rename or remove expense categories',
+                    trailing: const Chevron(),
+                    onTap: () => context.go('/settings/categories'),
+                  ),
                   MenuRow(
                     icon: Icons.dark_mode_rounded,
                     color: const Color(0xFF1F2A44),
