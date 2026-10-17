@@ -28,6 +28,18 @@ class MockCloudClient implements CloudSyncClient {
 
   @override
   Future<List<Map<String, dynamic>>> fetchExpenses() async => [];
+
+  @override
+  Future<void> upsertIncomeSources(List<Map<String, dynamic>> rows) async {}
+
+  @override
+  Future<void> upsertIncome(List<Map<String, dynamic>> rows) async {}
+
+  @override
+  Future<List<Map<String, dynamic>>> fetchIncomeSources() async => [];
+
+  @override
+  Future<List<Map<String, dynamic>>> fetchIncome() async => [];
 }
 
 void main() {

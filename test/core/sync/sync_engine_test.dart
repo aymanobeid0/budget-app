@@ -48,6 +48,18 @@ class FakeCloudSyncClient implements CloudSyncClient {
     if (shouldFail) throw Exception('Failed to fetch expenses');
     return remoteExpensesToReturn;
   }
+
+  @override
+  Future<void> upsertIncomeSources(List<Map<String, dynamic>> rows) async {}
+
+  @override
+  Future<void> upsertIncome(List<Map<String, dynamic>> rows) async {}
+
+  @override
+  Future<List<Map<String, dynamic>>> fetchIncomeSources() async => [];
+
+  @override
+  Future<List<Map<String, dynamic>>> fetchIncome() async => [];
 }
 
 void main() {

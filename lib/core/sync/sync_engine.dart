@@ -80,180 +80,20 @@ class SyncEngine {
 
       final syncTimestamp = DateTime.now().millisecondsSinceEpoch;
 
-      // 1. Push unsynced categories
-      final unsyncedCategories = await db.raw.query(
-        'categories',
-        where: 'synced_at IS NULL OR updated_at > synced_at',
-      );
-
-      if (unsyncedCategories.isNotEmpty) {
-        debugPrint('🔄 [SyncEngine] Pushing ${unsyncedCategories.length} categories to Supabase...');
-        final remoteCategories = unsyncedCategories.map((c) {
-          final createdAtMs = c['created_at'] as int;
-          final updatedAtMs = c['updated_at'] as int;
-          final deletedAtMs = c['deleted_at'] as int?;
-
-          return {
-            'id': c['id'],
-            'user_id': userId,
-            'name': c['name'],
-            'icon': c['icon'],
-            'color': c['color'],
-            'created_at': DateTime.fromMillisecondsSinceEpoch(createdAtMs, isUtc: true).toIso8601String(),
-            'updated_at': DateTime.fromMillisecondsSinceEpoch(updatedAtMs, isUtc: true).toIso8601String(),
-            'deleted_at': deletedAtMs != null
-                ? DateTime.fromMillisecondsSinceEpoch(deletedAtMs, isUtc: true).toIso8601String()
-                : null,
-          };
-        }).toList();
-
-        await client.upsertCategories(remoteCategories);
-        debugPrint('✅ [SyncEngine] Successfully synced ${remoteCategories.length} categories.');
-
-        // Mark local categories as synced
-        final categoryIds = unsyncedCategories.map((c) => c['id'] as String).toList();
-        final placeholders = List.filled(categoryIds.length, '?').join(',');
-        await db.raw.rawUpdate(
-          'UPDATE categories SET synced_at = ? WHERE id IN ($placeholders)',
-          [syncTimestamp, ...categoryIds],
-        );
+      // Push in dependency order (a label before what it labels), then pull.
+      final pushed = <String, int>{};
+      for (final table in _tables) {
+        pushed[table.name] = await _push(table, userId, syncTimestamp);
       }
-
-      // 2. Push unsynced expenses
-      final unsyncedExpenses = await db.raw.query(
-        'expenses',
-        where: 'synced_at IS NULL OR updated_at > synced_at',
-      );
-
-      if (unsyncedExpenses.isNotEmpty) {
-        debugPrint('🔄 [SyncEngine] Pushing ${unsyncedExpenses.length} expenses to Supabase...');
-        final remoteExpenses = unsyncedExpenses.map((e) {
-          final createdAtMs = e['created_at'] as int;
-          final updatedAtMs = e['updated_at'] as int;
-          final deletedAtMs = e['deleted_at'] as int?;
-
-          return {
-            'id': e['id'],
-            'user_id': userId,
-            'amount_minor': e['amount_minor'],
-            'category_id': e['category_id'],
-            'spent_on': e['spent_on'],
-            'created_at': DateTime.fromMillisecondsSinceEpoch(createdAtMs, isUtc: true).toIso8601String(),
-            'updated_at': DateTime.fromMillisecondsSinceEpoch(updatedAtMs, isUtc: true).toIso8601String(),
-            'deleted_at': deletedAtMs != null
-                ? DateTime.fromMillisecondsSinceEpoch(deletedAtMs, isUtc: true).toIso8601String()
-                : null,
-          };
-        }).toList();
-
-        await client.upsertExpenses(remoteExpenses);
-        debugPrint('✅ [SyncEngine] Successfully synced ${remoteExpenses.length} expenses.');
-
-        // Mark local expenses as synced
-        final expenseIds = unsyncedExpenses.map((e) => e['id'] as String).toList();
-        final placeholders = List.filled(expenseIds.length, '?').join(',');
-        await db.raw.rawUpdate(
-          'UPDATE expenses SET synced_at = ? WHERE id IN ($placeholders)',
-          [syncTimestamp, ...expenseIds],
-        );
-      }
-
-      // 3. Pull remote categories
-      final remoteCategories = await client.fetchCategories();
-      for (final r in remoteCategories) {
-        final id = r['id'] as String;
-        final name = r['name'] as String;
-        final icon = r['icon'] as String;
-        final color = r['color'] as int;
-        final createdAtMs = DateTime.parse(r['created_at'] as String).millisecondsSinceEpoch;
-        final updatedAtMs = DateTime.parse(r['updated_at'] as String).millisecondsSinceEpoch;
-        final deletedAtMs = r['deleted_at'] != null
-            ? DateTime.parse(r['deleted_at'] as String).millisecondsSinceEpoch
-            : null;
-
-        final existing = await db.raw.query('categories', where: 'id = ?', whereArgs: [id]);
-        if (existing.isEmpty) {
-          await db.raw.insert('categories', {
-            'id': id,
-            'name': name,
-            'icon': icon,
-            'color': color,
-            'created_at': createdAtMs,
-            'updated_at': updatedAtMs,
-            'deleted_at': deletedAtMs,
-            'synced_at': syncTimestamp,
-          });
-        } else {
-          final localUpdatedAt = existing.first['updated_at'] as int;
-          if (updatedAtMs >= localUpdatedAt) {
-            await db.raw.update(
-              'categories',
-              {
-                'name': name,
-                'icon': icon,
-                'color': color,
-                'created_at': createdAtMs,
-                'updated_at': updatedAtMs,
-                'deleted_at': deletedAtMs,
-                'synced_at': syncTimestamp,
-              },
-              where: 'id = ?',
-              whereArgs: [id],
-            );
-          }
-        }
-      }
-
-      // 4. Pull remote expenses
-      final remoteExpenses = await client.fetchExpenses();
-      for (final r in remoteExpenses) {
-        final id = r['id'] as String;
-        final amountMinor = r['amount_minor'] as int;
-        final categoryId = r['category_id'] as String;
-        final spentOn = r['spent_on'] as String;
-        final createdAtMs = DateTime.parse(r['created_at'] as String).millisecondsSinceEpoch;
-        final updatedAtMs = DateTime.parse(r['updated_at'] as String).millisecondsSinceEpoch;
-        final deletedAtMs = r['deleted_at'] != null
-            ? DateTime.parse(r['deleted_at'] as String).millisecondsSinceEpoch
-            : null;
-
-        final existing = await db.raw.query('expenses', where: 'id = ?', whereArgs: [id]);
-        if (existing.isEmpty) {
-          await db.raw.insert('expenses', {
-            'id': id,
-            'amount_minor': amountMinor,
-            'category_id': categoryId,
-            'spent_on': spentOn,
-            'created_at': createdAtMs,
-            'updated_at': updatedAtMs,
-            'deleted_at': deletedAtMs,
-            'synced_at': syncTimestamp,
-          });
-        } else {
-          final localUpdatedAt = existing.first['updated_at'] as int;
-          if (updatedAtMs >= localUpdatedAt) {
-            await db.raw.update(
-              'expenses',
-              {
-                'amount_minor': amountMinor,
-                'category_id': categoryId,
-                'spent_on': spentOn,
-                'created_at': createdAtMs,
-                'updated_at': updatedAtMs,
-                'deleted_at': deletedAtMs,
-                'synced_at': syncTimestamp,
-              },
-              where: 'id = ?',
-              whereArgs: [id],
-            );
-          }
-        }
+      final pulled = <String, int>{};
+      for (final table in _tables) {
+        pulled[table.name] = await _pull(table, syncTimestamp);
       }
 
       _setState(SyncState.success);
       return SyncResult.success(
-        categories: unsyncedCategories.length + remoteCategories.length,
-        expenses: unsyncedExpenses.length + remoteExpenses.length,
+        categories: pushed['categories']! + pulled['categories']!,
+        expenses: pushed['expenses']! + pulled['expenses']!,
       );
     } catch (e, st) {
       debugPrint('SyncEngine error: $e\n$st');
@@ -262,7 +102,80 @@ class SyncEngine {
     }
   }
 
+  /// Synced tables in dependency order: Income Sources go before Income as
+  /// Categories go before Expenses.
+  late final List<_SyncedTable> _tables = [
+    _SyncedTable('categories', ['name', 'icon', 'color'], client.upsertCategories, client.fetchCategories),
+    _SyncedTable('expenses', ['amount_minor', 'category_id', 'spent_on'], client.upsertExpenses, client.fetchExpenses),
+    _SyncedTable('income_sources', ['name', 'icon', 'color'], client.upsertIncomeSources, client.fetchIncomeSources),
+    _SyncedTable('income', ['amount_minor', 'source_id', 'paid_on'], client.upsertIncome, client.fetchIncome),
+  ];
+
+  /// Uploads rows changed since their last sync and marks them synced.
+  Future<int> _push(_SyncedTable table, String userId, int syncTimestamp) async {
+    final unsynced = await db.raw.query(table.name, where: 'synced_at IS NULL OR updated_at > synced_at');
+    if (unsynced.isEmpty) return 0;
+
+    debugPrint('🔄 [SyncEngine] Pushing ${unsynced.length} ${table.name} to Supabase...');
+    String iso(Object? ms) => DateTime.fromMillisecondsSinceEpoch(ms as int, isUtc: true).toIso8601String();
+    await table.upsert([
+      for (final row in unsynced)
+        {
+          'id': row['id'],
+          'user_id': userId,
+          for (final c in table.columns) c: row[c],
+          'created_at': iso(row['created_at']),
+          'updated_at': iso(row['updated_at']),
+          'deleted_at': row['deleted_at'] == null ? null : iso(row['deleted_at']),
+        },
+    ]);
+    debugPrint('✅ [SyncEngine] Successfully synced ${unsynced.length} ${table.name}.');
+
+    final ids = unsynced.map((r) => r['id'] as String).toList();
+    final placeholders = List.filled(ids.length, '?').join(',');
+    await db.raw.rawUpdate(
+      'UPDATE ${table.name} SET synced_at = ? WHERE id IN ($placeholders)',
+      [syncTimestamp, ...ids],
+    );
+    return unsynced.length;
+  }
+
+  /// Downloads the account's rows; the newer `updated_at` wins.
+  Future<int> _pull(_SyncedTable table, int syncTimestamp) async {
+    final remote = await table.fetch();
+    int? ms(Object? iso) => iso == null ? null : DateTime.parse(iso as String).millisecondsSinceEpoch;
+    for (final r in remote) {
+      final id = r['id'] as String;
+      final values = {
+        for (final c in table.columns) c: r[c],
+        'created_at': ms(r['created_at']),
+        'updated_at': ms(r['updated_at']),
+        'deleted_at': ms(r['deleted_at']),
+        'synced_at': syncTimestamp,
+      };
+
+      final existing = await db.raw.query(table.name, columns: ['updated_at'], where: 'id = ?', whereArgs: [id]);
+      if (existing.isEmpty) {
+        await db.raw.insert(table.name, {'id': id, ...values});
+      } else if (values['updated_at']! >= (existing.first['updated_at'] as int)) {
+        await db.raw.update(table.name, values, where: 'id = ?', whereArgs: [id]);
+      }
+    }
+    return remote.length;
+  }
+
   void dispose() {
     _statusController.close();
   }
+}
+
+/// One local table mirrored to the cloud. [columns] are its data columns;
+/// id and the created/updated/deleted timestamps are handled for every table.
+class _SyncedTable {
+  const _SyncedTable(this.name, this.columns, this.upsert, this.fetch);
+
+  final String name;
+  final List<String> columns;
+  final Future<void> Function(List<Map<String, dynamic>> rows) upsert;
+  final Future<List<Map<String, dynamic>>> Function() fetch;
 }

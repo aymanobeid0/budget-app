@@ -8,6 +8,10 @@ abstract class CloudSyncClient {
   Future<void> upsertExpenses(List<Map<String, dynamic>> expenses);
   Future<List<Map<String, dynamic>>> fetchCategories();
   Future<List<Map<String, dynamic>>> fetchExpenses();
+  Future<void> upsertIncomeSources(List<Map<String, dynamic>> incomeSources);
+  Future<void> upsertIncome(List<Map<String, dynamic>> income);
+  Future<List<Map<String, dynamic>>> fetchIncomeSources();
+  Future<List<Map<String, dynamic>>> fetchIncome();
 }
 
 /// Production Supabase implementation adhering strictly to RLS policies.
@@ -52,6 +56,31 @@ class SupabaseCloudSyncClient implements CloudSyncClient {
   @override
   Future<List<Map<String, dynamic>>> fetchExpenses() async {
     final response = await _client.from('expenses').select();
+    return List<Map<String, dynamic>>.from(response);
+  }
+
+  @override
+  Future<void> upsertIncomeSources(List<Map<String, dynamic>> incomeSources) async {
+    if (incomeSources.isEmpty) return;
+    // See migration 20261017000000_income.sql.
+    await _client.from('income_sources').upsert(incomeSources, onConflict: 'user_id,id');
+  }
+
+  @override
+  Future<void> upsertIncome(List<Map<String, dynamic>> income) async {
+    if (income.isEmpty) return;
+    await _client.from('income').upsert(income, onConflict: 'user_id,id');
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> fetchIncomeSources() async {
+    final response = await _client.from('income_sources').select();
+    return List<Map<String, dynamic>>.from(response);
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> fetchIncome() async {
+    final response = await _client.from('income').select();
     return List<Map<String, dynamic>>.from(response);
   }
 }

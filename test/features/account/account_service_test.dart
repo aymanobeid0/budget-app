@@ -9,6 +9,8 @@ import 'package:budget_app/features/account/data/auth_gateway.dart';
 import 'package:budget_app/features/categories/category_store.dart';
 import 'package:budget_app/features/expenses/expense.dart';
 import 'package:budget_app/features/expenses/expense_ledger.dart';
+import 'package:budget_app/features/income/income.dart';
+import 'package:budget_app/features/income/income_ledger.dart';
 import 'package:budget_app/core/theme/app_theme.dart';
 import 'package:budget_app/core/theme/theme_cubit.dart';
 import 'package:budget_app/features/account/cubit/account_cubit.dart';
@@ -25,6 +27,8 @@ class FakeServer {
   final ids = <String, String>{}; // email -> user id
   final categories = <String, Map<String, Map<String, dynamic>>>{}; // uid -> id -> row
   final expenses = <String, Map<String, Map<String, dynamic>>>{};
+  final incomeSources = <String, Map<String, Map<String, dynamic>>>{};
+  final income = <String, Map<String, Map<String, dynamic>>>{};
   int _anon = 0;
   bool offline = false;
 
@@ -112,6 +116,36 @@ class FakeCloud implements CloudSyncClient {
     }
   }
 
+  void _store(Map<String, Map<String, Map<String, dynamic>>> table, List<Map<String, dynamic>> rows) {
+    for (final r in rows) {
+      table.putIfAbsent(r['user_id'] as String, () => {})[r['id'] as String] = Map.of(r);
+    }
+  }
+
+  @override
+  Future<void> upsertIncomeSources(List<Map<String, dynamic>> rows) async {
+    _online();
+    _store(server.incomeSources, rows);
+  }
+
+  @override
+  Future<void> upsertIncome(List<Map<String, dynamic>> rows) async {
+    _online();
+    _store(server.income, rows);
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> fetchIncomeSources() async {
+    _online();
+    return (server.incomeSources[auth.uid] ?? {}).values.toList();
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> fetchIncome() async {
+    _online();
+    return (server.income[auth.uid] ?? {}).values.toList();
+  }
+
   @override
   Future<List<Map<String, dynamic>>> fetchCategories() async {
     _online();
@@ -127,13 +161,14 @@ class FakeCloud implements CloudSyncClient {
 
 /// One installed copy of the app on a phone.
 class Phone {
-  Phone._(this.db, this.auth, this.service, this.ledger, this.store);
+  Phone._(this.db, this.auth, this.service, this.ledger, this.store, this.incomeLedger);
 
   final AppDatabase db;
   final FakeAuth auth;
   final AccountService service;
   final ExpenseLedger ledger;
   final CategoryStore store;
+  final IncomeLedger incomeLedger;
 
   static Future<Phone> install(FakeServer server) async {
     // A separate file per phone: in-memory databases are shared by path.
@@ -150,9 +185,26 @@ class Phone {
     await service.init();
     final store = CategoryStore(db, syncEngine: engine, canSeedDefaults: service.canSeedDefaults);
     final ledger = ExpenseLedger(db, syncEngine: engine);
+    final incomeLedger = IncomeLedger(db, syncEngine: engine, canSeedDefaults: service.canSeedDefaults);
     await store.loadCategories(); // seeds defaults like a fresh launch
-    return Phone._(db, auth, service, ledger, store);
+    await incomeLedger.loadSources();
+    return Phone._(db, auth, service, ledger, store, incomeLedger);
   }
+
+  Future<void> addIncome(String id, int minor) async {
+    final now = DateTime.now();
+    await incomeLedger.logIncome(Income(
+      id: id,
+      amountMinor: minor,
+      sourceId: 'src_salary',
+      paidOn: now,
+      createdAt: now,
+      updatedAt: now,
+    ));
+  }
+
+  Future<List<int>> incomeAmounts() async =>
+      (await incomeLedger.loadIncome()).map((i) => i.amountMinor).toList()..sort();
 
   Future<void> addExpense(String id, int minor) async {
     final now = DateTime.now();
@@ -242,6 +294,36 @@ void main() {
 
     await phone.service.signIn(username: 'alice', password: 'secret1');
     expect((await phone.amounts())..sort(), [100, 200]);
+  });
+
+  test('creating an account moves guest Income into it', () async {
+    final phone = await Phone.install(server);
+    await phone.addIncome('g1', 350000);
+
+    await phone.service.createAccount(username: 'ayman', password: 'secret1');
+
+    final uid = server.ids['ayman@budgetapp.local']!;
+    expect(server.income[uid]!.keys, ['g1']);
+    expect(server.incomeSources[uid]!.keys, containsAll(<String>['src_salary', 'src_freelance', 'src_other']));
+  });
+
+  test('switching accounts shows only the new account\'s Income', () async {
+    final setup = await Phone.install(server);
+    await setup.addIncome('b1', 900);
+    await setup.service.createAccount(username: 'bob', password: 'secret2');
+
+    final phone = await Phone.install(server);
+    await phone.addIncome('a1', 100);
+    await phone.service.createAccount(username: 'alice', password: 'secret1');
+
+    await phone.service.signIn(username: 'bob', password: 'secret2');
+    expect(await phone.incomeAmounts(), [900]);
+
+    await phone.service.signIn(username: 'alice', password: 'secret1');
+    expect(await phone.incomeAmounts(), [100]);
+
+    await phone.service.signOut();
+    expect(await phone.incomeAmounts(), isEmpty);
   });
 
   test('wrong password changes nothing', () async {

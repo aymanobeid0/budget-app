@@ -77,8 +77,9 @@ class AccountService {
 
   bool get awaitingInitialPull => _prefs.awaitingInitialPull;
 
-  /// Guard for [CategoryStore]: don't seed defaults while an account's own
-  /// categories are still waiting to be downloaded.
+  /// Guard for [CategoryStore] and the Income Ledger: don't seed defaults
+  /// while an account's own categories and Income Sources are still waiting
+  /// to be downloaded.
   bool canSeedDefaults() => !_prefs.awaitingInitialPull;
 
   Future<void> init() async {
@@ -210,12 +211,16 @@ class AccountService {
   Future<void> _markAllUnsynced() async {
     await _db.raw.rawUpdate('UPDATE categories SET synced_at = NULL');
     await _db.raw.rawUpdate('UPDATE expenses SET synced_at = NULL');
+    await _db.raw.rawUpdate('UPDATE income_sources SET synced_at = NULL');
+    await _db.raw.rawUpdate('UPDATE income SET synced_at = NULL');
   }
 
   Future<void> _wipeLocal() async {
     await _db.raw.transaction((txn) async {
       await txn.delete('expenses');
       await txn.delete('categories');
+      await txn.delete('income');
+      await txn.delete('income_sources');
     });
   }
 
