@@ -106,12 +106,16 @@ class ExpensesScreen extends StatelessWidget {
 }
 
 /// Shared delete confirmation (list swipe and the edit screen).
-Future<bool> confirmDeleteExpense(BuildContext context, Expense expense) async {
+Future<bool> confirmDeleteExpense(BuildContext context, Expense expense) =>
+    confirmDeleteEntry(context, noun: 'expense', amountMinor: expense.amountMinor);
+
+/// Delete confirmation for an Expense or an Income.
+Future<bool> confirmDeleteEntry(BuildContext context, {required String noun, required int amountMinor}) async {
   final result = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
-      title: const Text('Delete expense?', style: TextStyle(fontWeight: FontWeight.w700)),
-      content: Text('This removes the ${Money.withLabel(expense.amountMinor)} expense.'),
+      title: Text('Delete $noun?', style: const TextStyle(fontWeight: FontWeight.w700)),
+      content: Text('This removes the ${Money.withLabel(amountMinor)} $noun.'),
       actions: [
         TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
         FilledButton(

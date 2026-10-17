@@ -27,6 +27,14 @@ class IncomeLoaded extends IncomeState {
   /// Income Sources offered in the picker.
   final List<IncomeSource> sources;
 
+  /// Total of the listed Income in minor units.
+  int get totalMinor => income.fold(0, (sum, i) => sum + i.amountMinor);
+
+  /// Total Income per paid-on date (YYYY-MM-DD), newest day first.
+  Map<String, int> get dayTotals => {
+        for (final day in groupedByDay.entries) day.key: day.value.fold(0, (sum, i) => sum + i.amountMinor),
+      };
+
   /// Income grouped by paid-on date (YYYY-MM-DD), newest day first.
   Map<String, List<Income>> get groupedByDay {
     final map = <String, List<Income>>{};

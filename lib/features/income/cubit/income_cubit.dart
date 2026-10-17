@@ -34,6 +34,11 @@ class IncomeCubit extends Cubit<IncomeState> {
         )));
   }
 
+  Future<void> updateIncome(Income income) =>
+      _guard(() => _ledger.updateIncome(income.copyWith(updatedAt: DateTime.now())));
+
+  Future<void> deleteIncome(String id) => _guard(() => _ledger.deleteIncome(id));
+
   Future<void> _guard(Future<void> Function() action) async {
     try {
       await action();

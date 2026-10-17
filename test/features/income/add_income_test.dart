@@ -97,4 +97,42 @@ void main() {
     await tester.pumpAndSettle();
     expect(inSheet(find.text('Income Source')), findsOneWidget);
   });
+
+  testWidgets('tapping an Income edits it, and it can be deleted', (tester) async {
+    await incomeLedger.loadSources();
+    await pumpApp(tester);
+    await tester.tap(find.byKey(const Key('add-expense-fab')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('entry-kind-income')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('expense-amount-field')), '200');
+    await tester.tap(inSheet(find.text('Freelance')));
+    await tester.tap(find.byKey(const Key('save-expense-btn')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('nav-income')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('income-total')), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const Key('income-total')), matching: find.textContaining('200')),
+        findsOneWidget);
+
+    await tester.tap(find.text('Freelance'));
+    await tester.pumpAndSettle();
+    expect(inSheet(find.text('Edit Income')), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('expense-amount-field')), '250');
+    await tester.tap(find.byKey(const Key('save-expense-btn')));
+    await tester.pumpAndSettle();
+    expect(find.text('+250'), findsOneWidget);
+    expect((await incomeLedger.loadIncome()).single.amountMinor, 25000);
+
+    await tester.tap(find.text('Freelance'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('delete-expense-btn')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+    await tester.pumpAndSettle();
+
+    expect(await incomeLedger.loadIncome(), isEmpty);
+    expect(find.text('No income yet'), findsOneWidget);
+  });
 }

@@ -59,6 +59,34 @@ void main() {
     expect(list.first.paidOn, DateTime.utc(2026, 10, 15));
   });
 
+  test('editing an Income changes its amount, date and source', () async {
+    await ledger.loadSources();
+    await ledger.logIncome(income('i1', 1000, DateTime.utc(2026, 10, 1)));
+    await ledger.logIncome(income('i2', 2000, DateTime.utc(2026, 10, 5)));
+
+    final original = (await ledger.loadIncome()).firstWhere((i) => i.id == 'i1');
+    await ledger.updateIncome(original.copyWith(
+      amountMinor: 1500,
+      sourceId: 'src_freelance',
+      paidOn: DateTime.utc(2026, 10, 9),
+    ));
+
+    final list = await ledger.loadIncome();
+    expect(list.map((i) => i.id), ['i1', 'i2']); // now the newest
+    expect(list.first.amountMinor, 1500);
+    expect(list.first.sourceId, 'src_freelance');
+  });
+
+  test('deleting an Income removes it from the list', () async {
+    await ledger.loadSources();
+    await ledger.logIncome(income('i1', 1000, DateTime.utc(2026, 10, 1)));
+    await ledger.logIncome(income('i2', 2000, DateTime.utc(2026, 10, 5)));
+
+    await ledger.deleteIncome('i1');
+
+    expect((await ledger.loadIncome()).map((i) => i.id), ['i2']);
+  });
+
   test('watchIncome emits the list after each new Income', () async {
     await ledger.loadSources();
     final emissions = <List<Income>>[];

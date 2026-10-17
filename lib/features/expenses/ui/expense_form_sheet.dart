@@ -14,7 +14,8 @@ import '../../income/cubit/income_state.dart';
 import '../../income/income_source.dart';
 import '../cubit/expense_cubit.dart';
 import '../expense.dart';
-import 'expenses_screen.dart' show confirmDeleteExpense;
+import '../../income/income.dart';
+import 'expenses_screen.dart' show confirmDeleteEntry;
 
 const _months = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -38,7 +39,7 @@ class AddSheetMemory {
 /// Opens the full-screen add/edit page. Used by the nav bar's add button and
 /// by tapping a transaction. [kind] forces a mode; otherwise a new entry
 /// opens on the mode used last.
-Future<void> showExpenseSheet(BuildContext context, {Expense? expense, EntryKind? kind}) {
+Future<void> showExpenseSheet(BuildContext context, {Expense? expense, Income? income, EntryKind? kind}) {
   final categoryState = context.read<CategoryCubit>().state;
   final categories = categoryState is CategoryLoaded ? categoryState.categories : <Category>[];
   final expenseCubit = context.read<ExpenseCubit>();
@@ -55,13 +56,15 @@ Future<void> showExpenseSheet(BuildContext context, {Expense? expense, EntryKind
     fullscreenDialog: true,
     builder: (_) => ExpenseFormSheet(
       expense: expense,
+      income: income,
       initialKind: kind,
       categories: categories,
       incomeSources: sources,
       onSaveIncome: incomeCubit == null
           ? null
-          : (amountMinor, sourceId, paidOn) =>
-              incomeCubit!.addIncome(amountMinor: amountMinor, sourceId: sourceId, paidOn: paidOn),
+          : (amountMinor, sourceId, paidOn) => income == null
+              ? incomeCubit!.addIncome(amountMinor: amountMinor, sourceId: sourceId, paidOn: paidOn)
+              : incomeCubit!.updateIncome(income.copyWith(amountMinor: amountMinor, sourceId: sourceId, paidOn: paidOn)),
       onSave: (amountMinor, categoryId, spentOn) {
         if (expense == null) {
           expenseCubit.addExpense(amountMinor: amountMinor, categoryId: categoryId, spentOn: spentOn);
@@ -71,7 +74,9 @@ Future<void> showExpenseSheet(BuildContext context, {Expense? expense, EntryKind
           );
         }
       },
-      onDelete: expense == null ? null : () => expenseCubit.deleteExpense(expense.id),
+      onDelete: expense != null
+          ? () => expenseCubit.deleteExpense(expense.id)
+          : (income != null ? () => incomeCubit?.deleteIncome(income.id) : null),
     ),
   ));
 }
@@ -83,6 +88,7 @@ class ExpenseFormSheet extends StatefulWidget {
   const ExpenseFormSheet({
     super.key,
     this.expense,
+    this.income,
     this.initialKind,
     required this.categories,
     this.incomeSources = const [],
@@ -92,6 +98,7 @@ class ExpenseFormSheet extends StatefulWidget {
   });
 
   final Expense? expense;
+  final Income? income;
   final EntryKind? initialKind;
   final List<Category> categories;
   final List<IncomeSource> incomeSources;
@@ -114,7 +121,8 @@ class _ExpenseFormSheetState extends State<ExpenseFormSheet> {
   String? _pickError;
 
   bool get _isIncome => _kind == EntryKind.income;
-  bool get _canSwitch => widget.expense == null && widget.onSaveIncome != null;
+  bool get _isEditing => widget.expense != null || widget.income != null;
+  bool get _canSwitch => !_isEditing && widget.onSaveIncome != null;
 
   static DateTime _day(DateTime d) => DateTime(d.year, d.month, d.day);
   static DateTime _mondayOf(DateTime d) => _day(d).subtract(Duration(days: d.weekday - 1));
@@ -123,10 +131,15 @@ class _ExpenseFormSheetState extends State<ExpenseFormSheet> {
   void initState() {
     super.initState();
     final e = widget.expense;
-    _amount = TextEditingController(text: e != null ? Money.format(e.amountMinor).replaceAll(',', '') : '');
+    final i = widget.income;
+    final amountMinor = e?.amountMinor ?? i?.amountMinor;
+    _amount = TextEditingController(text: amountMinor != null ? Money.format(amountMinor).replaceAll(',', '') : '');
     _categoryId = e?.categoryId ?? (widget.categories.isNotEmpty ? widget.categories.first.id : '');
-    _kind = _canSwitch ? (widget.initialKind ?? AddSheetMemory.lastKind) : EntryKind.expense;
-    _date = _day(e?.spentOn ?? DateTime.now());
+    _sourceId = i?.sourceId ?? '';
+    _kind = i != null
+        ? EntryKind.income
+        : (_canSwitch ? (widget.initialKind ?? AddSheetMemory.lastKind) : EntryKind.expense);
+    _date = _day(e?.spentOn ?? i?.paidOn ?? DateTime.now());
     _weekStart = _mondayOf(_date);
   }
 
@@ -195,9 +208,10 @@ class _ExpenseFormSheetState extends State<ExpenseFormSheet> {
   }
 
   Future<void> _delete() async {
-    final e = widget.expense;
-    if (e == null) return;
-    if (await confirmDeleteExpense(context, e) && mounted) {
+    final amountMinor = widget.expense?.amountMinor ?? widget.income?.amountMinor;
+    if (amountMinor == null) return;
+    final noun = _isIncome ? 'income' : 'expense';
+    if (await confirmDeleteEntry(context, noun: noun, amountMinor: amountMinor) && mounted) {
       widget.onDelete?.call();
       Navigator.of(context).pop();
     }
@@ -221,7 +235,7 @@ class _ExpenseFormSheetState extends State<ExpenseFormSheet> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final isEditing = widget.expense != null;
+    final isEditing = _isEditing;
     final noun = _isIncome ? 'Income' : 'Expense';
 
     return Scaffold(
@@ -239,7 +253,7 @@ class _ExpenseFormSheetState extends State<ExpenseFormSheet> {
                   ? SquareIconButton(
                       key: const Key('delete-expense-btn'),
                       icon: Icons.delete_outline_rounded,
-                      tooltip: 'Delete expense',
+                      tooltip: 'Delete ${noun.toLowerCase()}',
                       color: AppColors.expense,
                       onTap: _delete,
                     )

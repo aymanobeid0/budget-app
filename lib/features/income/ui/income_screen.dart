@@ -30,28 +30,50 @@ class IncomeScreen extends StatelessWidget {
         child: BlocBuilder<IncomeCubit, IncomeState>(
           builder: (context, state) {
             if (state is IncomeError) {
-              return Column(children: [
-                header,
-                Expanded(child: Center(child: Text('Error: ${state.message}', style: TextStyle(color: scheme.error)))),
-              ]);
+              return Column(
+                children: [
+                  header,
+                  Expanded(
+                    child: Center(
+                      child: Text('Error: ${state.message}', style: TextStyle(color: scheme.error)),
+                    ),
+                  ),
+                ],
+              );
             }
             if (state is! IncomeLoaded) {
-              return const Column(children: [header, Expanded(child: Center(child: CircularProgressIndicator()))]);
+              return const Column(
+                children: [
+                  header,
+                  Expanded(child: Center(child: CircularProgressIndicator())),
+                ],
+              );
             }
 
             final sources = {for (final s in state.sources) s.id: s};
             final days = state.groupedByDay;
+            final dayTotals = state.dayTotals;
             return ListView(
               padding: const EdgeInsets.only(bottom: 130),
               children: [
                 header,
                 if (days.isEmpty)
                   _EmptyIncome(onAdd: () => showExpenseSheet(context, kind: EntryKind.income))
-                else
+                else ...[
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 22, AppSpace.gutter, 0),
+                    child: _TotalCard(totalMinor: state.totalMinor),
+                  ),
                   for (final day in days.entries) ...[
-                    _DayHeader(day: day.value.first.paidOn),
-                    for (final i in day.value) _IncomeRow(income: i, source: sources[i.sourceId]),
+                    _DayHeader(day: day.value.first.paidOn, totalMinor: dayTotals[day.key]!),
+                    for (final i in day.value)
+                      _IncomeRow(
+                        income: i,
+                        source: sources[i.sourceId],
+                        onTap: () => showExpenseSheet(context, income: i),
+                      ),
                   ],
+                ],
               ],
             );
           },
@@ -61,9 +83,41 @@ class IncomeScreen extends StatelessWidget {
   }
 }
 
+/// Total of everything listed on the tab.
+class _TotalCard extends StatelessWidget {
+  const _TotalCard({required this.totalMinor});
+  final int totalMinor;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      key: const Key('income-total'),
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+      decoration: raisedDecoration(context, radius: AppRadius.xl, shadow: AppShadows.panel),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Total income',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 8),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(Money.withLabel(totalMinor), style: AppType.heroAmount.copyWith(color: AppColors.income)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _DayHeader extends StatelessWidget {
-  const _DayHeader({required this.day});
+  const _DayHeader({required this.day, required this.totalMinor});
   final DateTime day;
+  final int totalMinor;
 
   String _label() {
     final now = DateTime.now();
@@ -81,16 +135,27 @@ class _DayHeader extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 22, AppSpace.gutter, 4),
-      child: Text(_label(), style: AppType.caption.copyWith(color: scheme.onSurfaceVariant)),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(_label(), style: AppType.caption.copyWith(color: scheme.onSurfaceVariant)),
+          ),
+          Text(
+            Money.withLabel(totalMinor),
+            style: AppType.caption.copyWith(color: scheme.onSurfaceVariant, fontFeatures: AppFonts.tabular),
+          ),
+        ],
+      ),
     );
   }
 }
 
 class _IncomeRow extends StatelessWidget {
-  const _IncomeRow({required this.income, required this.source});
+  const _IncomeRow({required this.income, required this.source, required this.onTap});
 
   final Income income;
   final IncomeSource? source;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -98,18 +163,21 @@ class _IncomeRow extends StatelessWidget {
     final color = source != null ? Color(source!.color) : AppColors.income;
     final icon = source != null ? CategoryIconHelper.getIcon(source!.icon) : Icons.payments_rounded;
 
-    return Padding(
+    return InkWell(
       key: ValueKey('income-${income.id}'),
-      padding: const EdgeInsets.symmetric(horizontal: AppSpace.gutter, vertical: 10),
-      child: Row(
-        children: [
-          CategoryIconTile(icon: icon, color: color, size: 46),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Text(source?.name ?? 'Unknown source', style: AppType.rowTitle.copyWith(color: scheme.onSurface)),
-          ),
-          Text('+${Money.format(income.amountMinor)}', style: AppType.rowAmount.copyWith(color: AppColors.income)),
-        ],
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpace.gutter, vertical: 10),
+        child: Row(
+          children: [
+            CategoryIconTile(icon: icon, color: color, size: 46),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(source?.name ?? 'Unknown source', style: AppType.rowTitle.copyWith(color: scheme.onSurface)),
+            ),
+            Text('+${Money.format(income.amountMinor)}', style: AppType.rowAmount.copyWith(color: AppColors.income)),
+          ],
+        ),
       ),
     );
   }

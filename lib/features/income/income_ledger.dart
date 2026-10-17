@@ -66,6 +66,29 @@ class IncomeLedger {
     await _changed();
   }
 
+  /// Saves new values for an existing Income.
+  Future<void> updateIncome(Income income) async {
+    await _db.raw.update(
+      'income',
+      income.toMap()..['synced_at'] = null,
+      where: 'id = ?',
+      whereArgs: [income.id],
+    );
+    await _changed();
+  }
+
+  /// Soft-deletes an Income so the deletion can sync.
+  Future<void> deleteIncome(String id) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    await _db.raw.update(
+      'income',
+      {'deleted_at': now, 'updated_at': now, 'synced_at': null},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    await _changed();
+  }
+
   /// Income Sources the user can pick, by name. Seeds the presets on an
   /// empty table.
   Future<List<IncomeSource>> loadSources() async {
