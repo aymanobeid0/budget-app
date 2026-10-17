@@ -7,4 +7,4 @@ Every list screen has an empty state that says what goes there and offers the ne
 
 - [ ] Home, Income, Categories, Income Sources and Consultant all use `EmptyState`
 - [ ] Each empty state has a one-tap next step (add, or a suggested question)
-- [ ] Consultant without a Gemini key explains that the Consultant is off, instead of failing on send
+- [ ] Consultant without a Gemini key says the Consultant is off before the user types anything, instead of only answering with an error after they send
