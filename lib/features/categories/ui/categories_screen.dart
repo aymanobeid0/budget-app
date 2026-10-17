@@ -23,6 +23,7 @@ class CategoriesScreen extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
+      useRootNavigator: true, // above the nav bar, so Save is never covered
       backgroundColor: Colors.transparent,
       builder: (_) => CategoryFormSheet(
         category: category,

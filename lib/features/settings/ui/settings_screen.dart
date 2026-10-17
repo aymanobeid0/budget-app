@@ -64,6 +64,15 @@ class SettingsScreen extends StatelessWidget {
                     onTap: () => context.go('/settings/categories'),
                   ),
                   MenuRow(
+                    key: const Key('profile-income-sources-row'),
+                    icon: Icons.payments_rounded,
+                    color: AppColors.income,
+                    title: 'Income Sources',
+                    subtitle: 'Where your money comes from',
+                    trailing: const Chevron(),
+                    onTap: () => context.go('/settings/income-sources'),
+                  ),
+                  MenuRow(
                     icon: Icons.dark_mode_rounded,
                     color: const Color(0xFF1F2A44),
                     title: 'Dark mode',

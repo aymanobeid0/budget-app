@@ -4,6 +4,7 @@ import '../../features/categories/ui/categories_screen.dart';
 import '../../features/consultant/ui/consultant_screen.dart';
 import '../../features/expenses/ui/expenses_screen.dart';
 import '../../features/income/ui/income_screen.dart';
+import '../../features/income/ui/income_sources_screen.dart';
 import '../../features/settings/ui/settings_screen.dart';
 import 'app_shell.dart';
 
@@ -39,6 +40,10 @@ GoRouter buildRouter() => GoRouter(
                   GoRoute(
                     path: 'categories',
                     builder: (_, _) => const CategoriesScreen(),
+                  ),
+                  GoRoute(
+                    path: 'income-sources',
+                    builder: (_, _) => const IncomeSourcesScreen(),
                   ),
                 ],
               ),

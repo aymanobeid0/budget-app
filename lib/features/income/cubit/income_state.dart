@@ -19,13 +19,17 @@ class IncomeLoading extends IncomeState {
 }
 
 class IncomeLoaded extends IncomeState {
-  const IncomeLoaded({required this.income, required this.sources});
+  const IncomeLoaded({required this.income, required this.sources, this.sourceById = const {}});
 
   /// Active Income, newest first.
   final List<Income> income;
 
   /// Income Sources offered in the picker.
   final List<IncomeSource> sources;
+
+  /// Every Income Source by id, deleted ones included, for showing where
+  /// past Income came from.
+  final Map<String, IncomeSource> sourceById;
 
   /// Total of the listed Income in minor units.
   int get totalMinor => income.fold(0, (sum, i) => sum + i.amountMinor);
@@ -45,7 +49,7 @@ class IncomeLoaded extends IncomeState {
   }
 
   @override
-  List<Object?> get props => [income, sources];
+  List<Object?> get props => [income, sources, sourceById];
 }
 
 class IncomeError extends IncomeState {

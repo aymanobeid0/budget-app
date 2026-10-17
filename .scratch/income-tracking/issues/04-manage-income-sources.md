@@ -4,10 +4,14 @@
 
 **Blocked by:** 02: Log Your First Income
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Income Sources screen reachable from Profile, styled like Categories
-- [ ] Create, rename, recolour and change icon of an Income Source; changes show in the Add sheet picker
-- [ ] Deleting a source soft-deletes it: hidden from picker and list, past Income keeps showing it
-- [ ] Income Sources and Categories never appear in each other's lists
-- [ ] Tests: Income Ledger source create/update/soft delete; deleted source still resolves by id for past Income
+- [x] Income Sources screen reachable from Profile, styled like Categories
+- [x] Create, rename, recolour and change icon of an Income Source; changes show in the Add sheet picker
+- [x] Deleting a source soft-deletes it: hidden from picker and list, past Income keeps showing it
+- [x] Income Sources and Categories never appear in each other's lists
+- [x] Tests: Income Ledger source create/update/soft delete; deleted source still resolves by id for past Income
+
+## Answer
+
+Income Sources screen at `/settings/income-sources`, reached from a Profile row next to Categories. It reuses the category form (now takes a `noun`). The Income Ledger gains `saveSource`, soft `deleteSource` and `loadSources(includeDeleted:)`, so past Income keeps showing a deleted source. Also fixed in passing: the Categories and Income Sources form sheets now open above the nav bar (it covered their Save button), and the sheet title no longer overflows.

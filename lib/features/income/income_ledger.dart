@@ -91,17 +91,42 @@ class IncomeLedger {
 
   /// Income Sources the user can pick, by name. Seeds the presets on an
   /// empty table.
-  Future<List<IncomeSource>> loadSources() async {
-    final rows = await _db.raw.query('income_sources', where: 'deleted_at IS NULL', orderBy: 'name ASC');
-    if (rows.isNotEmpty) return rows.map(IncomeSource.fromMap).toList();
-
+  ///
+  /// With [includeDeleted], deleted sources come back too, so past Income
+  /// can still show where it came from.
+  Future<List<IncomeSource>> loadSources({bool includeDeleted = false}) async {
     final count = await _db.raw.rawQuery('SELECT COUNT(*) AS n FROM income_sources');
     final tableEmpty = ((count.first['n'] as int?) ?? 0) == 0;
-    if (tableEmpty && (_canSeedDefaults?.call() ?? true)) {
-      await _seedDefaults();
-      return loadSources();
-    }
-    return const [];
+    if (tableEmpty && (_canSeedDefaults?.call() ?? true)) await _seedDefaults();
+
+    final rows = await _db.raw.query(
+      'income_sources',
+      where: includeDeleted ? null : 'deleted_at IS NULL',
+      orderBy: 'name ASC',
+    );
+    return rows.map(IncomeSource.fromMap).toList();
+  }
+
+  /// Creates or replaces an Income Source.
+  Future<void> saveSource(IncomeSource source) async {
+    await _db.raw.insert(
+      'income_sources',
+      source.toMap()..['synced_at'] = null,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    unawaited(syncEngine?.sync().then((_) {}));
+  }
+
+  /// Soft-deletes an Income Source. Its past Income is kept and still counts.
+  Future<void> deleteSource(String id) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    await _db.raw.update(
+      'income_sources',
+      {'deleted_at': now, 'updated_at': now, 'synced_at': null},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    unawaited(syncEngine?.sync().then((_) {}));
   }
 
   Future<void> _seedDefaults() async {

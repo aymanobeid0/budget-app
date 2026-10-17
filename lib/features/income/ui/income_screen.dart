@@ -50,7 +50,7 @@ class IncomeScreen extends StatelessWidget {
               );
             }
 
-            final sources = {for (final s in state.sources) s.id: s};
+            final sources = state.sourceById;
             final days = state.groupedByDay;
             final dayTotals = state.dayTotals;
             return ListView(

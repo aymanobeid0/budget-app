@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../income.dart';
 import '../income_ledger.dart';
+import '../income_source.dart';
 import 'income_state.dart';
 
 /// Income tab state, read from the Income Ledger.
@@ -25,7 +26,7 @@ class IncomeCubit extends Cubit<IncomeState> {
   }) async {
     final now = DateTime.now();
     await _guard(() => _ledger.logIncome(Income(
-          id: _generateId(),
+          id: _generateId('inc_'),
           amountMinor: amountMinor,
           sourceId: sourceId,
           paidOn: paidOn,
@@ -39,6 +40,23 @@ class IncomeCubit extends Cubit<IncomeState> {
 
   Future<void> deleteIncome(String id) => _guard(() => _ledger.deleteIncome(id));
 
+  Future<void> addSource({required String name, required String icon, required int color}) {
+    final now = DateTime.now();
+    return _guard(() => _ledger.saveSource(IncomeSource(
+          id: _generateId('src_'),
+          name: name,
+          icon: icon,
+          color: color,
+          createdAt: now,
+          updatedAt: now,
+        )));
+  }
+
+  Future<void> updateSource(IncomeSource source) =>
+      _guard(() => _ledger.saveSource(source.copyWith(updatedAt: DateTime.now())));
+
+  Future<void> deleteSource(String id) => _guard(() => _ledger.deleteSource(id));
+
   Future<void> _guard(Future<void> Function() action) async {
     try {
       await action();
@@ -51,18 +69,24 @@ class IncomeCubit extends Cubit<IncomeState> {
 
   Future<void> _refresh() async {
     try {
-      final sources = await _ledger.loadSources();
+      final all = await _ledger.loadSources(includeDeleted: true);
       final income = await _ledger.loadIncome();
-      if (!isClosed) emit(IncomeLoaded(income: income, sources: sources));
+      if (!isClosed) {
+        emit(IncomeLoaded(
+          income: income,
+          sources: all.where((s) => !s.isDeleted).toList(),
+          sourceById: {for (final s in all) s.id: s},
+        ));
+      }
     } catch (e) {
       if (!isClosed) emit(IncomeError(e.toString()));
     }
   }
 
-  String _generateId() {
+  String _generateId(String prefix) {
     final rand = Random();
     const chars = '0123456789abcdef';
-    final buffer = StringBuffer('inc_');
+    final buffer = StringBuffer(prefix);
     for (var i = 0; i < 16; i++) {
       buffer.write(chars[rand.nextInt(chars.length)]);
     }

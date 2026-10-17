@@ -4,14 +4,28 @@ import '../../../core/theme/app_theme.dart';
 import '../category.dart';
 import 'category_icon_helper.dart';
 
+/// Name, icon and colour form. Used for Categories and, with [noun] and
+/// the `initial*` values, for Income Sources.
 class CategoryFormSheet extends StatefulWidget {
   const CategoryFormSheet({
     super.key,
     this.category,
+    this.noun = 'Category',
+    this.nameHint = 'e.g. Groceries, Gym, Subscriptions',
+    this.initialName,
+    this.initialIcon,
+    this.initialColor,
     required this.onSave,
   });
 
   final Category? category;
+  final String noun;
+  final String nameHint;
+
+  /// Values of the record being edited when it isn't a [Category].
+  final String? initialName;
+  final String? initialIcon;
+  final int? initialColor;
   final void Function(String name, String icon, int color) onSave;
 
   @override
@@ -38,9 +52,9 @@ class _CategoryFormSheetState extends State<CategoryFormSheet> {
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.category?.name ?? '');
-    _selectedIcon = widget.category?.icon ?? 'restaurant';
-    _selectedColor = widget.category?.color ?? _availableColors.first;
+    _nameController = TextEditingController(text: widget.category?.name ?? widget.initialName ?? '');
+    _selectedIcon = widget.category?.icon ?? widget.initialIcon ?? 'restaurant';
+    _selectedColor = widget.category?.color ?? widget.initialColor ?? _availableColors.first;
   }
 
   @override
@@ -60,7 +74,7 @@ class _CategoryFormSheetState extends State<CategoryFormSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final isEditing = widget.category != null;
+    final isEditing = widget.category != null || widget.initialName != null;
 
     return Container(
       decoration: BoxDecoration(
@@ -95,12 +109,15 @@ class _CategoryFormSheetState extends State<CategoryFormSheet> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  isEditing ? 'Edit Category' : 'New Category',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 20,
-                    color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+                Flexible(
+                  child: Text(
+                    isEditing ? 'Edit ${widget.noun}' : 'New ${widget.noun}',
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 20,
+                      color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+                    ),
                   ),
                 ),
                 GestureDetector(
@@ -132,9 +149,9 @@ class _CategoryFormSheetState extends State<CategoryFormSheet> {
                 fontWeight: FontWeight.w600,
                 color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
               ),
-              decoration: const InputDecoration(
-                labelText: 'Category Name',
-                hintText: 'e.g. Groceries, Gym, Subscriptions',
+              decoration: InputDecoration(
+                labelText: '${widget.noun} Name',
+                hintText: widget.nameHint,
               ),
               textInputAction: TextInputAction.done,
               onSubmitted: (_) => _submit(),
@@ -244,7 +261,7 @@ class _CategoryFormSheetState extends State<CategoryFormSheet> {
               key: const Key('save-category-btn'),
               onPressed: _submit,
               icon: const Icon(Icons.check_rounded),
-              label: Text(isEditing ? 'Save Changes' : 'Create Category'),
+              label: Text(isEditing ? 'Save Changes' : 'Create ${widget.noun}'),
               style: FilledButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
