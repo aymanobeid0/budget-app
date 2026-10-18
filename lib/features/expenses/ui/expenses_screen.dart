@@ -24,6 +24,7 @@ import '../../settings/cubit/currency_cubit.dart';
 import '../cubit/expense_cubit.dart';
 import '../cubit/expense_state.dart';
 import '../expense.dart';
+import '../month_spending.dart';
 import 'expense_form_sheet.dart';
 
 const _shortMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -102,6 +103,11 @@ class ExpensesScreen extends StatelessWidget {
                             label: month.label(today: chosen.today),
                             expenses: expenses,
                             today: chosen.isCurrent ? chosen.today : null,
+                            comparison: compareWithPreviousMonth(
+                              summarizeMonthSpending(expenses: state.expenses, month: month),
+                              currency: context.watch<CurrencyCubit>().state,
+                              today: chosen.today,
+                            ),
                           ),
                         ]),
                       ),
@@ -189,8 +195,11 @@ Future<bool> confirmDeleteEntry(BuildContext context,
 /// The chosen month's spending. Today and this week show only when [today]
 /// is given, on the current month.
 class _SpentCard extends StatelessWidget {
-  const _SpentCard({required this.label, required this.expenses, required this.today});
+  const _SpentCard({required this.label, required this.expenses, required this.today, this.comparison});
   final String label;
+
+  /// How the month compares with the month before; hidden when null.
+  final String? comparison;
 
   /// The chosen month's Expenses.
   final List<Expense> expenses;
@@ -243,6 +252,14 @@ class _SpentCard extends StatelessWidget {
               style: AppType.heroAmount,
             ),
           ),
+          if (comparison != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              comparison!,
+              key: const Key('month-comparison'),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.onPrimaryMuted),
+            ),
+          ],
           if (day != null) ...[
             const SizedBox(height: 18),
             Row(
