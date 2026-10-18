@@ -14,6 +14,7 @@ import 'package:budget_app/features/income/income_ledger.dart';
 import 'package:budget_app/core/theme/app_theme.dart';
 import 'package:budget_app/core/theme/theme_cubit.dart';
 import 'package:budget_app/features/account/cubit/account_cubit.dart';
+import 'package:budget_app/features/settings/cubit/currency_cubit.dart';
 import 'package:budget_app/features/settings/ui/settings_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -176,6 +177,7 @@ class Phone {
     final db = await AppDatabase.open(factory: databaseFactoryFfiNoIsolate, path: '${dir.path}/app.db');
     final auth = FakeAuth(server);
     final engine = SyncEngine(db: db, client: FakeCloud(server, auth));
+    addTearDown(engine.dispose);
     final service = AccountService(
       db: db,
       auth: auth,
@@ -410,6 +412,7 @@ void main() {
         home: MultiBlocProvider(
           providers: [
             BlocProvider<ThemeCubit>(create: (_) => ThemeCubit()),
+            BlocProvider<CurrencyCubit>(create: (_) => CurrencyCubit()),
             BlocProvider<AccountCubit>.value(value: cubit),
           ],
           child: const SettingsScreen(),

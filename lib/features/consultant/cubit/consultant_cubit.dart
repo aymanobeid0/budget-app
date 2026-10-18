@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/format/money.dart';
 import '../../categories/category_store.dart';
 import '../../expenses/expense_ledger.dart';
 import '../../income/income_ledger.dart';
@@ -15,8 +16,10 @@ class ConsultantCubit extends Cubit<ConsultantState> {
     required this.ledger,
     required this.categoryStore,
     this.incomeLedger,
+    Currency Function()? currency,
     required this.client,
-  }) : super(const ConsultantState());
+  })  : _currency = currency ?? (() => Currency.fallback),
+        super(const ConsultantState());
 
   final ExpenseLedger ledger;
   final CategoryStore categoryStore;
@@ -25,6 +28,9 @@ class ConsultantCubit extends Cubit<ConsultantState> {
   /// spending-only.
   final IncomeLedger? incomeLedger;
   final ConsultantClient client;
+
+  /// The Currency chosen in Settings at the time a message is sent.
+  final Currency Function() _currency;
 
   StreamSubscription<String>? _streamSub;
 
@@ -68,16 +74,19 @@ class ConsultantCubit extends Cubit<ConsultantState> {
       final categories = await categoryStore.loadCategories();
       final income = await incomeLedger?.loadIncome() ?? const [];
       final incomeSources = await incomeLedger?.loadSources(includeDeleted: true) ?? const [];
+      final currency = _currency();
       final contextSummary = SpendingContextBuilder.build(
         expenses: expenses,
         categories: categories,
         income: income,
         incomeSources: incomeSources,
+        currency: currency,
       );
 
       final stream = client.streamConsultantResponse(
         prompt: cleanPrompt,
         contextSummary: contextSummary,
+        currency: currency,
         conversationHistory: priorHistory,
       );
 

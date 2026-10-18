@@ -1,5 +1,6 @@
 import 'package:budget_app/app.dart';
 import 'package:budget_app/core/database/app_database.dart';
+import 'package:budget_app/core/theme/empty_state.dart';
 import 'package:budget_app/features/categories/category_store.dart';
 import 'package:budget_app/features/expenses/expense_ledger.dart';
 import 'package:budget_app/features/expenses/ui/expense_form_sheet.dart';
@@ -113,5 +114,20 @@ void main() {
     await tester.tap(find.byKey(const Key('add-expense-fab')));
     await tester.pumpAndSettle();
     expect(inSheet(find.text('Salary')), findsNothing);
+  });
+
+  testWidgets('with every Income Source deleted, the shared empty state offers to add one', (tester) async {
+    for (final s in await incomeLedger.loadSources()) {
+      await incomeLedger.deleteSource(s.id);
+    }
+    await pumpApp(tester);
+    await openSources(tester);
+
+    final empty = find.byType(EmptyState);
+    expect(find.descendant(of: empty, matching: find.text('No Income Sources yet')), findsOneWidget);
+    await tester.tap(find.descendant(of: empty, matching: find.byKey(const Key('add-first-income-source'))));
+    await tester.pumpAndSettle();
+
+    expect(find.text('New Income Source'), findsOneWidget);
   });
 }

@@ -3,7 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/format/money.dart';
+import '../../../core/sync/sync_status_view.dart';
+import '../../../core/theme/animated_entries.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/empty_state.dart';
 import '../../../core/theme/theme_toggle_button.dart';
 import '../../../core/theme/widgets.dart';
 import '../../categories/category.dart';
@@ -12,6 +15,7 @@ import '../../categories/cubit/category_state.dart';
 import '../../categories/ui/category_icon_helper.dart';
 import '../../income/cubit/income_cubit.dart' show maybeIncomeCubit;
 import '../../income/ui/net_card.dart';
+import '../../settings/cubit/currency_cubit.dart';
 import '../cubit/expense_cubit.dart';
 import '../cubit/expense_state.dart';
 import '../expense.dart';
@@ -80,6 +84,7 @@ class ExpensesScreen extends StatelessWidget {
                   padding: const EdgeInsets.only(bottom: 130),
                   children: [
                     header,
+                    SyncAttentionIndicator(onTap: router == null ? null : () => router.go('/settings')),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 22, AppSpace.gutter, 0),
                       child: _SpentCard(expenses: expenses),
@@ -93,16 +98,19 @@ class ExpensesScreen extends StatelessWidget {
                       padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 26, AppSpace.gutter, 6),
                       child: Text('Transactions', style: AppType.title.copyWith(color: scheme.onSurface)),
                     ),
-                    if (expenses.isEmpty)
-                      _EmptyTransactions(onAdd: () => showExpenseSheet(context))
-                    else
+                    // Kept while the list is empty, so the first Expense animates in too.
+                    AnimatedEntries(children: [
                       for (final e in expenses)
                         _TransactionRow(
+                          key: ValueKey('expense-row-${e.id}'),
                           expense: e,
                           category: catMap[e.categoryId],
                           onTap: () => showExpenseSheet(context, expense: e),
                           onDelete: () => _confirmDelete(context, e),
                         ),
+                    ]),
+                    if (expenses.isEmpty)
+                      _EmptyTransactions(onAdd: () => showExpenseSheet(context)),
                   ],
                 );
               },
@@ -116,15 +124,17 @@ class ExpensesScreen extends StatelessWidget {
 
 /// Shared delete confirmation (list swipe and the edit screen).
 Future<bool> confirmDeleteExpense(BuildContext context, Expense expense) =>
-    confirmDeleteEntry(context, noun: 'expense', amountMinor: expense.amountMinor);
+    confirmDeleteEntry(context,
+        noun: 'expense', amountMinor: expense.amountMinor, currency: context.read<CurrencyCubit>().state);
 
 /// Delete confirmation for an Expense or an Income.
-Future<bool> confirmDeleteEntry(BuildContext context, {required String noun, required int amountMinor}) async {
+Future<bool> confirmDeleteEntry(BuildContext context,
+    {required String noun, required int amountMinor, required Currency currency}) async {
   final result = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
       title: Text('Delete $noun?', style: const TextStyle(fontWeight: FontWeight.w700)),
-      content: Text('This removes the ${Money.withLabel(amountMinor)} $noun.'),
+      content: Text('This removes the ${Money.withLabel(amountMinor, currency)} $noun.'),
       actions: [
         TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
         FilledButton(
@@ -184,9 +194,9 @@ class _SpentCard extends StatelessWidget {
             child: Text.rich(
               TextSpan(children: [
                 TextSpan(text: Money.format(month)),
-                const TextSpan(
-                  text: '  ${Money.currencyLabel}',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.onPrimaryMuted),
+                TextSpan(
+                  text: '  ${context.watch<CurrencyCubit>().state.code}',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.onPrimaryMuted),
                 ),
               ]),
               style: AppType.heroAmount,
@@ -229,7 +239,7 @@ class _Stat extends StatelessWidget {
             children: [
               Text(label, style: const TextStyle(fontSize: 13, color: AppColors.onPrimaryMuted)),
               Text(
-                Money.withLabel(minor),
+                Money.withLabel(minor, context.watch<CurrencyCubit>().state),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
@@ -253,33 +263,15 @@ class _EmptyTransactions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 28, AppSpace.gutter, 0),
-      child: Column(
-        children: [
-          Container(
-            width: 72,
-            height: 72,
-            decoration: BoxDecoration(color: scheme.primaryContainer, shape: BoxShape.circle),
-            child: Icon(Icons.receipt_long_rounded, size: 32, color: scheme.onPrimaryContainer),
-          ),
-          const SizedBox(height: 16),
-          Text('No expenses yet', style: AppType.title.copyWith(color: scheme.onSurface)),
-          const SizedBox(height: 6),
-          Text(
-            'Tap + to log what you spend. Your month will take shape here.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 14, height: 1.45, color: scheme.onSurfaceVariant),
-          ),
-          const SizedBox(height: 18),
-          FilledButton.icon(
-            key: const Key('add-first-expense'),
-            onPressed: onAdd,
-            icon: const Icon(Icons.add_rounded),
-            label: const Text('Add your first expense'),
-          ),
-        ],
+    return EmptyState(
+      icon: Icons.receipt_long_rounded,
+      title: 'No Expenses yet',
+      message: 'Log what you spend and your month takes shape here.',
+      action: FilledButton.icon(
+        key: const Key('add-first-expense'),
+        onPressed: onAdd,
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('Add your first Expense'),
       ),
     );
   }
@@ -287,6 +279,7 @@ class _EmptyTransactions extends StatelessWidget {
 
 class _TransactionRow extends StatelessWidget {
   const _TransactionRow({
+    super.key,
     required this.expense,
     required this.category,
     required this.onTap,

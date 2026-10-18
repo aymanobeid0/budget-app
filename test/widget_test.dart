@@ -1,6 +1,8 @@
 import 'package:budget_app/app.dart';
 import 'package:budget_app/core/database/app_database.dart';
 import 'package:budget_app/core/router/app_shell.dart';
+import 'package:budget_app/core/sync/cloud_sync_client.dart';
+import 'package:budget_app/core/sync/sync_engine.dart';
 import 'package:budget_app/core/theme/theme_cubit.dart';
 import 'package:budget_app/features/categories/category_store.dart';
 import 'package:budget_app/features/expenses/expense_ledger.dart';
@@ -8,6 +10,36 @@ import 'package:budget_app/features/expenses/ui/expense_form_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+/// Reachable cloud with no rows; counts how many syncs reached it.
+class _CountingCloud implements CloudSyncClient {
+  int syncs = 0;
+
+  @override
+  String? get currentUserId => 'user_1';
+  @override
+  Future<String?> ensureAuthenticated() async {
+    syncs++;
+    return 'user_1';
+  }
+
+  @override
+  Future<void> upsertCategories(List<Map<String, dynamic>> rows) async {}
+  @override
+  Future<void> upsertExpenses(List<Map<String, dynamic>> rows) async {}
+  @override
+  Future<void> upsertIncomeSources(List<Map<String, dynamic>> rows) async {}
+  @override
+  Future<void> upsertIncome(List<Map<String, dynamic>> rows) async {}
+  @override
+  Future<List<Map<String, dynamic>>> fetchCategories() async => [];
+  @override
+  Future<List<Map<String, dynamic>>> fetchExpenses() async => [];
+  @override
+  Future<List<Map<String, dynamic>>> fetchIncomeSources() async => [];
+  @override
+  Future<List<Map<String, dynamic>>> fetchIncome() async => [];
+}
 
 void main() {
   setUpAll(sqfliteFfiInit);
@@ -126,5 +158,25 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.widget<MaterialApp>(find.byType(MaterialApp)).themeMode, ThemeMode.dark);
+  });
+
+  testWidgets('returning the app to the foreground syncs', (tester) async {
+    final cloud = _CountingCloud();
+    final engine = SyncEngine(db: db, client: cloud);
+    addTearDown(engine.dispose);
+
+    await tester.pumpWidget(BudgetApp(categoryStore: store, expenseLedger: ledger, syncEngine: engine));
+    await tester.pumpAndSettle();
+    expect(cloud.syncs, 0);
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpAndSettle();
+
+    expect(cloud.syncs, 1);
   });
 }

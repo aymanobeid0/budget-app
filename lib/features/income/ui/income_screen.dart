@@ -3,10 +3,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/format/money.dart';
+import '../../../core/theme/animated_entries.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/empty_state.dart';
 import '../../../core/theme/widgets.dart';
 import '../../categories/ui/category_icon_helper.dart';
 import '../../expenses/ui/expense_form_sheet.dart';
+import '../../settings/cubit/currency_cubit.dart';
 import '../cubit/income_cubit.dart';
 import '../cubit/income_state.dart';
 import '../income.dart';
@@ -67,23 +70,35 @@ class IncomeScreen extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 130),
               children: [
                 header,
+                // Always a child, so the list below keeps its place (and its
+                // leaving rows) when the last Income goes.
                 if (days.isEmpty)
-                  _EmptyIncome(onAdd: () => showExpenseSheet(context, kind: EntryKind.income))
-                else ...[
+                  const SizedBox.shrink()
+                else
                   Padding(
                     padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 22, AppSpace.gutter, 0),
                     child: _TotalCard(totalMinor: state.totalMinor),
                   ),
+                // Kept while the list is empty, so the first Income animates in too.
+                AnimatedEntries(children: [
                   for (final day in days.entries) ...[
-                    _DayHeader(day: day.value.first.paidOn, totalMinor: dayTotals[day.key]!),
+                    _DayHeader(
+                      key: ValueKey('income-day-${day.key}'),
+                      day: day.value.first.paidOn,
+                      totalMinor: dayTotals[day.key]!,
+                    ),
                     for (final i in day.value)
                       _IncomeRow(
+                        key: ValueKey('income-row-${i.id}'),
                         income: i,
                         source: sources[i.sourceId],
                         onTap: () => showExpenseSheet(context, income: i),
                       ),
                   ],
-                ],
+                ]),
+                // After the list, so a deleted last Income leaves above it.
+                if (days.isEmpty)
+                  _EmptyIncome(onAdd: () => showExpenseSheet(context, kind: EntryKind.income)),
               ],
             );
           },
@@ -116,7 +131,7 @@ class _TotalCard extends StatelessWidget {
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
-            child: Text(Money.withLabel(totalMinor), style: AppType.heroAmount.copyWith(color: AppColors.income)),
+            child: Text(Money.withLabel(totalMinor, context.watch<CurrencyCubit>().state), style: AppType.heroAmount.copyWith(color: AppColors.income)),
           ),
         ],
       ),
@@ -125,7 +140,7 @@ class _TotalCard extends StatelessWidget {
 }
 
 class _DayHeader extends StatelessWidget {
-  const _DayHeader({required this.day, required this.totalMinor});
+  const _DayHeader({super.key, required this.day, required this.totalMinor});
   final DateTime day;
   final int totalMinor;
 
@@ -151,7 +166,7 @@ class _DayHeader extends StatelessWidget {
             child: Text(_label(), style: AppType.caption.copyWith(color: scheme.onSurfaceVariant)),
           ),
           Text(
-            Money.withLabel(totalMinor),
+            Money.withLabel(totalMinor, context.watch<CurrencyCubit>().state),
             style: AppType.caption.copyWith(color: scheme.onSurfaceVariant, fontFeatures: AppFonts.tabular),
           ),
         ],
@@ -161,7 +176,7 @@ class _DayHeader extends StatelessWidget {
 }
 
 class _IncomeRow extends StatelessWidget {
-  const _IncomeRow({required this.income, required this.source, required this.onTap});
+  const _IncomeRow({super.key, required this.income, required this.source, required this.onTap});
 
   final Income income;
   final IncomeSource? source;
@@ -199,33 +214,15 @@ class _EmptyIncome extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 40, AppSpace.gutter, 0),
-      child: Column(
-        children: [
-          Container(
-            width: 72,
-            height: 72,
-            decoration: BoxDecoration(color: scheme.primaryContainer, shape: BoxShape.circle),
-            child: Icon(Icons.payments_rounded, size: 32, color: scheme.onPrimaryContainer),
-          ),
-          const SizedBox(height: 16),
-          Text('No income yet', style: AppType.title.copyWith(color: scheme.onSurface)),
-          const SizedBox(height: 6),
-          Text(
-            'Tap + and switch to Income to log money you were paid.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 14, height: 1.45, color: scheme.onSurfaceVariant),
-          ),
-          const SizedBox(height: 18),
-          FilledButton.icon(
-            key: const Key('add-first-income'),
-            onPressed: onAdd,
-            icon: const Icon(Icons.add_rounded),
-            label: const Text('Log your first income'),
-          ),
-        ],
+    return EmptyState(
+      icon: Icons.payments_rounded,
+      title: 'No Income yet',
+      message: 'Log money you were paid and see what comes in next to what you spend.',
+      action: FilledButton.icon(
+        key: const Key('add-first-income'),
+        onPressed: onAdd,
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('Log your first Income'),
       ),
     );
   }

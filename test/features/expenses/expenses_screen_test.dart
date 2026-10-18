@@ -1,4 +1,5 @@
 import 'package:budget_app/core/database/app_database.dart';
+import 'package:budget_app/core/theme/empty_state.dart';
 import 'package:budget_app/core/theme/theme_cubit.dart';
 import 'package:budget_app/features/categories/category_store.dart';
 import 'package:budget_app/features/categories/cubit/category_cubit.dart';
@@ -7,6 +8,7 @@ import 'package:budget_app/features/expenses/expense_ledger.dart';
 import 'package:budget_app/features/categories/ui/category_icon_helper.dart';
 import 'package:budget_app/features/expenses/ui/expense_form_sheet.dart';
 import 'package:budget_app/features/expenses/ui/expenses_screen.dart';
+import 'package:budget_app/features/settings/cubit/currency_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -47,19 +49,24 @@ void main() {
           BlocProvider<CategoryCubit>.value(value: categoryCubit),
           BlocProvider<ExpenseCubit>.value(value: expenseCubit),
           BlocProvider<ThemeCubit>(create: (_) => ThemeCubit()),
+          BlocProvider<CurrencyCubit>(create: (_) => CurrencyCubit()),
         ],
         child: const ExpensesScreen(),
       ),
     );
   }
 
-  testWidgets('renders empty state with an add action when there are no expenses', (tester) async {
+  testWidgets('Home with no Expenses shows the shared empty state, and its action opens the Add sheet', (tester) async {
     await expenseCubit.load();
     await tester.pumpWidget(buildTestWidget());
     await tester.pumpAndSettle();
 
-    expect(find.text('No expenses yet'), findsOneWidget);
-    expect(find.byKey(const Key('add-first-expense')), findsOneWidget);
+    final empty = find.byType(EmptyState);
+    expect(find.descendant(of: empty, matching: find.text('No Expenses yet')), findsOneWidget);
+    await tester.tap(find.descendant(of: empty, matching: find.byKey(const Key('add-first-expense'))));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ExpenseFormSheet), findsOneWidget);
   });
 
   testWidgets('renders the blue summary card and the transaction row', (tester) async {

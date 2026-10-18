@@ -51,7 +51,7 @@ void main() {
   }
 
   testWidgets('Home shows this month\'s Net and updates it as Income and Expenses change', (tester) async {
-    await pumpApp(tester, InMemoryNetPeriodStorage());
+    await pumpApp(tester, NetPeriodStorage.inMemory());
 
     expect(find.byKey(const Key('net-card')), findsOneWidget);
     expect(inCard(find.text('This month')), findsOneWidget);
@@ -66,7 +66,7 @@ void main() {
   });
 
   testWidgets('the last picked period is remembered on the device', (tester) async {
-    final storage = InMemoryNetPeriodStorage();
+    final storage = NetPeriodStorage.inMemory();
     await pumpApp(tester, storage);
 
     await tester.tap(find.byKey(const Key('net-period-week')));

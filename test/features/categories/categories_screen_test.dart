@@ -1,4 +1,6 @@
 import 'package:budget_app/core/database/app_database.dart';
+import 'package:budget_app/core/theme/empty_state.dart';
+import 'package:budget_app/features/categories/cubit/category_state.dart';
 import 'package:budget_app/features/categories/category_store.dart';
 import 'package:budget_app/features/categories/cubit/category_cubit.dart';
 import 'package:budget_app/features/categories/ui/categories_screen.dart';
@@ -93,5 +95,21 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('category-item-cat_food')), findsNothing);
+  });
+
+  testWidgets('with every Category deleted, the shared empty state offers to add one', (tester) async {
+    await cubit.load();
+    for (final c in (cubit.state as CategoryLoaded).categories) {
+      await cubit.deleteCategory(c.id);
+    }
+    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpAndSettle();
+
+    final empty = find.byType(EmptyState);
+    expect(find.descendant(of: empty, matching: find.text('No Categories yet')), findsOneWidget);
+    await tester.tap(find.descendant(of: empty, matching: find.byKey(const Key('add-first-category'))));
+    await tester.pumpAndSettle();
+
+    expect(find.text('New Category'), findsOneWidget);
   });
 }

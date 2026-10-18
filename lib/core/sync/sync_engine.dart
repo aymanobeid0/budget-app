@@ -6,6 +6,9 @@ import '../database/app_database.dart';
 import 'cloud_sync_client.dart';
 import 'sync_status.dart';
 
+/// Starts a one-shot timer. Injected so tests can fire retries by hand.
+typedef StartTimer = Timer Function(Duration delay, void Function() callback);
+
 /// Deep module orchestrating local SQLite and remote Supabase synchronization.
 ///
 /// Ensures offline-first continuity: local mutations succeed immediately,
@@ -14,10 +17,24 @@ class SyncEngine {
   SyncEngine({
     required this.db,
     required this.client,
+    this.startTimer = Timer.new,
   });
 
   final AppDatabase db;
   final CloudSyncClient client;
+  final StartTimer startTimer;
+
+  /// Waits between retries after a sync ends offline or in error. The last
+  /// one repeats until a sync succeeds.
+  static const retryDelays = [
+    Duration(seconds: 5),
+    Duration(seconds: 15),
+    Duration(minutes: 1),
+    Duration(minutes: 5),
+  ];
+
+  Timer? _retryTimer;
+  int _retryAttempt = 0;
 
   final _statusController = StreamController<SyncState>.broadcast();
   SyncState _currentState = SyncState.idle;
@@ -25,28 +42,64 @@ class SyncEngine {
   SyncState get currentState => _currentState;
   Stream<SyncState> get statusStream => _statusController.stream;
 
+  /// Set by [dispose]. A run still in flight then finishes quietly: no
+  /// state events, no retry.
+  bool _disposed = false;
+
   void _setState(SyncState state) {
+    if (_disposed) return;
     _currentState = state;
     _statusController.add(state);
+  }
+
+  /// A finished run either clears the backoff (success) or schedules the
+  /// next retry, replacing any retry already waiting.
+  void _afterRun(bool succeeded) {
+    _retryTimer?.cancel();
+    _retryTimer = null;
+    if (_disposed) return;
+    if (succeeded) {
+      _retryAttempt = 0;
+      return;
+    }
+    _retryAttempt++;
+    if (!_paused) _scheduleRetry();
+  }
+
+  void _scheduleRetry() {
+    final delay = retryDelays[(_retryAttempt - 1).clamp(0, retryDelays.length - 1)];
+    _retryTimer = startTimer(delay, () {
+      if (!_disposed) unawaited(sync());
+    });
   }
 
   Future<SyncResult>? _inFlight;
 
   /// While true, background syncs are skipped. Account switching sets this
   /// so a stray sync can't push one account's rows into another account or
-  /// sign in anonymously halfway through a switch.
-  bool paused = false;
+  /// sign in anonymously halfway through a switch. No retry timer runs while
+  /// paused; a pending retry starts again when the pause ends.
+  bool get paused => _paused;
+  bool _paused = false;
+  set paused(bool value) {
+    _paused = value;
+    _retryTimer?.cancel();
+    _retryTimer = null;
+    if (!value && _retryAttempt > 0 && !_disposed) _scheduleRetry();
+  }
 
   /// Executes full two-way synchronization: pushes unsynced local changes,
   /// then pulls remote changes. Concurrent calls share one run.
   ///
   /// [force] runs even while [paused] (used by the account flow itself).
   Future<SyncResult> sync({bool force = false}) async {
+    if (_disposed) return SyncResult.failure('Sync stopped');
     if (paused && !force) return SyncResult.failure('Sync paused');
     if (force) {
       // A run that started before the caller changed accounts may still be
       // using the old session: let it finish, then start a fresh run.
       await idle();
+      if (_disposed) return SyncResult.failure('Sync stopped');
       return _start();
     }
     return _inFlight ?? _start();
@@ -75,6 +128,7 @@ class SyncEngine {
       final userId = await client.ensureAuthenticated();
       if (userId == null) {
         _setState(SyncState.offline);
+        _afterRun(false);
         return SyncResult.failure('Authentication required for sync');
       }
 
@@ -91,6 +145,7 @@ class SyncEngine {
       }
 
       _setState(SyncState.success);
+      _afterRun(true);
       int synced(String table) => pushed[table]! + pulled[table]!;
       return SyncResult.success(
         categories: synced('categories'),
@@ -101,6 +156,7 @@ class SyncEngine {
     } catch (e, st) {
       debugPrint('SyncEngine error: $e\n$st');
       _setState(SyncState.error);
+      _afterRun(false);
       return SyncResult.failure(e.toString());
     }
   }
@@ -167,7 +223,13 @@ class SyncEngine {
     return remote.length;
   }
 
+  /// Stops the engine for good: cancels any waiting retry, and later
+  /// [sync] calls (including a timer that already fired) do nothing.
   void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+    _retryTimer?.cancel();
+    _retryTimer = null;
     _statusController.close();
   }
 }

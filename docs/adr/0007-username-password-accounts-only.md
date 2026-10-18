@@ -1,0 +1,3 @@
+# Username and Password Accounts Only, No Google Sign-In
+
+The original spec (user story 11) offered sign-in "with an email or Google account". We chose username + password accounts only: a guest upgrades by picking a username, which maps to an internal `@budgetapp.local` email on Supabase Auth (see `docs/accounts.md`), and each account's data is scoped to its own user id. Google (or any OAuth) sign-in is out of scope because the per-user data setup relies on accounts the app creates itself from a username, and adding a second identity provider would mean linking identities across the guest, username and Google flows.

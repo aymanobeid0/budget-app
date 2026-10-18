@@ -13,23 +13,24 @@ class SpendingContextBuilder {
 
   /// [incomeSources] should include deleted sources so past Income keeps
   /// its source's name. [today] fixes "this month" (defaults to now).
+  /// Amounts are labelled with [currency], as the rest of the app shows them.
   static String build({
     required List<Expense> expenses,
     required List<Category> categories,
     List<Income> income = const [],
     List<IncomeSource> incomeSources = const [],
+    Currency currency = Currency.fallback,
     DateTime? today,
   }) {
-    return '${_spending(expenses, categories)}\n'
-        '${_income(income, incomeSources, expenses, today ?? DateTime.now())}';
+    String money(int minor) => Money.withLabel(minor, currency);
+    return '${_spending(expenses, categories, money)}\n'
+        '${_income(income, incomeSources, expenses, today ?? DateTime.now(), money)}';
   }
-
-  /// Amounts in the configured Currency, as the rest of the app shows them.
-  static String _money(int minor) => Money.withLabel(minor);
 
   /// Income totals by source, recent Income and this month's Net, so the
   /// consultant can judge affordability and spot changes in income.
-  static String _income(List<Income> income, List<IncomeSource> sources, List<Expense> expenses, DateTime today) {
+  static String _income(List<Income> income, List<IncomeSource> sources, List<Expense> expenses, DateTime today,
+      String Function(int minor) money) {
     final buffer = StringBuffer()..writeln('[USER INCOME SUMMARY]');
     if (income.isEmpty) {
       buffer.writeln('No income recorded yet, so affordability cannot be judged from income.');
@@ -50,13 +51,13 @@ class SpendingContextBuilder {
     final month = calculateNet(income: income, expenses: expenses, period: NetPeriod.month, today: today);
 
     buffer
-      ..writeln('Total recorded income: ${_money(totalMinor)}')
-      ..writeln('Net this month (income minus expenses): ${_money(month.netMinor)} '
-          '(income ${_money(month.incomeMinor)}, expenses ${_money(month.expensesMinor)})')
+      ..writeln('Total recorded income: ${money(totalMinor)}')
+      ..writeln('Net this month (income minus expenses): ${money(month.netMinor)} '
+          '(income ${money(month.incomeMinor)}, expenses ${money(month.expensesMinor)})')
       ..writeln('')
       ..writeln('Income by Source:');
     for (final entry in sortedSources) {
-      buffer.writeln('- ${entry.key}: ${_money(entry.value)}');
+      buffer.writeln('- ${entry.key}: ${money(entry.value)}');
     }
     buffer
       ..writeln('')
@@ -69,23 +70,23 @@ class SpendingContextBuilder {
     }
     for (final month in byMonth.entries.take(3)) {
       final parts = month.value.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
-      buffer.writeln('- ${month.key}: ${parts.map((e) => '${e.key} ${_money(e.value)}').join(', ')}');
+      buffer.writeln('- ${month.key}: ${parts.map((e) => '${e.key} ${money(e.value)}').join(', ')}');
     }
 
     buffer
       ..writeln('')
       ..writeln('Recent Income:');
     for (final i in recent.take(10)) {
-      buffer.writeln('- ${i.paidOnIso}: ${_money(i.amountMinor)} (${nameOf(i)})');
+      buffer.writeln('- ${i.paidOnIso}: ${money(i.amountMinor)} (${nameOf(i)})');
     }
     return buffer.toString();
   }
 
-  static String _spending(List<Expense> expenses, List<Category> categories) {
+  static String _spending(List<Expense> expenses, List<Category> categories, String Function(int minor) money) {
     if (expenses.isEmpty) {
       return '''
 [USER SPENDING SUMMARY]
-Total recorded expenses: ${_money(0)}
+Total recorded expenses: ${money(0)}
 No expenses recorded yet.
 ''';
     }
@@ -111,14 +112,14 @@ No expenses recorded yet.
 
     final buffer = StringBuffer()
       ..writeln('[USER SPENDING SUMMARY]')
-      ..writeln('Total recorded expenses: ${_money(totalMinor)}')
+      ..writeln('Total recorded expenses: ${money(totalMinor)}')
       ..writeln('Highest spending category: $highestCategory')
       ..writeln('')
       ..writeln('Category Breakdown:');
 
     for (final entry in sortedCategories) {
       final pct = totalMinor > 0 ? ((entry.value / totalMinor) * 100).toStringAsFixed(1) : '0.0';
-      buffer.writeln('- ${entry.key}: ${_money(entry.value)} ($pct%)');
+      buffer.writeln('- ${entry.key}: ${money(entry.value)} ($pct%)');
     }
 
     buffer
@@ -127,7 +128,7 @@ No expenses recorded yet.
 
     for (final exp in recentExpenses.take(10)) {
       final cat = categoryMap[exp.categoryId] ?? 'Uncategorized';
-      buffer.writeln('- ${exp.spentOnIso}: ${_money(exp.amountMinor)} ($cat)');
+      buffer.writeln('- ${exp.spentOnIso}: ${money(exp.amountMinor)} ($cat)');
     }
 
     return buffer.toString();
