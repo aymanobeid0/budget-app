@@ -27,8 +27,10 @@ create index if not exists expenses_user_spent_on_idx on public.expenses (user_i
 alter table public.categories enable row level security;
 alter table public.expenses   enable row level security;
 
+drop policy if exists "own categories" on public.categories;
 create policy "own categories" on public.categories
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+drop policy if exists "own expenses" on public.expenses;
 create policy "own expenses" on public.expenses
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);

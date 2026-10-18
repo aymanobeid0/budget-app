@@ -1,0 +1,80 @@
+# Applies new files in supabase/migrations/ to the self-hosted Supabase server
+# when they reach main. The database port is not public, so the job SSHes into
+# the VPS and runs psql inside the database container.
+#
+# Repository secrets (Settings → Secrets and variables → Actions):
+#   SUPABASE_SSH_HOST         VPS hostname or IP
+#   SUPABASE_SSH_USER         a user that can run `docker exec`
+#   SUPABASE_SSH_KEY          that user's private key (the public key goes in
+#                             ~/.ssh/authorized_keys on the VPS)
+#   SUPABASE_SSH_KNOWN_HOSTS  optional: output of `ssh-keyscan <host>`, pins the
+#                             host key; without it the key is trusted on first use
+# Repository variables (optional):
+#   SUPABASE_SSH_PORT         default 22
+#   SUPABASE_DB_CONTAINER     default supabase-db (check with `docker ps` on the VPS)
+#
+# Run it by hand from the Actions tab ("Run workflow"); tick "dry run" to only
+# list what would be applied.
+name: Supabase migrations
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - supabase/migrations/**
+      - supabase/apply_migrations.sh
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: List pending migrations without applying them
+        type: boolean
+        default: false
+
+concurrency:
+  group: supabase-migrations
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up SSH
+        env:
+          SSH_HOST: ${{ secrets.SUPABASE_SSH_HOST }}
+          SSH_USER: ${{ secrets.SUPABASE_SSH_USER }}
+          SSH_KEY: ${{ secrets.SUPABASE_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SUPABASE_SSH_KNOWN_HOSTS }}
+          SSH_PORT: ${{ vars.SUPABASE_SSH_PORT || '22' }}
+        run: |
+          if [ -z "$SSH_HOST" ] || [ -z "$SSH_USER" ] || [ -z "$SSH_KEY" ]; then
+            echo "::error::Add the SUPABASE_SSH_HOST, SUPABASE_SSH_USER and SUPABASE_SSH_KEY secrets first."
+            exit 1
+          fi
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/supabase && chmod 600 ~/.ssh/supabase
+          if [ -n "$SSH_KNOWN_HOSTS" ]; then
+            printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          else
+            ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" > ~/.ssh/known_hosts
+          fi
+          cat > ~/.ssh/config <<CONF
+          Host supabase-vps
+            HostName $SSH_HOST
+            User $SSH_USER
+            Port $SSH_PORT
+            IdentityFile ~/.ssh/supabase
+            StrictHostKeyChecking yes
+          CONF
+
+      - name: Apply migrations
+        env:
+          DB_CONTAINER: ${{ vars.SUPABASE_DB_CONTAINER || 'supabase-db' }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
+        run: |
+          PSQL="ssh supabase-vps docker exec -i $DB_CONTAINER psql -U postgres -d postgres" \
+            supabase/apply_migrations.sh

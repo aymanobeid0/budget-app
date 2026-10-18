@@ -28,11 +28,4 @@ Already set in `supabase/docker/docker-compose.yml`:
 - `GOTRUE_MAILER_AUTOCONFIRM: "true"`: no confirmation email (required for usernames)
 - `GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: "true"`: guest mode
 
-**Apply the migration** `supabase/migrations/20261016000000_per_user_keys.sql` to the server once. It changes the primary keys to `(user_id, id)` so several accounts can each own the default categories (`cat_food`, …). Without it, the second account's sync is rejected.
-
-To apply it, open Supabase Studio → SQL Editor, paste the file and run it. Or with psql:
-
-```bash
-psql "postgres://postgres:<POSTGRES_PASSWORD>@<host>:5432/postgres" \
-  -f supabase/migrations/20261016000000_per_user_keys.sql
-```
+**Apply the migrations** in `supabase/migrations/` to the server; `20261016000000_per_user_keys.sql` changes the primary keys to `(user_id, id)` so several accounts can each own the default categories (`cat_food`, …). Without it, the second account's sync is rejected. See "Database Schema & RLS Setup" in `docs/self_hosting_supabase.md`: the `Supabase migrations` GitHub workflow applies them on merge to `main`.

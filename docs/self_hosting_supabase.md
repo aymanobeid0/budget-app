@@ -34,46 +34,30 @@ If you prefer creating a custom **Compose** service directly in Dokploy:
 
 ## 🗄️ Database Schema & RLS Setup
 
-Once Supabase is running, open **Supabase Studio** (port 3000 or your studio domain) $\to$ **SQL Editor** $\to$ **New query**, and execute the following SQL to create the tables with Row-Level Security:
+The tables and their row-level security live in `supabase/migrations/`. Every account shares the same tables; RLS on `user_id` keeps each account's rows to itself, so a new account needs no setup on the server.
 
-```sql
--- Categories: user-owned classification labels
-create table if not exists public.categories (
-  id          text primary key,
-  user_id     uuid not null references auth.users (id) on delete cascade default auth.uid(),
-  name        text not null,
-  icon        text not null,
-  color       bigint not null,
-  created_at  timestamptz not null default now(),
-  updated_at  timestamptz not null default now(),
-  deleted_at  timestamptz
-);
+### Automatically (recommended)
 
--- Expenses: amount + category + date
-create table if not exists public.expenses (
-  id           text primary key,
-  user_id      uuid not null references auth.users (id) on delete cascade default auth.uid(),
-  amount_minor bigint not null check (amount_minor > 0),
-  category_id  text not null references public.categories (id),
-  spent_on     date not null,
-  created_at   timestamptz not null default now(),
-  updated_at   timestamptz not null default now(),
-  deleted_at   timestamptz
-);
+`.github/workflows/supabase-migrations.yml` applies new migration files whenever they reach `main`. The database port isn't public, so the job SSHes into the VPS and runs `psql` inside the database container. One-time setup:
 
-create index if not exists expenses_user_spent_on_idx on public.expenses (user_id, spent_on desc);
+1. On the VPS, check the database container's name with `docker ps` (it is `supabase-db` for the compose file in this repo; the Dokploy template names it differently).
+2. Make an SSH key pair for GitHub (`ssh-keygen -t ed25519 -f budget-app-deploy -N ""`) and add `budget-app-deploy.pub` to `~/.ssh/authorized_keys` of a VPS user that can run `docker`.
+3. In GitHub → **Settings → Secrets and variables → Actions**, add:
+   - Secrets: `SUPABASE_SSH_HOST`, `SUPABASE_SSH_USER`, `SUPABASE_SSH_KEY` (contents of `budget-app-deploy`), and optionally `SUPABASE_SSH_KNOWN_HOSTS` (output of `ssh-keyscan <host>`).
+   - Variables (only if not the default): `SUPABASE_DB_CONTAINER` (default `supabase-db`), `SUPABASE_SSH_PORT` (default `22`).
+4. **Actions → Supabase migrations → Run workflow**, first with "dry run" ticked to see what is pending, then without.
 
--- Enable Row Level Security (RLS)
-alter table public.categories enable row level security;
-alter table public.expenses   enable row level security;
+Applied files are recorded in `supabase_migrations.schema_migrations`, so each runs once. Every migration is written to be safe to run again, so the first run against a server set up by hand is harmless.
 
--- Enforce user-scoped access policies
-create policy "own categories" on public.categories
-  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+### By hand
 
-create policy "own expenses" on public.expenses
-  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+Run the same script from the VPS (or anywhere `psql` can reach the database):
+
+```bash
+PSQL="docker exec -i supabase-db psql -U postgres -d postgres" supabase/apply_migrations.sh
 ```
+
+Or paste each pending file from `supabase/migrations/` into **Studio → SQL Editor** in filename order.
 
 ---
 
