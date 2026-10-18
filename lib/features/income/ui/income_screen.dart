@@ -3,22 +3,30 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/format/money.dart';
+import '../../../core/month/chosen_month_cubit.dart';
+import '../../../core/month/month_header.dart';
 import '../../../core/theme/animated_entries.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/empty_state.dart';
 import '../../../core/theme/widgets.dart';
 import '../../categories/ui/category_icon_helper.dart';
+import '../../expenses/cubit/expense_cubit.dart';
+import '../../expenses/cubit/expense_state.dart';
+import '../../expenses/expense.dart';
 import '../../expenses/ui/expense_form_sheet.dart';
 import '../../settings/cubit/currency_cubit.dart';
 import '../cubit/income_cubit.dart';
 import '../cubit/income_state.dart';
+import '../earliest_month.dart';
 import '../income.dart';
 import '../income_source.dart';
 
 const _shortMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const _weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-/// Income tab: the Income list, newest first and grouped by day.
+/// Income tab: one month at a time. The month header and total card (swipe
+/// either to change month) over that month's Income, newest first and
+/// grouped by day.
 class IncomeScreen extends StatelessWidget {
   const IncomeScreen({super.key});
 
@@ -26,6 +34,9 @@ class IncomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final router = GoRouter.maybeOf(context);
+    final chosen = context.watch<ChosenMonthCubit>();
+    final month = chosen.state;
+    final expenses = _watchExpenses(context);
     final header = ScreenHeader(
       title: 'Income',
       trailing: SquareIconButton(
@@ -63,28 +74,38 @@ class IncomeScreen extends StatelessWidget {
               );
             }
 
-            final sources = state.sourceById;
-            final days = state.groupedByDay;
-            final dayTotals = state.dayTotals;
+            final earliest = earliestEntryMonth(expenses: expenses, income: state.income);
+            final inMonth = state.forMonth(month);
+            final sources = inMonth.sourceById;
+            final days = inMonth.groupedByDay;
+            final dayTotals = inMonth.dayTotals;
+            final label = month.label(today: chosen.today);
             return ListView(
               padding: const EdgeInsets.only(bottom: 130),
               children: [
                 header,
-                // Always a child, so the list below keeps its place (and its
-                // leaving rows) when the last Income goes.
-                if (days.isEmpty)
-                  const SizedBox.shrink()
-                else
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 22, AppSpace.gutter, 0),
-                    child: _TotalCard(totalMinor: state.totalMinor),
+                MonthSwipeArea(
+                  earliest: earliest,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 14, AppSpace.gutter, 0),
+                    child: Column(children: [
+                      MonthHeader(earliest: earliest),
+                      // With no Income at all, the welcome below says it all.
+                      if (state.income.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        _TotalCard(label: label, totalMinor: inMonth.totalMinor),
+                      ],
+                    ]),
                   ),
+                ),
                 // Kept while the list is empty, so the first Income animates in too.
-                AnimatedEntries(children: [
+                // Keyed by month, so a new month's rows show at once.
+                AnimatedEntries(key: ValueKey(month), children: [
                   for (final day in days.entries) ...[
                     _DayHeader(
                       key: ValueKey('income-day-${day.key}'),
                       day: day.value.first.paidOn,
+                      today: chosen.today,
                       totalMinor: dayTotals[day.key]!,
                     ),
                     for (final i in day.value)
@@ -97,8 +118,14 @@ class IncomeScreen extends StatelessWidget {
                   ],
                 ]),
                 // After the list, so a deleted last Income leaves above it.
-                if (days.isEmpty)
-                  _EmptyIncome(onAdd: () => showExpenseSheet(context, kind: EntryKind.income)),
+                if (state.income.isEmpty)
+                  _EmptyIncome(onAdd: () => showExpenseSheet(context, kind: EntryKind.income))
+                else if (days.isEmpty)
+                  EmptyState(
+                    icon: Icons.event_busy_rounded,
+                    title: 'No Income in $label',
+                    message: chosen.isCurrent ? 'Nothing logged this month yet.' : 'Nothing was logged this month.',
+                  ),
               ],
             );
           },
@@ -108,9 +135,24 @@ class IncomeScreen extends StatelessWidget {
   }
 }
 
-/// Total of everything listed on the tab.
+/// The Expense list, rebuilding [context] as it changes; empty when the app
+/// runs without the expenses feature (tests).
+List<Expense> _watchExpenses(BuildContext context) {
+  try {
+    context.read<ExpenseCubit>();
+  } catch (_) {
+    return const [];
+  }
+  final state = context.watch<ExpenseCubit>().state;
+  return state is ExpenseLoaded ? state.expenses : const [];
+}
+
+/// The chosen month's Income total.
 class _TotalCard extends StatelessWidget {
-  const _TotalCard({required this.totalMinor});
+  const _TotalCard({required this.label, required this.totalMinor});
+
+  /// The chosen month's name, as the header shows it.
+  final String label;
   final int totalMinor;
 
   @override
@@ -124,7 +166,7 @@ class _TotalCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Total income',
+            'Income in $label',
             style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
           ),
           const SizedBox(height: 8),
@@ -140,12 +182,15 @@ class _TotalCard extends StatelessWidget {
 }
 
 class _DayHeader extends StatelessWidget {
-  const _DayHeader({super.key, required this.day, required this.totalMinor});
+  const _DayHeader({super.key, required this.day, required this.today, required this.totalMinor});
   final DateTime day;
+
+  /// Now, by the chosen month's clock, for "Today" and "Yesterday".
+  final DateTime today;
   final int totalMinor;
 
   String _label() {
-    final now = DateTime.now();
+    final now = this.today;
     final today = DateTime(now.year, now.month, now.day);
     final d = DateTime(day.year, day.month, day.day);
     final diff = today.difference(d).inDays;

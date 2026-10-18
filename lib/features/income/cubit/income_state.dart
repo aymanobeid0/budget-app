@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 
+import '../../../core/month/calendar_month.dart';
 import '../income.dart';
 import '../income_source.dart';
 
@@ -30,6 +31,13 @@ class IncomeLoaded extends IncomeState {
   /// Every Income Source by id, deleted ones included, for showing where
   /// past Income came from.
   final Map<String, IncomeSource> sourceById;
+
+  /// The same state with only the Income paid in [month].
+  IncomeLoaded forMonth(CalendarMonth month) => IncomeLoaded(
+        income: [for (final i in income) if (month.contains(i.paidOn)) i],
+        sources: sources,
+        sourceById: sourceById,
+      );
 
   /// Total of the listed Income in minor units.
   int get totalMinor => income.fold(0, (sum, i) => sum + i.amountMinor);
