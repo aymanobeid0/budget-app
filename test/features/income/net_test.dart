@@ -1,3 +1,4 @@
+import 'package:budget_app/core/month/calendar_month.dart';
 import 'package:budget_app/features/expenses/expense.dart';
 import 'package:budget_app/features/income/income.dart';
 import 'package:budget_app/features/income/net.dart';
@@ -109,5 +110,38 @@ void main() {
 
     expect(net.incomeMinor, 1000);
     expect(net.expensesMinor, 200);
+  });
+
+  test('Net for a past month counts only that calendar month, across a year boundary', () {
+    final net = calculateNetForMonth(
+      income: [
+        income(1000, DateTime(2025, 11, 30)), // November: out
+        income(2000, DateTime(2025, 12, 1)), // in
+        income(4000, DateTime(2025, 12, 31)), // in
+        income(8000, DateTime(2026, 1, 1)), // January: out
+      ],
+      expenses: [
+        expense(500, DateTime(2025, 12, 15)), // in
+        expense(700, DateTime(2026, 10, 14)), // this month: out
+      ],
+      month: const CalendarMonth(2025, 12),
+    );
+
+    expect(net.incomeMinor, 6000);
+    expect(net.expensesMinor, 500);
+    expect(net.netMinor, 5500);
+  });
+
+  test('Net for a past month leaves out deleted Income and Expenses', () {
+    final august = DateTime(2026, 8, 10);
+    final net = calculateNetForMonth(
+      income: [income(1000, august), income(9000, august, deleted: true)],
+      expenses: [expense(1500, august), expense(7000, august, deleted: true)],
+      month: const CalendarMonth(2026, 8),
+    );
+
+    expect(net.incomeMinor, 1000);
+    expect(net.expensesMinor, 1500);
+    expect(net.netMinor, -500);
   });
 }
