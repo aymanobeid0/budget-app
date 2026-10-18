@@ -18,12 +18,17 @@ final class CategoryLoading extends CategoryState {
 }
 
 final class CategoryLoaded extends CategoryState {
-  const CategoryLoaded(this.categories);
+  const CategoryLoaded(this.categories, {this.categoryById = const {}});
 
+  /// Categories offered in pickers.
   final List<Category> categories;
 
+  /// Every Category by id, deleted ones included, for showing where past
+  /// Expenses went.
+  final Map<String, Category> categoryById;
+
   @override
-  List<Object?> get props => [categories];
+  List<Object?> get props => [categories, categoryById];
 }
 
 final class CategoryError extends CategoryState {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'core/config/app_config.dart';
+import 'core/month/chosen_month_cubit.dart';
 import 'core/router/app_router.dart';
 import 'core/sync/sync_engine.dart';
 import 'core/theme/app_theme.dart';
@@ -29,6 +30,7 @@ class BudgetApp extends StatefulWidget {
     this.consultantClient,
     this.themeCubit,
     this.netPeriodCubit,
+    this.chosenMonthCubit,
     this.currencyCubit,
     this.accountService,
   });
@@ -45,6 +47,10 @@ class BudgetApp extends StatefulWidget {
   /// Home's Net period. Defaults to this month, kept in memory, when not given.
   final NetPeriodCubit? netPeriodCubit;
 
+  /// The month Home and the Income tab show. Defaults to the current month
+  /// by the device clock when not given.
+  final ChosenMonthCubit? chosenMonthCubit;
+
   /// The Currency amounts are labelled with. Defaults to `Currency.fallback`, kept in
   /// memory, when not given.
   final CurrencyCubit? currencyCubit;
@@ -60,6 +66,7 @@ class _BudgetAppState extends State<BudgetApp> {
   late final _router = buildRouter();
   late final ThemeCubit _themeCubit = widget.themeCubit ?? ThemeCubit();
   late final NetPeriodCubit _netPeriodCubit = widget.netPeriodCubit ?? NetPeriodCubit();
+  late final ChosenMonthCubit _chosenMonthCubit = widget.chosenMonthCubit ?? ChosenMonthCubit();
   late final CurrencyCubit _currencyCubit = widget.currencyCubit ?? CurrencyCubit();
 
   late final CategoryCubit? _categoryCubit =
@@ -85,13 +92,17 @@ class _BudgetAppState extends State<BudgetApp> {
   )..resume();
 
   /// Coming back to the foreground is the cheapest sign the connection may be
-  /// back: sync whatever was changed while away.
+  /// back: sync whatever was changed while away. It's also when a new month
+  /// may have begun, so the chosen month follows the clock.
   late final AppLifecycleListener _lifecycle;
 
   @override
   void initState() {
     super.initState();
-    _lifecycle = AppLifecycleListener(onResume: () => widget.syncEngine?.sync());
+    _lifecycle = AppLifecycleListener(onResume: () {
+      _chosenMonthCubit.followClock();
+      widget.syncEngine?.sync();
+    });
   }
 
   /// The phone now holds a different account's data: reload every list and
@@ -108,6 +119,7 @@ class _BudgetAppState extends State<BudgetApp> {
     _lifecycle.dispose();
     if (widget.themeCubit == null) _themeCubit.close();
     if (widget.netPeriodCubit == null) _netPeriodCubit.close();
+    if (widget.chosenMonthCubit == null) _chosenMonthCubit.close();
     if (widget.currencyCubit == null) _currencyCubit.close();
     _categoryCubit?.close();
     _expenseCubit?.close();
@@ -134,6 +146,7 @@ class _BudgetAppState extends State<BudgetApp> {
     final providers = <BlocProvider>[
       BlocProvider<ThemeCubit>.value(value: _themeCubit),
       BlocProvider<NetPeriodCubit>.value(value: _netPeriodCubit),
+      BlocProvider<ChosenMonthCubit>.value(value: _chosenMonthCubit),
       BlocProvider<CurrencyCubit>.value(value: _currencyCubit),
       BlocProvider<AccountCubit>.value(value: _accountCubit),
       if (_categoryCubit != null) BlocProvider<CategoryCubit>.value(value: _categoryCubit),

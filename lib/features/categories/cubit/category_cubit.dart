@@ -11,13 +11,21 @@ class CategoryCubit extends Cubit<CategoryState> {
 
   final CategoryStore _store;
 
+  Future<CategoryLoaded> _loaded() async {
+    final all = await _store.loadAllCategories();
+    return CategoryLoaded(
+      [for (final c in all) if (c.deletedAt == null) c],
+      categoryById: {for (final c in all) c.id: c},
+    );
+  }
+
   Future<void> load() async {
     if (isClosed) return;
     emit(const CategoryLoading());
     try {
-      final categories = await _store.loadCategories();
+      final loaded = await _loaded();
       if (isClosed) return;
-      emit(CategoryLoaded(categories));
+      emit(loaded);
     } catch (e) {
       if (isClosed) return;
       emit(CategoryError(e.toString()));
@@ -41,9 +49,9 @@ class CategoryCubit extends Cubit<CategoryState> {
         updatedAt: now,
       );
       await _store.saveCategory(category);
-      final categories = await _store.loadCategories();
+      final loaded = await _loaded();
       if (isClosed) return;
-      emit(CategoryLoaded(categories));
+      emit(loaded);
     } catch (e) {
       if (isClosed) return;
       emit(CategoryError(e.toString()));
@@ -54,9 +62,9 @@ class CategoryCubit extends Cubit<CategoryState> {
     try {
       final updated = category.copyWith(updatedAt: DateTime.now());
       await _store.saveCategory(updated);
-      final categories = await _store.loadCategories();
+      final loaded = await _loaded();
       if (isClosed) return;
-      emit(CategoryLoaded(categories));
+      emit(loaded);
     } catch (e) {
       if (isClosed) return;
       emit(CategoryError(e.toString()));
@@ -66,9 +74,9 @@ class CategoryCubit extends Cubit<CategoryState> {
   Future<void> deleteCategory(String id) async {
     try {
       await _store.deleteCategory(id);
-      final categories = await _store.loadCategories();
+      final loaded = await _loaded();
       if (isClosed) return;
-      emit(CategoryLoaded(categories));
+      emit(loaded);
     } catch (e) {
       if (isClosed) return;
       emit(CategoryError(e.toString()));

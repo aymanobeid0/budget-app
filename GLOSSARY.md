@@ -33,5 +33,5 @@ A user-managed label for where money comes from (e.g., Salary, Freelance, Dental
 _Avoid_: Category, account, employer, income type
 
 **Net**:
-Income minus Expenses over a chosen period (this week, this month, or all time).
+Income minus Expenses over a chosen period: this week, this month or all time on the current month, or a whole past calendar month when Home shows one.
 _Avoid_: Balance, savings, profit

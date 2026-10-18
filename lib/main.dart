@@ -6,6 +6,7 @@ import 'app.dart';
 import 'core/config/app_config.dart';
 import 'core/database/open_app_database.dart';
 import 'core/format/money.dart';
+import 'core/month/chosen_month_cubit.dart';
 import 'core/network/supabase_bootstrap.dart';
 import 'core/sync/cloud_sync_client.dart';
 import 'core/sync/sync_engine.dart';
@@ -69,6 +70,10 @@ Future<void> main() async {
     initial: await netPeriodStorage.read() ?? NetPeriod.month,
   );
 
+  // The month Home and the Income tab show: not saved, so every launch opens
+  // on the current month.
+  final chosenMonthCubit = ChosenMonthCubit();
+
   // Currency.fallback (MRU) by default; the Currency picked last time wins.
   final currencyStorage = CurrencyStorage.file();
   final currencyCubit = CurrencyCubit(
@@ -83,6 +88,7 @@ Future<void> main() async {
     syncEngine: syncEngine,
     themeCubit: themeCubit,
     netPeriodCubit: netPeriodCubit,
+    chosenMonthCubit: chosenMonthCubit,
     currencyCubit: currencyCubit,
     accountService: accountService,
   ));

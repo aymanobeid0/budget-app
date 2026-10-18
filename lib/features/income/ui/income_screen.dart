@@ -3,29 +3,68 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/format/money.dart';
+import '../../../core/month/breakdown_sheet.dart';
+import '../../../core/month/chosen_month_cubit.dart';
+import '../../../core/month/earliest_month.dart';
+import '../../../core/month/empty_month.dart';
+import '../../../core/month/month_header.dart';
 import '../../../core/theme/animated_entries.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/empty_state.dart';
 import '../../../core/theme/widgets.dart';
 import '../../categories/ui/category_icon_helper.dart';
+import '../../expenses/cubit/expense_cubit.dart';
+import '../../expenses/cubit/expense_state.dart';
+import '../../expenses/expense.dart';
 import '../../expenses/ui/expense_form_sheet.dart';
 import '../../settings/cubit/currency_cubit.dart';
 import '../cubit/income_cubit.dart';
 import '../cubit/income_state.dart';
 import '../income.dart';
+import '../income_breakdown.dart';
 import '../income_source.dart';
 
 const _shortMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const _weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-/// Income tab: the Income list, newest first and grouped by day.
-class IncomeScreen extends StatelessWidget {
+/// Income tab: one month at a time. The month header and total card (swipe
+/// either to change month) over that month's Income, newest first and
+/// grouped by day. Tapping the total card breaks the month down by Income
+/// Source; picking one filters the list to it.
+class IncomeScreen extends StatefulWidget {
   const IncomeScreen({super.key});
+
+  @override
+  State<IncomeScreen> createState() => _IncomeScreenState();
+}
+
+class _IncomeScreenState extends State<IncomeScreen> {
+  /// The Income Source the list is filtered to. Kept when the month changes.
+  String? _sourceFilter;
+
+  Future<void> _openBreakdown({required String label, required IncomeLoaded inMonth}) async {
+    final rows = incomeSourceBreakdown(
+      inMonth.income,
+      month: context.read<ChosenMonthCubit>().state,
+      sourceById: inMonth.sourceById,
+    );
+    final picked = await showBreakdownSheet(
+      context,
+      title: 'Income in $label',
+      totalMinor: inMonth.totalMinor,
+      rows: rows,
+      currency: context.read<CurrencyCubit>().state,
+    );
+    if (picked != null && mounted) setState(() => _sourceFilter = picked);
+  }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final router = GoRouter.maybeOf(context);
+    final chosen = context.watch<ChosenMonthCubit>();
+    final month = chosen.state;
+    final expenses = _watchExpenses(context);
     final header = ScreenHeader(
       title: 'Income',
       trailing: SquareIconButton(
@@ -63,28 +102,55 @@ class IncomeScreen extends StatelessWidget {
               );
             }
 
-            final sources = state.sourceById;
-            final days = state.groupedByDay;
-            final dayTotals = state.dayTotals;
+            final earliest = earliestMonth([
+              for (final e in expenses) if (e.deletedAt == null) e.spentOn,
+              for (final i in state.income) if (i.deletedAt == null) i.paidOn,
+            ]);
+            final inMonth = state.forMonth(month);
+            final sources = inMonth.sourceById;
+            final filter = _sourceFilter;
+            final shown = filter == null ? inMonth : state.forMonth(month, sourceId: filter);
+            final days = shown.groupedByDay;
+            final dayTotals = shown.dayTotals;
+            final label = month.label(today: chosen.today);
             return ListView(
               padding: const EdgeInsets.only(bottom: 130),
               children: [
                 header,
-                // Always a child, so the list below keeps its place (and its
-                // leaving rows) when the last Income goes.
-                if (days.isEmpty)
-                  const SizedBox.shrink()
-                else
+                MonthSwipeArea(
+                  earliest: earliest,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 14, AppSpace.gutter, 0),
+                    child: Column(children: [
+                      MonthHeader(earliest: earliest),
+                      // With no Income at all, the welcome below says it all.
+                      if (state.income.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        // Tapping the card breaks the month down by Income Source.
+                        GestureDetector(
+                          onTap: () => _openBreakdown(label: label, inMonth: inMonth),
+                          child: _TotalCard(label: label, totalMinor: inMonth.totalMinor),
+                        ),
+                      ],
+                    ]),
+                  ),
+                ),
+                if (filter != null)
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 22, AppSpace.gutter, 0),
-                    child: _TotalCard(totalMinor: state.totalMinor),
+                    padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 16, AppSpace.gutter, 0),
+                    child: GroupFilterChip(
+                      group: incomeSourceGroup(filter, sources[filter]),
+                      onClear: () => setState(() => _sourceFilter = null),
+                    ),
                   ),
                 // Kept while the list is empty, so the first Income animates in too.
-                AnimatedEntries(children: [
+                // Keyed by month and filter, so a new month's rows show at once.
+                AnimatedEntries(key: ValueKey((month, filter)), children: [
                   for (final day in days.entries) ...[
                     _DayHeader(
                       key: ValueKey('income-day-${day.key}'),
                       day: day.value.first.paidOn,
+                      today: chosen.today,
                       totalMinor: dayTotals[day.key]!,
                     ),
                     for (final i in day.value)
@@ -97,8 +163,16 @@ class IncomeScreen extends StatelessWidget {
                   ],
                 ]),
                 // After the list, so a deleted last Income leaves above it.
-                if (days.isEmpty)
-                  _EmptyIncome(onAdd: () => showExpenseSheet(context, kind: EntryKind.income)),
+                if (state.income.isEmpty)
+                  _EmptyIncome(onAdd: () => showExpenseSheet(context, kind: EntryKind.income))
+                else if (days.isEmpty)
+                  emptyMonthState(
+                    entries: 'Income',
+                    monthLabel: label,
+                    isCurrent: chosen.isCurrent,
+                    filteredTo: filter == null ? null : incomeSourceGroup(filter, sources[filter]).name,
+                    filteredMessage: 'Nothing from this Income Source this month.',
+                  ),
               ],
             );
           },
@@ -108,9 +182,20 @@ class IncomeScreen extends StatelessWidget {
   }
 }
 
-/// Total of everything listed on the tab.
+/// The Expense list, rebuilding [context] as it changes; empty when the app
+/// runs without the expenses feature (tests).
+List<Expense> _watchExpenses(BuildContext context) {
+  if (maybeExpenseCubit(context) == null) return const [];
+  final state = context.watch<ExpenseCubit>().state;
+  return state is ExpenseLoaded ? state.expenses : const [];
+}
+
+/// The chosen month's Income total.
 class _TotalCard extends StatelessWidget {
-  const _TotalCard({required this.totalMinor});
+  const _TotalCard({required this.label, required this.totalMinor});
+
+  /// The chosen month's name, as the header shows it.
+  final String label;
   final int totalMinor;
 
   @override
@@ -124,7 +209,7 @@ class _TotalCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Total income',
+            'Income in $label',
             style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
           ),
           const SizedBox(height: 8),
@@ -140,12 +225,15 @@ class _TotalCard extends StatelessWidget {
 }
 
 class _DayHeader extends StatelessWidget {
-  const _DayHeader({super.key, required this.day, required this.totalMinor});
+  const _DayHeader({super.key, required this.day, required this.today, required this.totalMinor});
   final DateTime day;
+
+  /// Now, by the chosen month's clock, for "Today" and "Yesterday".
+  final DateTime today;
   final int totalMinor;
 
   String _label() {
-    final now = DateTime.now();
+    final now = this.today;
     final today = DateTime(now.year, now.month, now.day);
     final d = DateTime(day.year, day.month, day.day);
     final diff = today.difference(d).inDays;

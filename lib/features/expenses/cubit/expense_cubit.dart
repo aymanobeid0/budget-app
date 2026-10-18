@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/ids.dart';
@@ -5,6 +6,16 @@ import '../../../core/ids.dart';
 import '../expense.dart';
 import '../expense_ledger.dart';
 import 'expense_state.dart';
+
+/// The [ExpenseCubit] above [context], or null when the app runs without the
+/// expenses feature (screens shared with income, tests).
+ExpenseCubit? maybeExpenseCubit(BuildContext context) {
+  try {
+    return context.read<ExpenseCubit>();
+  } catch (_) {
+    return null;
+  }
+}
 
 class ExpenseCubit extends Cubit<ExpenseState> {
   ExpenseCubit(this._ledger) : super(const ExpenseInitial());
