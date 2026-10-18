@@ -252,6 +252,26 @@ void main() {
       expect(find.text('−300'), findsOneWidget);
     });
 
+    testWidgets('the card compares the chosen month with the month before', (tester) async {
+      await expenseCubit.addExpense(amountMinor: 250000, categoryId: 'cat_food', spentOn: DateTime.utc(2026, 10, 2));
+      await expenseCubit.addExpense(amountMinor: 170000, categoryId: 'cat_food', spentOn: DateTime.utc(2026, 9, 10));
+      await expenseCubit.addExpense(amountMinor: 200000, categoryId: 'cat_food', spentOn: DateTime.utc(2026, 8, 10));
+      await pumpHome(tester);
+
+      // The current month so far against the whole of September.
+      expect(inCard(find.text('800 MRU more than September')), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Previous month'));
+      await tester.pumpAndSettle();
+      expect(inCard(find.text('300 MRU less than August')), findsOneWidget);
+
+      // August's month before has no Expenses: no comparison.
+      await tester.tap(find.byTooltip('Previous month'));
+      await tester.pumpAndSettle();
+      expect(monthLabel('August'), findsOneWidget);
+      expect(find.byKey(const Key('month-comparison')), findsNothing);
+    });
+
     testWidgets('with no entries both arrows are disabled', (tester) async {
       await expenseCubit.load();
       await pumpHome(tester);
