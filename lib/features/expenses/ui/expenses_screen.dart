@@ -6,6 +6,8 @@ import '../../../core/format/money.dart';
 import '../../../core/month/breakdown.dart';
 import '../../../core/month/breakdown_sheet.dart';
 import '../../../core/month/chosen_month_cubit.dart';
+import '../../../core/month/earliest_month.dart';
+import '../../../core/month/empty_month.dart';
 import '../../../core/month/month_header.dart';
 import '../../../core/sync/sync_status_view.dart';
 import '../../../core/theme/animated_entries.dart';
@@ -19,7 +21,6 @@ import '../../categories/cubit/category_state.dart';
 import '../../categories/ui/category_icon_helper.dart';
 import '../../income/cubit/income_cubit.dart';
 import '../../income/cubit/income_state.dart';
-import '../../income/earliest_month.dart';
 import '../../income/income.dart';
 import '../../income/ui/net_card.dart';
 import '../../settings/cubit/currency_cubit.dart';
@@ -89,12 +90,8 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
         bottom: false,
         child: BlocBuilder<CategoryCubit, CategoryState>(
           builder: (context, catState) {
-            final categories = catState is CategoryLoaded ? catState.categories : <Category>[];
             // Deleted Categories too, so past Expenses keep their name.
-            final catMap = {
-              for (final c in categories) c.id: c,
-              if (catState is CategoryLoaded) ...catState.categoryById,
-            };
+            final catMap = catState is CategoryLoaded ? catState.categoryById : const <String, Category>{};
 
             return BlocBuilder<ExpenseCubit, ExpenseState>(
               builder: (context, state) {
@@ -121,7 +118,10 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                 }
                 if (state is! ExpenseLoaded) return const SizedBox.shrink();
 
-                final earliest = earliestEntryMonth(expenses: state.expenses, income: income);
+                final earliest = earliestMonth([
+                  for (final e in state.expenses) if (e.deletedAt == null) e.spentOn,
+                  for (final i in income) if (i.deletedAt == null) i.paidOn,
+                ]);
                 final monthExpenses = [for (final e in state.expenses) if (month.contains(e.spentOn)) e];
                 final filter = _categoryFilter;
                 final expenses = filter == null
@@ -146,6 +146,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                             child: _SpentCard(
                               label: label,
                               expenses: monthExpenses,
+                              allExpenses: state.expenses,
                               today: chosen.isCurrent ? chosen.today : null,
                               comparison: compareWithPreviousMonth(
                                 summarizeMonthSpending(expenses: state.expenses, month: month),
@@ -189,16 +190,12 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                     if (state.expenses.isEmpty)
                       _EmptyTransactions(onAdd: () => showExpenseSheet(context))
                     else if (expenses.isEmpty)
-                      EmptyState(
-                        icon: Icons.event_busy_rounded,
-                        title: filter == null
-                            ? 'No Expenses in $label'
-                            : 'No ${_categoryGroup(filter, catMap[filter]).name} Expenses in $label',
-                        message: filter != null
-                            ? 'Nothing in this Category this month.'
-                            : chosen.isCurrent
-                                ? 'Nothing logged this month yet.'
-                                : 'Nothing was logged this month.',
+                      emptyMonthState(
+                        entries: 'Expenses',
+                        monthLabel: label,
+                        isCurrent: chosen.isCurrent,
+                        filteredTo: filter == null ? null : _categoryGroup(filter, catMap[filter]).name,
+                        filteredMessage: 'Nothing in this Category this month.',
                       ),
                   ],
                 );
@@ -261,7 +258,8 @@ Future<bool> confirmDeleteEntry(BuildContext context,
 /// The chosen month's spending. Today and this week show only when [today]
 /// is given, on the current month.
 class _SpentCard extends StatelessWidget {
-  const _SpentCard({required this.label, required this.expenses, required this.today, this.comparison});
+  const _SpentCard(
+      {required this.label, required this.expenses, required this.allExpenses, required this.today, this.comparison});
   final String label;
 
   /// How the month compares with the month before; hidden when null.
@@ -269,6 +267,10 @@ class _SpentCard extends StatelessWidget {
 
   /// The chosen month's Expenses.
   final List<Expense> expenses;
+
+  /// Every Expense, for today and this week: a week can start in the month
+  /// before.
+  final List<Expense> allExpenses;
   final DateTime? today;
 
   @override
@@ -279,12 +281,14 @@ class _SpentCard extends StatelessWidget {
     final day = now == null ? null : DateTime(now.year, now.month, now.day);
     final weekStart = day?.subtract(Duration(days: day.weekday - 1));
 
-    var month = 0, todayTotal = 0, week = 0;
-    for (final e in expenses) {
-      final d = DateTime(e.spentOn.year, e.spentOn.month, e.spentOn.day);
-      month += e.amountMinor;
-      if (d == day) todayTotal += e.amountMinor;
-      if (day != null && !d.isBefore(weekStart!) && !d.isAfter(day)) week += e.amountMinor;
+    final month = expenses.fold(0, (sum, e) => sum + e.amountMinor);
+    var todayTotal = 0, week = 0;
+    if (day != null) {
+      for (final e in allExpenses) {
+        final d = DateTime(e.spentOn.year, e.spentOn.month, e.spentOn.day);
+        if (d == day) todayTotal += e.amountMinor;
+        if (!d.isBefore(weekStart!) && !d.isAfter(day)) week += e.amountMinor;
+      }
     }
 
     return Container(

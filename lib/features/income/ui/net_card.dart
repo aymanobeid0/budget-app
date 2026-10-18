@@ -66,7 +66,10 @@ class NetCard extends StatelessWidget {
             ),
             const SizedBox(height: 14),
           ],
-          Text(pastMonth ? 'Net in ${month.label(today: chosen.today)}' : 'Net', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant)),
+          Text(
+            pastMonth ? 'Net in ${month.label(today: chosen.today)}' : 'Net',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
+          ),
           const SizedBox(height: 4),
           FittedBox(
             fit: BoxFit.scaleDown,

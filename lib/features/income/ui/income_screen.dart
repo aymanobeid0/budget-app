@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/format/money.dart';
 import '../../../core/month/breakdown_sheet.dart';
 import '../../../core/month/chosen_month_cubit.dart';
+import '../../../core/month/earliest_month.dart';
+import '../../../core/month/empty_month.dart';
 import '../../../core/month/month_header.dart';
 import '../../../core/theme/animated_entries.dart';
 import '../../../core/theme/app_theme.dart';
@@ -18,7 +20,6 @@ import '../../expenses/ui/expense_form_sheet.dart';
 import '../../settings/cubit/currency_cubit.dart';
 import '../cubit/income_cubit.dart';
 import '../cubit/income_state.dart';
-import '../earliest_month.dart';
 import '../income.dart';
 import '../income_breakdown.dart';
 import '../income_source.dart';
@@ -101,17 +102,14 @@ class _IncomeScreenState extends State<IncomeScreen> {
               );
             }
 
-            final earliest = earliestEntryMonth(expenses: expenses, income: state.income);
+            final earliest = earliestMonth([
+              for (final e in expenses) if (e.deletedAt == null) e.spentOn,
+              for (final i in state.income) if (i.deletedAt == null) i.paidOn,
+            ]);
             final inMonth = state.forMonth(month);
             final sources = inMonth.sourceById;
             final filter = _sourceFilter;
-            final shown = filter == null
-                ? inMonth
-                : IncomeLoaded(
-                    income: [for (final i in inMonth.income) if (i.sourceId == filter) i],
-                    sources: inMonth.sources,
-                    sourceById: sources,
-                  );
+            final shown = filter == null ? inMonth : state.forMonth(month, sourceId: filter);
             final days = shown.groupedByDay;
             final dayTotals = shown.dayTotals;
             final label = month.label(today: chosen.today);
@@ -168,16 +166,12 @@ class _IncomeScreenState extends State<IncomeScreen> {
                 if (state.income.isEmpty)
                   _EmptyIncome(onAdd: () => showExpenseSheet(context, kind: EntryKind.income))
                 else if (days.isEmpty)
-                  EmptyState(
-                    icon: Icons.event_busy_rounded,
-                    title: filter == null
-                        ? 'No Income in $label'
-                        : 'No ${incomeSourceGroup(filter, sources[filter]).name} Income in $label',
-                    message: filter != null
-                        ? 'Nothing from this Income Source this month.'
-                        : chosen.isCurrent
-                            ? 'Nothing logged this month yet.'
-                            : 'Nothing was logged this month.',
+                  emptyMonthState(
+                    entries: 'Income',
+                    monthLabel: label,
+                    isCurrent: chosen.isCurrent,
+                    filteredTo: filter == null ? null : incomeSourceGroup(filter, sources[filter]).name,
+                    filteredMessage: 'Nothing from this Income Source this month.',
                   ),
               ],
             );
@@ -191,11 +185,7 @@ class _IncomeScreenState extends State<IncomeScreen> {
 /// The Expense list, rebuilding [context] as it changes; empty when the app
 /// runs without the expenses feature (tests).
 List<Expense> _watchExpenses(BuildContext context) {
-  try {
-    context.read<ExpenseCubit>();
-  } catch (_) {
-    return const [];
-  }
+  if (maybeExpenseCubit(context) == null) return const [];
   final state = context.watch<ExpenseCubit>().state;
   return state is ExpenseLoaded ? state.expenses : const [];
 }

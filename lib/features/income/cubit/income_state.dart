@@ -32,9 +32,13 @@ class IncomeLoaded extends IncomeState {
   /// past Income came from.
   final Map<String, IncomeSource> sourceById;
 
-  /// The same state with only the Income paid in [month].
-  IncomeLoaded forMonth(CalendarMonth month) => IncomeLoaded(
-        income: [for (final i in income) if (month.contains(i.paidOn)) i],
+  /// The same state with only the Income paid in [month], and only from
+  /// [sourceId] when given.
+  IncomeLoaded forMonth(CalendarMonth month, {String? sourceId}) => IncomeLoaded(
+        income: [
+          for (final i in income)
+            if (month.contains(i.paidOn) && (sourceId == null || i.sourceId == sourceId)) i,
+        ],
         sources: sources,
         sourceById: sourceById,
       );

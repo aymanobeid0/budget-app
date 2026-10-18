@@ -10,9 +10,14 @@ import 'calendar_month.dart';
 class ChosenMonthCubit extends Cubit<CalendarMonth> {
   ChosenMonthCubit({DateTime Function()? clock})
       : _clock = clock ?? DateTime.now,
-        super(CalendarMonth.of((clock ?? DateTime.now)()));
+        super(CalendarMonth.of((clock ?? DateTime.now)())) {
+    _lastCurrent = state;
+  }
 
   final DateTime Function() _clock;
+
+  /// The current month when the clock was last checked.
+  late CalendarMonth _lastCurrent;
 
   /// Now, by the clock this cubit was given.
   DateTime get today => _clock();
@@ -37,5 +42,16 @@ class ChosenMonthCubit extends Cubit<CalendarMonth> {
 
   void showCurrent() {
     if (!isCurrent) emit(current);
+  }
+
+  /// Re-checks the clock (the app calls this when it comes back to the
+  /// foreground): if a new month has begun and the user was on the current
+  /// month, moves to the new one. A past month stays put.
+  void followClock() {
+    final now = current;
+    if (now == _lastCurrent) return;
+    final wasOnCurrent = state == _lastCurrent;
+    _lastCurrent = now;
+    if (wasOnCurrent) emit(now);
   }
 }

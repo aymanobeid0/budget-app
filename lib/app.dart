@@ -92,13 +92,17 @@ class _BudgetAppState extends State<BudgetApp> {
   )..resume();
 
   /// Coming back to the foreground is the cheapest sign the connection may be
-  /// back: sync whatever was changed while away.
+  /// back: sync whatever was changed while away. It's also when a new month
+  /// may have begun, so the chosen month follows the clock.
   late final AppLifecycleListener _lifecycle;
 
   @override
   void initState() {
     super.initState();
-    _lifecycle = AppLifecycleListener(onResume: () => widget.syncEngine?.sync());
+    _lifecycle = AppLifecycleListener(onResume: () {
+      _chosenMonthCubit.followClock();
+      widget.syncEngine?.sync();
+    });
   }
 
   /// The phone now holds a different account's data: reload every list and

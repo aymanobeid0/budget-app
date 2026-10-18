@@ -209,6 +209,22 @@ void main() {
       expect(arrow(tester, 'Next month').onPressed, isNotNull);
     });
 
+    testWidgets('this week counts the whole Monday-start week, even days in the month before', (tester) async {
+      tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+      // Thursday 1 October 2026: the week began on Monday 28 September.
+      await expenseCubit.addExpense(amountMinor: 9900, categoryId: 'cat_food', spentOn: DateTime.utc(2026, 9, 27));
+      await expenseCubit.addExpense(amountMinor: 1000, categoryId: 'cat_food', spentOn: DateTime.utc(2026, 9, 28));
+      await expenseCubit.addExpense(amountMinor: 2000, categoryId: 'cat_food', spentOn: DateTime.utc(2026, 9, 30));
+      await expenseCubit.addExpense(amountMinor: 500, categoryId: 'cat_food', spentOn: DateTime.utc(2026, 10, 1));
+      await tester.pumpWidget(buildTestWidget(clock: () => DateTime(2026, 10, 1, 12)));
+      await tester.pumpAndSettle();
+
+      expect(total(tester), '5  MRU');
+      expect(inCard(find.text('35 MRU')), findsOneWidget); // this week: 10 + 20 + 5
+    });
+
     testWidgets('a month with no Expenses shows its own empty state', (tester) async {
       await expenseCubit.addExpense(amountMinor: 30000, categoryId: 'cat_food', spentOn: DateTime.utc(2026, 10, 1));
       await expenseCubit.addExpense(amountMinor: 4000, categoryId: 'cat_food', spentOn: DateTime.utc(2026, 8, 20));
