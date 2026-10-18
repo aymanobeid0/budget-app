@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/format/money.dart';
+import '../../../core/month/breakdown_sheet.dart';
 import '../../../core/month/chosen_month_cubit.dart';
 import '../../../core/month/month_header.dart';
 import '../../../core/theme/animated_entries.dart';
@@ -19,6 +20,7 @@ import '../cubit/income_cubit.dart';
 import '../cubit/income_state.dart';
 import '../earliest_month.dart';
 import '../income.dart';
+import '../income_breakdown.dart';
 import '../income_source.dart';
 
 const _shortMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -26,9 +28,34 @@ const _weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 /// Income tab: one month at a time. The month header and total card (swipe
 /// either to change month) over that month's Income, newest first and
-/// grouped by day.
-class IncomeScreen extends StatelessWidget {
+/// grouped by day. Tapping the total card breaks the month down by Income
+/// Source; picking one filters the list to it.
+class IncomeScreen extends StatefulWidget {
   const IncomeScreen({super.key});
+
+  @override
+  State<IncomeScreen> createState() => _IncomeScreenState();
+}
+
+class _IncomeScreenState extends State<IncomeScreen> {
+  /// The Income Source the list is filtered to. Kept when the month changes.
+  String? _sourceFilter;
+
+  Future<void> _openBreakdown({required String label, required IncomeLoaded inMonth}) async {
+    final rows = incomeSourceBreakdown(
+      inMonth.income,
+      month: context.read<ChosenMonthCubit>().state,
+      sourceById: inMonth.sourceById,
+    );
+    final picked = await showBreakdownSheet(
+      context,
+      title: 'Income in $label',
+      totalMinor: inMonth.totalMinor,
+      rows: rows,
+      currency: context.read<CurrencyCubit>().state,
+    );
+    if (picked != null && mounted) setState(() => _sourceFilter = picked);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -77,8 +104,16 @@ class IncomeScreen extends StatelessWidget {
             final earliest = earliestEntryMonth(expenses: expenses, income: state.income);
             final inMonth = state.forMonth(month);
             final sources = inMonth.sourceById;
-            final days = inMonth.groupedByDay;
-            final dayTotals = inMonth.dayTotals;
+            final filter = _sourceFilter;
+            final shown = filter == null
+                ? inMonth
+                : IncomeLoaded(
+                    income: [for (final i in inMonth.income) if (i.sourceId == filter) i],
+                    sources: inMonth.sources,
+                    sourceById: sources,
+                  );
+            final days = shown.groupedByDay;
+            final dayTotals = shown.dayTotals;
             final label = month.label(today: chosen.today);
             return ListView(
               padding: const EdgeInsets.only(bottom: 130),
@@ -93,14 +128,26 @@ class IncomeScreen extends StatelessWidget {
                       // With no Income at all, the welcome below says it all.
                       if (state.income.isNotEmpty) ...[
                         const SizedBox(height: 8),
-                        _TotalCard(label: label, totalMinor: inMonth.totalMinor),
+                        // Tapping the card breaks the month down by Income Source.
+                        GestureDetector(
+                          onTap: () => _openBreakdown(label: label, inMonth: inMonth),
+                          child: _TotalCard(label: label, totalMinor: inMonth.totalMinor),
+                        ),
                       ],
                     ]),
                   ),
                 ),
+                if (filter != null)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 16, AppSpace.gutter, 0),
+                    child: GroupFilterChip(
+                      group: incomeSourceGroup(filter, sources[filter]),
+                      onClear: () => setState(() => _sourceFilter = null),
+                    ),
+                  ),
                 // Kept while the list is empty, so the first Income animates in too.
-                // Keyed by month, so a new month's rows show at once.
-                AnimatedEntries(key: ValueKey(month), children: [
+                // Keyed by month and filter, so a new month's rows show at once.
+                AnimatedEntries(key: ValueKey((month, filter)), children: [
                   for (final day in days.entries) ...[
                     _DayHeader(
                       key: ValueKey('income-day-${day.key}'),
@@ -123,8 +170,14 @@ class IncomeScreen extends StatelessWidget {
                 else if (days.isEmpty)
                   EmptyState(
                     icon: Icons.event_busy_rounded,
-                    title: 'No Income in $label',
-                    message: chosen.isCurrent ? 'Nothing logged this month yet.' : 'Nothing was logged this month.',
+                    title: filter == null
+                        ? 'No Income in $label'
+                        : 'No ${incomeSourceGroup(filter, sources[filter]).name} Income in $label',
+                    message: filter != null
+                        ? 'Nothing from this Income Source this month.'
+                        : chosen.isCurrent
+                            ? 'Nothing logged this month yet.'
+                            : 'Nothing was logged this month.',
                   ),
               ],
             );

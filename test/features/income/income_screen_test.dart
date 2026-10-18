@@ -6,6 +6,7 @@ import 'package:budget_app/features/categories/cubit/category_cubit.dart';
 import 'package:budget_app/features/expenses/cubit/expense_cubit.dart';
 import 'package:budget_app/features/expenses/expense_ledger.dart';
 import 'package:budget_app/features/income/cubit/income_cubit.dart';
+import 'package:budget_app/features/income/cubit/income_state.dart';
 import 'package:budget_app/features/income/income_ledger.dart';
 import 'package:budget_app/features/income/ui/income_screen.dart';
 import 'package:budget_app/features/settings/cubit/currency_cubit.dart';
@@ -128,5 +129,84 @@ void main() {
     expect(monthLabel('September'), findsOneWidget);
     expect(find.text('No Income in September'), findsOneWidget);
     expect(arrow(tester, 'Previous month').onPressed, isNull);
+  });
+
+  group('Income Source breakdown and filter', () {
+    Finder sheet() => find.byKey(const Key('breakdown-sheet'));
+    Finder inSheet(Finder f) => find.descendant(of: sheet(), matching: f);
+    Finder row(String sourceId) => find.byKey(Key('breakdown-row-$sourceId'));
+    Finder chip() => find.byKey(const Key('group-filter-chip'));
+
+    testWidgets('tapping the total lists the month per Income Source, deleted ones included, largest first',
+        (tester) async {
+      await incomeCubit.addSource(name: 'Dental clinic', icon: 'work', color: 0xFF4CAF50);
+      final clinicId =
+          (incomeCubit.state as IncomeLoaded).sources.firstWhere((s) => s.name == 'Dental clinic').id;
+      await incomeCubit.addIncome(amountMinor: 60000, sourceId: 'src_salary', paidOn: DateTime.utc(2026, 10, 1));
+      await incomeCubit.addIncome(amountMinor: 25000, sourceId: 'src_freelance', paidOn: DateTime.utc(2026, 10, 9));
+      await incomeCubit.addIncome(amountMinor: 15000, sourceId: clinicId, paidOn: DateTime.utc(2026, 10, 4));
+      await incomeCubit.addIncome(amountMinor: 4000, sourceId: 'src_other', paidOn: DateTime.utc(2026, 9, 3));
+      await incomeCubit.deleteSource(clinicId);
+      await pumpIncome(tester);
+
+      await tester.tap(find.byKey(const Key('income-total')));
+      await tester.pumpAndSettle();
+
+      expect(sheet(), findsOneWidget);
+      expect(inSheet(find.text('Income in October')), findsOneWidget);
+      double top(String id) => tester.getTopLeft(row(id)).dy;
+      expect(top('src_salary'), lessThan(top('src_freelance')));
+      expect(top('src_freelance'), lessThan(top(clinicId)));
+      for (final (id, name, amount, share) in [
+        ('src_salary', 'Salary', '600 MRU', '60%'),
+        ('src_freelance', 'Freelance', '250 MRU', '25%'),
+        (clinicId, 'Dental clinic', '150 MRU', '15%'),
+      ]) {
+        for (final text in [name, amount, share]) {
+          expect(find.descendant(of: row(id), matching: find.text(text)), findsOneWidget, reason: '$name: $text');
+        }
+      }
+      expect(inSheet(find.text('Other')), findsNothing); // September only
+    });
+
+    testWidgets('tapping an Income Source filters the list, the filter follows the month, and × clears it',
+        (tester) async {
+      await incomeCubit.addIncome(amountMinor: 100000, sourceId: 'src_salary', paidOn: DateTime.utc(2026, 10, 1));
+      await incomeCubit.addIncome(amountMinor: 25000, sourceId: 'src_freelance', paidOn: DateTime.utc(2026, 10, 9));
+      await incomeCubit.addIncome(amountMinor: 7000, sourceId: 'src_freelance', paidOn: DateTime.utc(2026, 9, 3));
+      await incomeCubit.addIncome(amountMinor: 4000, sourceId: 'src_salary', paidOn: DateTime.utc(2026, 8, 3));
+      await pumpIncome(tester);
+      expect(chip(), findsNothing);
+
+      await tester.tap(find.byKey(const Key('income-total')));
+      await tester.pumpAndSettle();
+      await tester.tap(row('src_freelance'));
+      await tester.pumpAndSettle();
+
+      expect(sheet(), findsNothing);
+      expect(find.descendant(of: chip(), matching: find.text('Freelance')), findsOneWidget);
+      expect(find.text('+250'), findsOneWidget);
+      expect(find.text('+1,000'), findsNothing);
+      expect(inTotal(find.text('1,250 MRU')), findsOneWidget); // the card still shows the whole month
+
+      // The filter stays when stepping back.
+      await tester.tap(find.byTooltip('Previous month'));
+      await tester.pumpAndSettle();
+      expect(chip(), findsOneWidget);
+      expect(find.text('+70'), findsOneWidget);
+
+      // August has no Freelance: the empty state, with the chip still there.
+      await tester.tap(find.byTooltip('Previous month'));
+      await tester.pumpAndSettle();
+      expect(chip(), findsOneWidget);
+      expect(find.text('No Freelance Income in August'), findsOneWidget);
+      expect(find.text('+40'), findsNothing);
+
+      await tester.tap(find.descendant(of: chip(), matching: find.byIcon(Icons.close_rounded)));
+      await tester.pumpAndSettle();
+      expect(chip(), findsNothing);
+      expect(find.text('No Freelance Income in August'), findsNothing);
+      expect(find.text('+40'), findsOneWidget);
+    });
   });
 }
