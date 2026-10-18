@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/format/money.dart';
+import '../../../core/month/chosen_month_cubit.dart';
+import '../../../core/month/month_header.dart';
 import '../../../core/sync/sync_status_view.dart';
 import '../../../core/theme/animated_entries.dart';
 import '../../../core/theme/app_theme.dart';
@@ -13,7 +15,10 @@ import '../../categories/category.dart';
 import '../../categories/cubit/category_cubit.dart';
 import '../../categories/cubit/category_state.dart';
 import '../../categories/ui/category_icon_helper.dart';
-import '../../income/cubit/income_cubit.dart' show maybeIncomeCubit;
+import '../../income/cubit/income_cubit.dart';
+import '../../income/cubit/income_state.dart';
+import '../../income/earliest_month.dart';
+import '../../income/income.dart';
 import '../../income/ui/net_card.dart';
 import '../../settings/cubit/currency_cubit.dart';
 import '../cubit/expense_cubit.dart';
@@ -21,14 +26,11 @@ import '../cubit/expense_state.dart';
 import '../expense.dart';
 import 'expense_form_sheet.dart';
 
-const _months = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
 const _shortMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const _weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-/// Home: blue "spent this month" card and the transaction list.
+/// Home: one month at a time. The month header and blue "spent" card (swipe
+/// either to change month) over that month's Expenses.
 class ExpensesScreen extends StatelessWidget {
   const ExpensesScreen({super.key});
 
@@ -44,6 +46,9 @@ class ExpensesScreen extends StatelessWidget {
     final router = GoRouter.maybeOf(context);
     // Net needs Income; Home without the income feature (tests) skips it.
     final hasIncome = maybeIncomeCubit(context) != null;
+    final chosen = context.watch<ChosenMonthCubit>();
+    final month = chosen.state;
+    final income = _watchIncome(context);
 
     return Scaffold(
       key: const Key('expenses-screen'),
@@ -79,15 +84,27 @@ class ExpensesScreen extends StatelessWidget {
                 }
                 if (state is! ExpenseLoaded) return const SizedBox.shrink();
 
-                final expenses = state.expenses;
+                final earliest = earliestEntryMonth(expenses: state.expenses, income: income);
+                final expenses = [for (final e in state.expenses) if (month.contains(e.spentOn)) e];
                 return ListView(
                   padding: const EdgeInsets.only(bottom: 130),
                   children: [
                     header,
                     SyncAttentionIndicator(onTap: router == null ? null : () => router.go('/settings')),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 22, AppSpace.gutter, 0),
-                      child: _SpentCard(expenses: expenses),
+                    MonthSwipeArea(
+                      earliest: earliest,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 14, AppSpace.gutter, 0),
+                        child: Column(children: [
+                          MonthHeader(earliest: earliest),
+                          const SizedBox(height: 8),
+                          _SpentCard(
+                            label: month.label(today: chosen.today),
+                            expenses: expenses,
+                            today: chosen.isCurrent ? chosen.today : null,
+                          ),
+                        ]),
+                      ),
                     ),
                     if (hasIncome)
                       const Padding(
@@ -99,7 +116,8 @@ class ExpensesScreen extends StatelessWidget {
                       child: Text('Transactions', style: AppType.title.copyWith(color: scheme.onSurface)),
                     ),
                     // Kept while the list is empty, so the first Expense animates in too.
-                    AnimatedEntries(children: [
+                    // Keyed by month, so a new month's rows show at once.
+                    AnimatedEntries(key: ValueKey(month), children: [
                       for (final e in expenses)
                         _TransactionRow(
                           key: ValueKey('expense-row-${e.id}'),
@@ -109,8 +127,16 @@ class ExpensesScreen extends StatelessWidget {
                           onDelete: () => _confirmDelete(context, e),
                         ),
                     ]),
-                    if (expenses.isEmpty)
-                      _EmptyTransactions(onAdd: () => showExpenseSheet(context)),
+                    if (state.expenses.isEmpty)
+                      _EmptyTransactions(onAdd: () => showExpenseSheet(context))
+                    else if (expenses.isEmpty)
+                      EmptyState(
+                        icon: Icons.event_busy_rounded,
+                        title: 'No Expenses in ${month.label(today: chosen.today)}',
+                        message: chosen.isCurrent
+                            ? 'Nothing logged this month yet.'
+                            : 'Nothing was logged this month.',
+                      ),
                   ],
                 );
               },
@@ -120,6 +146,14 @@ class ExpensesScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The Income list, rebuilding [context] as it changes; empty when the app
+/// runs without the income feature (tests).
+List<Income> _watchIncome(BuildContext context) {
+  if (maybeIncomeCubit(context) == null) return const [];
+  final state = context.watch<IncomeCubit>().state;
+  return state is IncomeLoaded ? state.income : const [];
 }
 
 /// Shared delete confirmation (list swipe and the edit screen).
@@ -152,24 +186,30 @@ Future<bool> confirmDeleteEntry(BuildContext context,
   return result == true;
 }
 
+/// The chosen month's spending. Today and this week show only when [today]
+/// is given, on the current month.
 class _SpentCard extends StatelessWidget {
-  const _SpentCard({required this.expenses});
+  const _SpentCard({required this.label, required this.expenses, required this.today});
+  final String label;
+
+  /// The chosen month's Expenses.
   final List<Expense> expenses;
+  final DateTime? today;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final isDark = isDarkOf(context);
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final weekStart = today.subtract(Duration(days: today.weekday - 1));
+    final now = today;
+    final day = now == null ? null : DateTime(now.year, now.month, now.day);
+    final weekStart = day?.subtract(Duration(days: day.weekday - 1));
 
     var month = 0, todayTotal = 0, week = 0;
     for (final e in expenses) {
       final d = DateTime(e.spentOn.year, e.spentOn.month, e.spentOn.day);
-      if (d.year == now.year && d.month == now.month) month += e.amountMinor;
-      if (d == today) todayTotal += e.amountMinor;
-      if (!d.isBefore(weekStart) && !d.isAfter(today)) week += e.amountMinor;
+      month += e.amountMinor;
+      if (d == day) todayTotal += e.amountMinor;
+      if (day != null && !d.isBefore(weekStart!) && !d.isAfter(day)) week += e.amountMinor;
     }
 
     return Container(
@@ -184,7 +224,7 @@ class _SpentCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Spent in ${_months[now.month - 1]}',
+            'Spent in $label',
             style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.onPrimaryMuted),
           ),
           const SizedBox(height: 10),
@@ -192,6 +232,7 @@ class _SpentCard extends StatelessWidget {
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
             child: Text.rich(
+              key: const Key('month-total'),
               TextSpan(children: [
                 TextSpan(text: Money.format(month)),
                 TextSpan(
@@ -202,14 +243,16 @@ class _SpentCard extends StatelessWidget {
               style: AppType.heroAmount,
             ),
           ),
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              Expanded(child: _Stat(icon: Icons.today_rounded, label: 'Today', minor: todayTotal)),
-              const SizedBox(width: 12),
-              Expanded(child: _Stat(icon: Icons.bar_chart_rounded, label: 'This week', minor: week)),
-            ],
-          ),
+          if (day != null) ...[
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                Expanded(child: _Stat(icon: Icons.today_rounded, label: 'Today', minor: todayTotal)),
+                const SizedBox(width: 12),
+                Expanded(child: _Stat(icon: Icons.bar_chart_rounded, label: 'This week', minor: week)),
+              ],
+            ),
+          ],
         ],
       ),
     );

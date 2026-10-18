@@ -1,4 +1,5 @@
 import 'package:budget_app/core/database/app_database.dart';
+import 'package:budget_app/core/month/chosen_month_cubit.dart';
 import 'package:budget_app/core/theme/empty_state.dart';
 import 'package:budget_app/core/theme/theme_cubit.dart';
 import 'package:budget_app/features/categories/category_store.dart';
@@ -42,12 +43,13 @@ void main() {
     await db.close();
   });
 
-  Widget buildTestWidget() {
+  Widget buildTestWidget({DateTime Function()? clock}) {
     return MaterialApp(
       home: MultiBlocProvider(
         providers: [
           BlocProvider<CategoryCubit>.value(value: categoryCubit),
           BlocProvider<ExpenseCubit>.value(value: expenseCubit),
+          BlocProvider<ChosenMonthCubit>(create: (_) => ChosenMonthCubit(clock: clock)),
           BlocProvider<ThemeCubit>(create: (_) => ThemeCubit()),
           BlocProvider<CurrencyCubit>(create: (_) => CurrencyCubit()),
         ],
@@ -151,5 +153,113 @@ void main() {
 
     expect(find.text('−1,250'), findsOneWidget);
     expect(find.text('Yesterday'), findsOneWidget);
+  });
+
+  group('stepping between months', () {
+    // Sunday 18 October 2026.
+    DateTime today() => DateTime(2026, 10, 18, 9, 30);
+    Finder inCard(Finder f) => find.descendant(of: find.byKey(const Key('month-summary-card')), matching: f);
+    Finder monthLabel(String text) =>
+        find.descendant(of: find.byKey(const Key('month-header')), matching: find.text(text));
+
+    String total(WidgetTester tester) =>
+        tester.widget<Text>(find.byKey(const Key('month-total'))).textSpan!.toPlainText();
+
+    Future<void> pumpHome(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(buildTestWidget(clock: today));
+      await tester.pumpAndSettle();
+    }
+
+    IconButton arrow(WidgetTester tester, String tooltip) =>
+        tester.widget<IconButton>(find.ancestor(of: find.byTooltip(tooltip), matching: find.byType(IconButton)));
+
+    testWidgets('step back a month and see only that month\'s total and Expenses', (tester) async {
+      await expenseCubit.addExpense(amountMinor: 30000, categoryId: 'cat_food', spentOn: DateTime.utc(2026, 10, 18));
+      await expenseCubit.addExpense(amountMinor: 12500, categoryId: 'cat_transport', spentOn: DateTime.utc(2026, 9, 30));
+      await expenseCubit.addExpense(amountMinor: 4000, categoryId: 'cat_food', spentOn: DateTime.utc(2026, 9, 2));
+      await pumpHome(tester);
+
+      // Opens on the current month, with today and this week on the card.
+      expect(monthLabel('October'), findsOneWidget);
+      expect(inCard(find.text('Spent in October')), findsOneWidget);
+      expect(total(tester), '300  MRU');
+      expect(inCard(find.text('Today')), findsOneWidget);
+      expect(find.text('−300'), findsOneWidget);
+      expect(find.text('−125'), findsNothing);
+      expect(arrow(tester, 'Next month').onPressed, isNull);
+
+      await tester.tap(find.byTooltip('Previous month'));
+      await tester.pumpAndSettle();
+
+      expect(monthLabel('September'), findsOneWidget);
+      expect(inCard(find.text('Spent in September')), findsOneWidget);
+      expect(total(tester), '165  MRU');
+      expect(inCard(find.text('Today')), findsNothing);
+      expect(inCard(find.text('This week')), findsNothing);
+      expect(find.text('−125'), findsOneWidget);
+      expect(find.text('−40'), findsOneWidget);
+      expect(find.text('−300'), findsNothing);
+
+      // September holds the first entry: no further back.
+      expect(arrow(tester, 'Previous month').onPressed, isNull);
+      expect(arrow(tester, 'Next month').onPressed, isNotNull);
+    });
+
+    testWidgets('a month with no Expenses shows its own empty state', (tester) async {
+      await expenseCubit.addExpense(amountMinor: 30000, categoryId: 'cat_food', spentOn: DateTime.utc(2026, 10, 1));
+      await expenseCubit.addExpense(amountMinor: 4000, categoryId: 'cat_food', spentOn: DateTime.utc(2026, 8, 20));
+      await pumpHome(tester);
+
+      await tester.tap(find.byTooltip('Previous month'));
+      await tester.pumpAndSettle();
+
+      expect(monthLabel('September'), findsOneWidget);
+      expect(total(tester), '0  MRU');
+      expect(find.text('No Expenses in September'), findsOneWidget);
+      expect(find.text('−300'), findsNothing);
+      expect(find.text('−40'), findsNothing);
+    });
+
+    testWidgets('swiping the card changes month, and tapping a past month\'s label comes back', (tester) async {
+      await expenseCubit.addExpense(amountMinor: 30000, categoryId: 'cat_food', spentOn: DateTime.utc(2026, 10, 1));
+      await expenseCubit.addExpense(amountMinor: 4000, categoryId: 'cat_food', spentOn: DateTime.utc(2026, 8, 20));
+      await pumpHome(tester);
+
+      // Swiping left on the current month goes nowhere: no future months.
+      await tester.fling(find.byKey(const Key('month-summary-card')), const Offset(-300, 0), 1000);
+      await tester.pumpAndSettle();
+      expect(monthLabel('October'), findsOneWidget);
+
+      await tester.fling(find.byKey(const Key('month-summary-card')), const Offset(300, 0), 1000);
+      await tester.pumpAndSettle();
+      expect(monthLabel('September'), findsOneWidget);
+
+      await tester.fling(find.byKey(const Key('month-header')), const Offset(300, 0), 1000);
+      await tester.pumpAndSettle();
+      expect(monthLabel('August'), findsOneWidget);
+      expect(find.text('−40'), findsOneWidget);
+
+      await tester.fling(find.byKey(const Key('month-summary-card')), const Offset(-300, 0), 1000);
+      await tester.pumpAndSettle();
+      expect(monthLabel('September'), findsOneWidget);
+
+      await tester.tap(monthLabel('September'));
+      await tester.pumpAndSettle();
+      expect(monthLabel('October'), findsOneWidget);
+      expect(find.text('−300'), findsOneWidget);
+    });
+
+    testWidgets('with no entries both arrows are disabled', (tester) async {
+      await expenseCubit.load();
+      await pumpHome(tester);
+
+      expect(monthLabel('October'), findsOneWidget);
+      expect(arrow(tester, 'Previous month').onPressed, isNull);
+      expect(arrow(tester, 'Next month').onPressed, isNull);
+      expect(find.text('No Expenses yet'), findsOneWidget);
+    });
   });
 }
