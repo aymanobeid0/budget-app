@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 
+import '../../core/month/calendar_month.dart';
 import '../expenses/expense.dart';
 import 'income.dart';
 
@@ -47,6 +48,19 @@ NetSummary calculateNet({
       }(),
   };
 
+  return _sum(income, expenses, inPeriod);
+}
+
+/// Net for one calendar [month], as Home shows on a past month. Deleted
+/// entries never count, and dates compare as calendar days.
+NetSummary calculateNetForMonth({
+  required List<Income> income,
+  required List<Expense> expenses,
+  required CalendarMonth month,
+}) =>
+    _sum(income, expenses, month.contains);
+
+NetSummary _sum(List<Income> income, List<Expense> expenses, bool Function(DateTime) inPeriod) {
   var incomeMinor = 0;
   for (final i in income) {
     if (i.deletedAt == null && inPeriod(_day(i.paidOn))) incomeMinor += i.amountMinor;
