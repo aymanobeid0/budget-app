@@ -72,6 +72,15 @@ class CategoryStore {
     ),
   ];
 
+  /// Every Category ever saved, deleted ones included, so past Expenses can
+  /// still show the Category they were logged under. Pickers use
+  /// [loadCategories].
+  Future<List<Category>> loadAllCategories() async {
+    await loadCategories(); // seeds an empty table
+    final rows = await _db.raw.query('categories', orderBy: 'name ASC');
+    return rows.map((r) => Category.fromMap(r)).toList();
+  }
+
   Future<List<Category>> loadCategories() async {
     final rows = await _db.raw.query(
       'categories',

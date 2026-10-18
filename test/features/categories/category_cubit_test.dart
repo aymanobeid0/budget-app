@@ -60,4 +60,23 @@ void main() {
       expect(state.categories.any((c) => c.name == 'Disposable'), isFalse);
     },
   );
+
+  blocTest<CategoryCubit, CategoryState>(
+    'a deleted Category leaves the picker but still resolves by id for past Expenses',
+    build: () => CategoryCubit(store),
+    act: (cubit) async {
+      await cubit.load();
+      await cubit.addCategory(name: 'Gym', icon: 'fitness_center', color: 0xFF4CAF50);
+      final gym = (cubit.state as CategoryLoaded).categories.firstWhere((c) => c.name == 'Gym');
+      await cubit.deleteCategory(gym.id);
+    },
+    verify: (cubit) {
+      final state = cubit.state as CategoryLoaded;
+      expect(state.categories.map((c) => c.name), isNot(contains('Gym')));
+      final gym = state.categoryById.values.singleWhere((c) => c.name == 'Gym');
+      expect((gym.icon, gym.color), ('fitness_center', 0xFF4CAF50));
+      expect(gym.deletedAt, isNotNull);
+      expect(state.categoryById['cat_food']?.name, 'Food');
+    },
+  );
 }

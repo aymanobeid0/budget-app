@@ -4,6 +4,7 @@ import 'package:budget_app/core/theme/empty_state.dart';
 import 'package:budget_app/core/theme/theme_cubit.dart';
 import 'package:budget_app/features/categories/category_store.dart';
 import 'package:budget_app/features/categories/cubit/category_cubit.dart';
+import 'package:budget_app/features/categories/cubit/category_state.dart';
 import 'package:budget_app/features/expenses/cubit/expense_cubit.dart';
 import 'package:budget_app/features/expenses/expense_ledger.dart';
 import 'package:budget_app/features/categories/ui/category_icon_helper.dart';
@@ -250,6 +251,88 @@ void main() {
       await tester.pumpAndSettle();
       expect(monthLabel('October'), findsOneWidget);
       expect(find.text('−300'), findsOneWidget);
+    });
+
+    group('Category breakdown and filter', () {
+      Finder sheet() => find.byKey(const Key('breakdown-sheet'));
+      Finder inSheet(Finder f) => find.descendant(of: sheet(), matching: f);
+      Finder row(String categoryId) => find.byKey(Key('breakdown-row-$categoryId'));
+      Finder chip() => find.byKey(const Key('group-filter-chip'));
+
+      Future<String> addDeletedGym() async {
+        await categoryCubit.addCategory(name: 'Gym', icon: 'fitness_center', color: 0xFF4CAF50);
+        return (categoryCubit.state as CategoryLoaded).categories.firstWhere((c) => c.name == 'Gym').id;
+      }
+
+      testWidgets('tapping the card lists the month per Category, deleted ones included, largest first',
+          (tester) async {
+        final gymId = await addDeletedGym();
+        await expenseCubit.addExpense(amountMinor: 30000, categoryId: 'cat_food', spentOn: DateTime.utc(2026, 10, 18));
+        await expenseCubit.addExpense(amountMinor: 7500, categoryId: gymId, spentOn: DateTime.utc(2026, 10, 5));
+        await expenseCubit.addExpense(amountMinor: 12500, categoryId: 'cat_transport', spentOn: DateTime.utc(2026, 10, 3));
+        await expenseCubit.addExpense(amountMinor: 4000, categoryId: 'cat_health', spentOn: DateTime.utc(2026, 9, 3));
+        await categoryCubit.deleteCategory(gymId);
+        await pumpHome(tester);
+
+        await tester.tap(find.byKey(const Key('month-summary-card')));
+        await tester.pumpAndSettle();
+
+        expect(sheet(), findsOneWidget);
+        expect(inSheet(find.text('Spent in October')), findsOneWidget);
+        double top(String id) => tester.getTopLeft(row(id)).dy;
+        expect(top('cat_food'), lessThan(top('cat_transport')));
+        expect(top('cat_transport'), lessThan(top(gymId)));
+        for (final (id, name, amount, share) in [
+          ('cat_food', 'Food', '300 MRU', '60%'),
+          ('cat_transport', 'Transport', '125 MRU', '25%'),
+          (gymId, 'Gym', '75 MRU', '15%'),
+        ]) {
+          for (final text in [name, amount, share]) {
+            expect(find.descendant(of: row(id), matching: find.text(text)), findsOneWidget, reason: '$name: $text');
+          }
+        }
+        expect(inSheet(find.text('Health')), findsNothing); // September only
+      });
+
+      testWidgets('tapping a Category filters the list, the filter follows the month, and × clears it',
+          (tester) async {
+        await expenseCubit.addExpense(amountMinor: 30000, categoryId: 'cat_food', spentOn: DateTime.utc(2026, 10, 18));
+        await expenseCubit.addExpense(amountMinor: 12500, categoryId: 'cat_transport', spentOn: DateTime.utc(2026, 10, 3));
+        await expenseCubit.addExpense(amountMinor: 4000, categoryId: 'cat_transport', spentOn: DateTime.utc(2026, 9, 3));
+        await expenseCubit.addExpense(amountMinor: 2000, categoryId: 'cat_food', spentOn: DateTime.utc(2026, 8, 3));
+        await pumpHome(tester);
+        expect(chip(), findsNothing);
+
+        await tester.tap(find.byKey(const Key('month-summary-card')));
+        await tester.pumpAndSettle();
+        await tester.tap(row('cat_transport'));
+        await tester.pumpAndSettle();
+
+        expect(sheet(), findsNothing);
+        expect(find.descendant(of: chip(), matching: find.text('Transport')), findsOneWidget);
+        expect(find.text('−125'), findsOneWidget);
+        expect(find.text('−300'), findsNothing);
+        expect(total(tester), '425  MRU'); // the card still shows the whole month
+
+        // The filter stays when stepping back.
+        await tester.tap(find.byTooltip('Previous month'));
+        await tester.pumpAndSettle();
+        expect(chip(), findsOneWidget);
+        expect(find.text('−40'), findsOneWidget);
+
+        // August has no Transport: the empty state, with the chip still there.
+        await tester.tap(find.byTooltip('Previous month'));
+        await tester.pumpAndSettle();
+        expect(chip(), findsOneWidget);
+        expect(find.byType(EmptyState), findsOneWidget);
+        expect(find.text('−20'), findsNothing);
+
+        await tester.tap(find.descendant(of: chip(), matching: find.byIcon(Icons.close_rounded)));
+        await tester.pumpAndSettle();
+        expect(chip(), findsNothing);
+        expect(find.byType(EmptyState), findsNothing);
+        expect(find.text('−20'), findsOneWidget);
+      });
     });
 
     testWidgets('with no entries both arrows are disabled', (tester) async {

@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/format/money.dart';
+import '../../../core/month/breakdown.dart';
+import '../../../core/month/breakdown_sheet.dart';
 import '../../../core/month/chosen_month_cubit.dart';
 import '../../../core/month/month_header.dart';
 import '../../../core/sync/sync_status_view.dart';
@@ -30,9 +32,39 @@ const _shortMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'S
 const _weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 /// Home: one month at a time. The month header and blue "spent" card (swipe
-/// either to change month) over that month's Expenses.
-class ExpensesScreen extends StatelessWidget {
+/// either to change month) over that month's Expenses. Tapping the card
+/// breaks the month down by Category; picking one filters the list to it.
+class ExpensesScreen extends StatefulWidget {
   const ExpensesScreen({super.key});
+
+  @override
+  State<ExpensesScreen> createState() => _ExpensesScreenState();
+}
+
+class _ExpensesScreenState extends State<ExpensesScreen> {
+  /// The Category the list is filtered to. Kept when the month changes.
+  String? _categoryFilter;
+
+  Future<void> _openBreakdown(
+      {required String label, required List<Expense> expenses, required Map<String, Category> byId}) async {
+    final rows = monthBreakdown<Expense>(
+      expenses,
+      month: context.read<ChosenMonthCubit>().state,
+      dateOf: (e) => e.spentOn,
+      groupOf: (e) => e.categoryId,
+      amountOf: (e) => e.amountMinor,
+      isDeleted: (e) => e.deletedAt != null,
+      describe: (id) => _categoryGroup(id, byId[id]),
+    );
+    final picked = await showBreakdownSheet(
+      context,
+      title: 'Spent in $label',
+      totalMinor: rows.fold(0, (sum, r) => sum + r.totalMinor),
+      rows: rows,
+      currency: context.read<CurrencyCubit>().state,
+    );
+    if (picked != null && mounted) setState(() => _categoryFilter = picked);
+  }
 
   Future<bool> _confirmDelete(BuildContext context, Expense expense) async {
     final result = await confirmDeleteExpense(context, expense);
@@ -57,7 +89,11 @@ class ExpensesScreen extends StatelessWidget {
         child: BlocBuilder<CategoryCubit, CategoryState>(
           builder: (context, catState) {
             final categories = catState is CategoryLoaded ? catState.categories : <Category>[];
-            final catMap = {for (final c in categories) c.id: c};
+            // Deleted Categories too, so past Expenses keep their name.
+            final catMap = {
+              for (final c in categories) c.id: c,
+              if (catState is CategoryLoaded) ...catState.categoryById,
+            };
 
             return BlocBuilder<ExpenseCubit, ExpenseState>(
               builder: (context, state) {
@@ -85,7 +121,12 @@ class ExpensesScreen extends StatelessWidget {
                 if (state is! ExpenseLoaded) return const SizedBox.shrink();
 
                 final earliest = earliestEntryMonth(expenses: state.expenses, income: income);
-                final expenses = [for (final e in state.expenses) if (month.contains(e.spentOn)) e];
+                final monthExpenses = [for (final e in state.expenses) if (month.contains(e.spentOn)) e];
+                final filter = _categoryFilter;
+                final expenses = filter == null
+                    ? monthExpenses
+                    : [for (final e in monthExpenses) if (e.categoryId == filter) e];
+                final label = month.label(today: chosen.today);
                 return ListView(
                   padding: const EdgeInsets.only(bottom: 130),
                   children: [
@@ -98,10 +139,14 @@ class ExpensesScreen extends StatelessWidget {
                         child: Column(children: [
                           MonthHeader(earliest: earliest),
                           const SizedBox(height: 8),
-                          _SpentCard(
-                            label: month.label(today: chosen.today),
-                            expenses: expenses,
-                            today: chosen.isCurrent ? chosen.today : null,
+                          // Tapping the card breaks the month down by Category.
+                          GestureDetector(
+                            onTap: () => _openBreakdown(label: label, expenses: monthExpenses, byId: catMap),
+                            child: _SpentCard(
+                              label: label,
+                              expenses: monthExpenses,
+                              today: chosen.isCurrent ? chosen.today : null,
+                            ),
                           ),
                         ]),
                       ),
@@ -115,9 +160,17 @@ class ExpensesScreen extends StatelessWidget {
                       padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 26, AppSpace.gutter, 6),
                       child: Text('Transactions', style: AppType.title.copyWith(color: scheme.onSurface)),
                     ),
+                    if (filter != null)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 0, AppSpace.gutter, 4),
+                        child: GroupFilterChip(
+                          group: _categoryGroup(filter, catMap[filter]),
+                          onClear: () => setState(() => _categoryFilter = null),
+                        ),
+                      ),
                     // Kept while the list is empty, so the first Expense animates in too.
-                    // Keyed by month, so a new month's rows show at once.
-                    AnimatedEntries(key: ValueKey(month), children: [
+                    // Keyed by month and filter, so a new month's rows show at once.
+                    AnimatedEntries(key: ValueKey((month, filter)), children: [
                       for (final e in expenses)
                         _TransactionRow(
                           key: ValueKey('expense-row-${e.id}'),
@@ -132,10 +185,14 @@ class ExpensesScreen extends StatelessWidget {
                     else if (expenses.isEmpty)
                       EmptyState(
                         icon: Icons.event_busy_rounded,
-                        title: 'No Expenses in ${month.label(today: chosen.today)}',
-                        message: chosen.isCurrent
-                            ? 'Nothing logged this month yet.'
-                            : 'Nothing was logged this month.',
+                        title: filter == null
+                            ? 'No Expenses in $label'
+                            : 'No ${_categoryGroup(filter, catMap[filter]).name} Expenses in $label',
+                        message: filter != null
+                            ? 'Nothing in this Category this month.'
+                            : chosen.isCurrent
+                                ? 'Nothing logged this month yet.'
+                                : 'Nothing was logged this month.',
                       ),
                   ],
                 );
@@ -147,6 +204,15 @@ class ExpensesScreen extends StatelessWidget {
     );
   }
 }
+
+/// A Category as a breakdown group; Expenses whose Category is gone
+/// entirely show as Uncategorized, as their rows do.
+BreakdownGroup _categoryGroup(String id, Category? category) => BreakdownGroup(
+      id: id,
+      name: category?.name ?? 'Uncategorized',
+      icon: category != null ? CategoryIconHelper.getIcon(category.icon) : Icons.receipt_long_rounded,
+      color: category != null ? Color(category.color) : AppColors.primary,
+    );
 
 /// The Income list, rebuilding [context] as it changes; empty when the app
 /// runs without the income feature (tests).
