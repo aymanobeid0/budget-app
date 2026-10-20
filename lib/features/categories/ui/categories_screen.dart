@@ -14,7 +14,7 @@ import 'category_form_sheet.dart';
 import 'category_icon_helper.dart';
 
 /// Categories as a menu: solid colored squares, a line between rows, a "⋯"
-/// menu for edit/delete and an "Add category" row at the end.
+/// menu for edit/delete; the header's + adds one.
 class CategoriesScreen extends StatelessWidget {
   const CategoriesScreen({super.key});
 
@@ -88,7 +88,7 @@ class CategoriesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final counts = _monthCounts(context);
-    // Reached from Profile; standalone (tests) there is nothing to go back to.
+    // Pushed from Home or Profile; standalone (tests) there is nothing to go back to.
     final canPop = Navigator.of(context).canPop();
 
     return Scaffold(
@@ -166,16 +166,9 @@ class CategoriesScreen extends StatelessWidget {
                           onEdit: () => _openCategorySheet(context, c),
                           onDelete: () => _confirmDelete(context, c),
                         ),
-                        Divider(height: 1, indent: 8 + 36 + 14, endIndent: 8, color: scheme.outlineVariant),
+                        if (c != categories.last)
+                          Divider(height: 1, indent: 8 + 36 + 14, endIndent: 8, color: scheme.outlineVariant),
                       ],
-                      MenuRow(
-                        key: const Key('add-category-row'),
-                        icon: Icons.add_rounded,
-                        color: scheme.primary,
-                        title: 'Add category',
-                        showDivider: false,
-                        onTap: () => _openCategorySheet(context),
-                      ),
                     ],
                   ),
                 ),

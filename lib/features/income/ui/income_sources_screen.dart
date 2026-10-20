@@ -11,7 +11,7 @@ import '../cubit/income_cubit.dart';
 import '../cubit/income_state.dart';
 import '../income_source.dart';
 
-/// Income Sources as a menu, styled like Categories. Reached from Profile.
+/// Income Sources as a menu, styled like Categories. Pushed from Income or Profile.
 class IncomeSourcesScreen extends StatelessWidget {
   const IncomeSourcesScreen({super.key});
 
@@ -149,16 +149,9 @@ class IncomeSourcesScreen extends StatelessWidget {
                             onDelete: () => _confirmDelete(context, s),
                           ),
                         ),
-                        Divider(height: 1, indent: 8 + 36 + 14, endIndent: 8, color: scheme.outlineVariant),
+                        if (s != sources.last)
+                          Divider(height: 1, indent: 8 + 36 + 14, endIndent: 8, color: scheme.outlineVariant),
                       ],
-                      MenuRow(
-                        key: const Key('add-income-source-row'),
-                        icon: Icons.add_rounded,
-                        color: scheme.primary,
-                        title: 'Add Income Source',
-                        showDivider: false,
-                        onTap: () => _openSheet(context),
-                      ),
                     ],
                   ),
                 ),

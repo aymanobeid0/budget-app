@@ -47,9 +47,9 @@ void main() {
     expect(find.text('Food'), findsOneWidget);
     expect(find.text('Transport'), findsOneWidget);
     expect(find.text('Utilities'), findsOneWidget);
-    // Shown as one elevated menu card with an add row and a header button.
+    // Shown as one menu card; the only add button is in the header.
     expect(find.byKey(const Key('categories-menu')), findsOneWidget);
-    expect(find.byKey(const Key('add-category-row')), findsOneWidget);
+    expect(find.text('Add category'), findsNothing);
     expect(find.byKey(const Key('add-category-btn')), findsOneWidget);
     expect(find.byType(Divider), findsWidgets);
   });
