@@ -4,7 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/widgets.dart';
 import '../cubit/account_cubit.dart';
-import 'account_sheet.dart';
+import 'account_dialog.dart';
 
 /// Avatar, name and status at the top of the Profile screen.
 class AccountProfileHeader extends StatelessWidget {
@@ -138,7 +138,7 @@ class AccountSection extends StatelessWidget {
                 title: 'Create account',
                 subtitle: 'Keep your data after a reinstall',
                 trailing: const Chevron(),
-                onTap: state.busy ? null : () => showAccountSheet(context, AccountSheetMode.create),
+                onTap: state.busy ? null : () => showAccountDialog(context, AccountDialogMode.create),
               ))
               ..add(MenuRow(
                 key: const Key('sign-in-btn'),
@@ -147,7 +147,7 @@ class AccountSection extends StatelessWidget {
                 title: 'Sign in',
                 subtitle: 'Bring back an existing account',
                 trailing: const Chevron(),
-                onTap: state.busy ? null : () => showAccountSheet(context, AccountSheetMode.signIn),
+                onTap: state.busy ? null : () => showAccountDialog(context, AccountDialogMode.signIn),
               ));
           case AccountStatus.signedIn:
             rows
@@ -157,7 +157,7 @@ class AccountSection extends StatelessWidget {
                 color: scheme.primary,
                 title: 'Switch account',
                 trailing: const Chevron(),
-                onTap: state.busy ? null : () => showAccountSheet(context, AccountSheetMode.signIn),
+                onTap: state.busy ? null : () => showAccountDialog(context, AccountDialogMode.signIn),
               ))
               ..add(MenuRow(
                 key: const Key('sign-out-btn'),

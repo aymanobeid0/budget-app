@@ -5,31 +5,29 @@ import '../../../core/theme/app_theme.dart';
 import '../account_service.dart';
 import '../cubit/account_cubit.dart';
 
-enum AccountSheetMode { create, signIn }
+enum AccountDialogMode { create, signIn }
 
-Future<void> showAccountSheet(BuildContext context, AccountSheetMode mode) {
+/// Opens centred, above the nav bar; it moves up when the keyboard opens.
+Future<void> showAccountDialog(BuildContext context, AccountDialogMode mode) {
   final cubit = context.read<AccountCubit>();
-  return showModalBottomSheet<void>(
+  return showDialog<void>(
     context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    backgroundColor: Colors.transparent,
-    builder: (_) => BlocProvider.value(value: cubit, child: AccountSheet(initialMode: mode)),
+    builder: (_) => BlocProvider.value(value: cubit, child: AccountDialog(initialMode: mode)),
   );
 }
 
-/// Create-account / sign-in form. The same sheet handles switching accounts:
+/// Create-account / sign-in form. The same dialog handles switching accounts:
 /// signing into another account while signed in switches to it.
-class AccountSheet extends StatefulWidget {
-  const AccountSheet({super.key, required this.initialMode});
-  final AccountSheetMode initialMode;
+class AccountDialog extends StatefulWidget {
+  const AccountDialog({super.key, required this.initialMode});
+  final AccountDialogMode initialMode;
 
   @override
-  State<AccountSheet> createState() => _AccountSheetState();
+  State<AccountDialog> createState() => _AccountDialogState();
 }
 
-class _AccountSheetState extends State<AccountSheet> {
-  late AccountSheetMode _mode = widget.initialMode;
+class _AccountDialogState extends State<AccountDialog> {
+  late AccountDialogMode _mode = widget.initialMode;
   final _username = TextEditingController();
   final _password = TextEditingController();
   final _confirm = TextEditingController();
@@ -41,7 +39,7 @@ class _AccountSheetState extends State<AccountSheet> {
   int _guestExpenses = 0;
   int _guestIncome = 0;
 
-  bool get _isCreate => _mode == AccountSheetMode.create;
+  bool get _isCreate => _mode == AccountDialogMode.create;
 
   /// "3 expenses and 1 income": what a sign-in would replace.
   String _guestEntries() => [
@@ -110,34 +108,16 @@ class _AccountSheetState extends State<AccountSheet> {
             ? 'Signed in as $signedInAs. Enter the account you want to switch to.'
             : 'Sign in to bring back your expenses from your server.');
 
-    return Container(
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.sheet)),
-        boxShadow: AppShadows.sheet,
-      ),
-      padding: EdgeInsets.only(
-        left: AppSpace.xl,
-        right: AppSpace.xl,
-        top: 10,
-        bottom: MediaQuery.of(context).viewInsets.bottom + AppSpace.xxl,
-      ),
+    return Dialog(
+      backgroundColor: scheme.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sheet)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: AppSpace.gutter, vertical: AppSpace.xl),
       child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(AppSpace.xl, AppSpace.md, AppSpace.xl, AppSpace.lg),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkBorder : AppColors.handle,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSpace.lg),
             Row(
               children: [
                 Expanded(child: Text(title, style: AppType.title.copyWith(color: scheme.onSurface))),
@@ -195,7 +175,7 @@ class _AccountSheetState extends State<AccountSheet> {
                 errorText: _usernameError,
               ),
             ),
-            const SizedBox(height: AppSpace.md),
+            const SizedBox(height: AppSpace.xl),
             TextField(
               key: const Key('account-password-field'),
               controller: _password,
@@ -218,7 +198,7 @@ class _AccountSheetState extends State<AccountSheet> {
               ),
             ),
             if (_isCreate) ...[
-              const SizedBox(height: AppSpace.md),
+              const SizedBox(height: AppSpace.xl),
               TextField(
                 key: const Key('account-confirm-field'),
                 controller: _confirm,
@@ -246,36 +226,60 @@ class _AccountSheetState extends State<AccountSheet> {
               ),
             ],
 
-            const SizedBox(height: AppSpace.xl),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: state.busy ? null : AppShadows.fab,
-              ),
-              child: FilledButton(
-                key: const Key('account-submit-btn'),
-                onPressed: state.busy ? null : _submit,
-                style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(56)),
-                child: state.busy
-                    ? const SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white),
-                      )
-                    : Text(_isCreate ? 'Create account' : (signedInAs != null ? 'Switch' : 'Sign in')),
-              ),
+            const SizedBox(height: AppSpace.xxl),
+            FilledButton(
+              key: const Key('account-submit-btn'),
+              onPressed: state.busy ? null : _submit,
+              style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(56)),
+              child: state.busy
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white),
+                    )
+                  : Text(_isCreate ? 'Create account' : (signedInAs != null ? 'Switch' : 'Sign in')),
             ),
-            const SizedBox(height: AppSpace.sm),
-            TextButton(
-              key: const Key('account-mode-toggle'),
-              onPressed: state.busy
-                  ? null
-                  : () => setState(() {
-                        _mode = _isCreate ? AccountSheetMode.signIn : AccountSheetMode.create;
-                        _error = null;
-                        _confirmError = null;
-                      }),
-              child: Text(_isCreate ? 'I already have an account' : 'Create a new account'),
+            const SizedBox(height: AppSpace.md),
+            // Only the link word is tappable; the question before it is plain text.
+            Wrap(
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Text(
+                  _isCreate
+                      ? 'Already have an account? '
+                      : (signedInAs != null ? 'Need another account? ' : "Don't have an account? "),
+                  style: TextStyle(fontSize: 14, color: scheme.onSurfaceVariant),
+                ),
+                // A plain link: no button background, splash or highlight.
+                Semantics(
+                  link: true,
+                  child: GestureDetector(
+                    key: const Key('account-mode-toggle'),
+                    behavior: HitTestBehavior.opaque,
+                    onTap: state.busy
+                        ? null
+                        : () => setState(() {
+                              _mode = _isCreate ? AccountDialogMode.signIn : AccountDialogMode.create;
+                              _error = null;
+                              _confirmError = null;
+                            }),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: AppSpace.xs, vertical: 10),
+                      child: Text(
+                        _isCreate ? 'Sign in' : 'Sign up',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: state.busy ? scheme.onSurfaceVariant : scheme.primary,
+                          decoration: TextDecoration.underline,
+                          decorationColor: state.busy ? scheme.onSurfaceVariant : scheme.primary,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
