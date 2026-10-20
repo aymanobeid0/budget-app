@@ -34,55 +34,27 @@ If you prefer creating a custom **Compose** service directly in Dokploy:
 
 ## 🗄️ Database Schema & RLS Setup
 
-Once Supabase is running, open **Supabase Studio** (port 3000 or your studio domain) $\to$ **SQL Editor** $\to$ **New query**, and execute the following SQL to create the tables with Row-Level Security:
+The schema lives in [`supabase/migrations/`](../supabase/migrations/). It is the only copy, so this guide never repeats its SQL.
 
-```sql
--- Categories: user-owned classification labels
-create table if not exists public.categories (
-  id          text primary key,
-  user_id     uuid not null references auth.users (id) on delete cascade default auth.uid(),
-  name        text not null,
-  icon        text not null,
-  color       bigint not null,
-  created_at  timestamptz not null default now(),
-  updated_at  timestamptz not null default now(),
-  deleted_at  timestamptz
-);
+Once Supabase is running, open **Supabase Studio** (port 3000 or your studio domain) $\to$ **SQL Editor** $\to$ **New query**, and run **every file in `supabase/migrations/`, oldest first** (the file names start with a timestamp, so sort by name). Paste each whole file and click **Run** before moving to the next.
 
--- Expenses: amount + category + date
-create table if not exists public.expenses (
-  id           text primary key,
-  user_id      uuid not null references auth.users (id) on delete cascade default auth.uid(),
-  amount_minor bigint not null check (amount_minor > 0),
-  category_id  text not null references public.categories (id),
-  spent_on     date not null,
-  created_at   timestamptz not null default now(),
-  updated_at   timestamptz not null default now(),
-  deleted_at   timestamptz
-);
+On a server that is already set up, run only the migrations it is missing. The later files are safe to run again, but `20261013000000_init_schema.sql` is not: run a second time, it fails with `policy "own categories" for table "categories" already exists`.
 
-create index if not exists expenses_user_spent_on_idx on public.expenses (user_id, spent_on desc);
+When a new migration is added to the repo, run it on the server too. Until you do, sync stops at the missing table with an error such as:
 
--- Enable Row Level Security (RLS)
-alter table public.categories enable row level security;
-alter table public.expenses   enable row level security;
-
--- Enforce user-scoped access policies
-create policy "own categories" on public.categories
-  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
-
-create policy "own expenses" on public.expenses
-  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+```
+PostgrestException(message: Could not find the table 'public.income_sources' in the schema cache, code: PGRST205)
 ```
 
 ---
 
-## 🔑 Configured Deployment Credentials
+## 🔑 Configured Deployment
 
-The Dokploy Supabase instance has been deployed and verified:
+The Dokploy Supabase instance runs at:
 - **API URL (`SUPABASE_URL`):** `https://api.itlabservice.com`
-- **Anonymous Key (`SUPABASE_ANON_KEY`):** `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3OTE5OTg1NjQsImV4cCI6MTg5MzQ1NjAwMCwicm9sZSI6ImFub24iLCJpc3MiOiJzdXBhYmFzZSJ9.9eNXKCYAG4MpxmwbdQ1yBg0JTC6R9F_dXrGFIdKsEuI`
 - **Studio Dashboard:** `https://api.itlabservice.com/` (HTTP Basic Auth: User `supabase`, Password configured in Dokploy)
+
+The anon key (`SUPABASE_ANON_KEY`) is the `ANON_KEY` from the Supabase environment in Dokploy. Copy it from there into your `.env`; it is not kept in the repo.
 
 ### Running the App with Supabase Enabled
 
