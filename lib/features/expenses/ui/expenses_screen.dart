@@ -56,7 +56,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
       groupOf: (e) => e.categoryId,
       amountOf: (e) => e.amountMinor,
       isDeleted: (e) => e.deletedAt != null,
-      describe: (id) => _categoryGroup(id, byId[id]),
+      describe: (id) => categoryGroup(id, byId[id]),
     );
     final picked = await showBreakdownSheet(
       context,
@@ -100,7 +100,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                   leading: SquareIconButton(
                     icon: Icons.grid_view_rounded,
                     tooltip: 'Categories',
-                    onTap: router == null ? null : () => router.go('/settings/categories'),
+                    onTap: router == null ? null : () => router.push('/categories'),
                   ),
                   trailing: const ThemeToggleButton(),
                 );
@@ -171,7 +171,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                       Padding(
                         padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 0, AppSpace.gutter, 4),
                         child: GroupFilterChip(
-                          group: _categoryGroup(filter, catMap[filter]),
+                          group: categoryGroup(filter, catMap[filter]),
                           onClear: () => setState(() => _categoryFilter = null),
                         ),
                       ),
@@ -179,7 +179,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                     // Keyed by month and filter, so a new month's rows show at once.
                     AnimatedEntries(key: ValueKey((month, filter)), children: [
                       for (final e in expenses)
-                        _TransactionRow(
+                        ExpenseRow(
                           key: ValueKey('expense-row-${e.id}'),
                           expense: e,
                           category: catMap[e.categoryId],
@@ -194,7 +194,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                         entries: 'Expenses',
                         monthLabel: label,
                         isCurrent: chosen.isCurrent,
-                        filteredTo: filter == null ? null : _categoryGroup(filter, catMap[filter]).name,
+                        filteredTo: filter == null ? null : categoryGroup(filter, catMap[filter]).name,
                         filteredMessage: 'Nothing in this Category this month.',
                       ),
                   ],
@@ -210,7 +210,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
 
 /// A Category as a breakdown group; Expenses whose Category is gone
 /// entirely show as Uncategorized, as their rows do.
-BreakdownGroup _categoryGroup(String id, Category? category) => BreakdownGroup(
+BreakdownGroup categoryGroup(String id, Category? category) => BreakdownGroup(
       id: id,
       name: category?.name ?? 'Uncategorized',
       icon: category != null ? CategoryIconHelper.getIcon(category.icon) : Icons.receipt_long_rounded,
@@ -407,8 +407,10 @@ class _EmptyTransactions extends StatelessWidget {
   }
 }
 
-class _TransactionRow extends StatelessWidget {
-  const _TransactionRow({
+/// One Expense in a list: its Category and amount; tap to edit, swipe to
+/// delete.
+class ExpenseRow extends StatelessWidget {
+  const ExpenseRow({
     super.key,
     required this.expense,
     required this.category,

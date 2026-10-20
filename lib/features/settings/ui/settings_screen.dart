@@ -56,7 +56,7 @@ class SettingsScreen extends StatelessWidget {
                     title: 'Categories',
                     subtitle: 'Add, rename or remove expense categories',
                     trailing: const Chevron(),
-                    onTap: () => context.go('/settings/categories'),
+                    onTap: () => context.push('/categories'),
                   ),
                   MenuRow(
                     key: const Key('profile-income-sources-row'),
@@ -65,7 +65,7 @@ class SettingsScreen extends StatelessWidget {
                     title: 'Income Sources',
                     subtitle: 'Where your money comes from',
                     trailing: const Chevron(),
-                    onTap: () => context.go('/settings/income-sources'),
+                    onTap: () => context.push('/income-sources'),
                   ),
                   MenuRow(
                     icon: Icons.dark_mode_rounded,

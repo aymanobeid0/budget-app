@@ -26,20 +26,9 @@ const _months = [
 /// What the Add sheet is logging.
 enum EntryKind { expense, income }
 
-/// The Add sheet opens on the kind used last, so several Income in a row
-/// don't need a switch each time. Kept for the app's lifetime.
-class AddSheetMemory {
-  const AddSheetMemory._();
-
-  static EntryKind lastKind = EntryKind.expense;
-
-  @visibleForTesting
-  static void reset() => lastKind = EntryKind.expense;
-}
-
-/// Opens the full-screen add/edit page. Used by the nav bar's add button and
-/// by tapping an Expense or Income in a list. [kind] forces a mode;
-/// otherwise a new entry opens on the mode used last.
+/// Opens the full-screen add/edit page. A new entry is the [kind] asked for
+/// (an Expense unless Income is asked for) and can't switch to the other:
+/// each add button does one job. Editing keeps the entry's own kind.
 Future<void> showExpenseSheet(BuildContext context, {Expense? expense, Income? income, EntryKind? kind}) {
   final categoryState = context.read<CategoryCubit>().state;
   final categories = categoryState is CategoryLoaded ? categoryState.categories : <Category>[];
@@ -98,8 +87,7 @@ Future<void> showExpenseSheet(BuildContext context, {Expense? expense, Income? i
 }
 
 /// Add / edit page for an Expense or an Income (kept under its original
-/// name for callers). A new entry can switch between the two when
-/// [onSaveIncome] is given.
+/// name for callers). A new Income needs [onSaveIncome].
 class ExpenseFormSheet extends StatefulWidget {
   const ExpenseFormSheet({
     super.key,
@@ -132,7 +120,7 @@ class ExpenseFormSheet extends StatefulWidget {
 
 class _ExpenseFormSheetState extends State<ExpenseFormSheet> {
   late final TextEditingController _amount;
-  late EntryKind _kind;
+  late final EntryKind _kind;
   late String _categoryId;
   String _sourceId = '';
   late DateTime _date;
@@ -142,7 +130,6 @@ class _ExpenseFormSheetState extends State<ExpenseFormSheet> {
 
   bool get _isIncome => _kind == EntryKind.income;
   bool get _isEditing => widget.expense != null || widget.income != null;
-  bool get _canSwitch => !_isEditing && widget.onSaveIncome != null;
 
   static DateTime _day(DateTime d) => DateTime(d.year, d.month, d.day);
   static DateTime _mondayOf(DateTime d) => _day(d).subtract(Duration(days: d.weekday - 1));
@@ -158,7 +145,7 @@ class _ExpenseFormSheetState extends State<ExpenseFormSheet> {
     _sourceId = i?.sourceId ?? '';
     _kind = i != null
         ? EntryKind.income
-        : (_canSwitch ? (widget.initialKind ?? AddSheetMemory.lastKind) : EntryKind.expense);
+        : (e != null || widget.onSaveIncome == null ? EntryKind.expense : (widget.initialKind ?? EntryKind.expense));
     _date = _day(e?.spentOn ?? i?.paidOn ?? DateTime.now());
     _weekStart = _mondayOf(_date);
   }
@@ -185,14 +172,6 @@ class _ExpenseFormSheetState extends State<ExpenseFormSheet> {
     }
     HapticFeedback.lightImpact();
     Navigator.of(context).pop();
-  }
-
-  void _switchKind(EntryKind kind) {
-    AddSheetMemory.lastKind = kind;
-    setState(() {
-      _kind = kind;
-      _pickError = null;
-    });
   }
 
   /// Chips for the current mode: Categories for an Expense, Income Sources
@@ -285,25 +264,6 @@ class _ExpenseFormSheetState extends State<ExpenseFormSheet> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 22, AppSpace.gutter, 16),
                 children: [
-                  if (_canSwitch) ...[
-                    SegmentedButton<EntryKind>(
-                      key: const Key('entry-kind-switch'),
-                      segments: const [
-                        ButtonSegment(
-                          value: EntryKind.expense,
-                          label: Text('Expense', key: Key('entry-kind-expense')),
-                        ),
-                        ButtonSegment(
-                          value: EntryKind.income,
-                          label: Text('Income', key: Key('entry-kind-income')),
-                        ),
-                      ],
-                      selected: {_kind},
-                      showSelectedIcon: false,
-                      onSelectionChanged: (s) => _switchKind(s.first),
-                    ),
-                    const SizedBox(height: 18),
-                  ],
                   _WeekStrip(
                     weekStart: _weekStart,
                     selected: _date,

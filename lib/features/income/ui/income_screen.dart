@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/format/money.dart';
 import '../../../core/month/breakdown_sheet.dart';
 import '../../../core/month/chosen_month_cubit.dart';
+import '../../../core/month/day_header.dart';
 import '../../../core/month/earliest_month.dart';
 import '../../../core/month/empty_month.dart';
 import '../../../core/month/month_header.dart';
@@ -23,9 +24,6 @@ import '../cubit/income_state.dart';
 import '../income.dart';
 import '../income_breakdown.dart';
 import '../income_source.dart';
-
-const _shortMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const _weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 /// Income tab: one month at a time. The month header and total card (swipe
 /// either to change month) over that month's Income, newest first and
@@ -67,11 +65,17 @@ class _IncomeScreenState extends State<IncomeScreen> {
     final expenses = _watchExpenses(context);
     final header = ScreenHeader(
       title: 'Income',
+      leading: SquareIconButton(
+        key: const Key('add-income-btn'),
+        icon: Icons.add_rounded,
+        tooltip: 'Add income',
+        onTap: () => showExpenseSheet(context, kind: EntryKind.income),
+      ),
       trailing: SquareIconButton(
         key: const Key('income-sources-btn'),
         icon: Icons.tune_rounded,
         tooltip: 'Income Sources',
-        onTap: router == null ? null : () => router.go('/settings/income-sources'),
+        onTap: router == null ? null : () => router.push('/income-sources'),
       ),
     );
 
@@ -147,11 +151,12 @@ class _IncomeScreenState extends State<IncomeScreen> {
                 // Keyed by month and filter, so a new month's rows show at once.
                 AnimatedEntries(key: ValueKey((month, filter)), children: [
                   for (final day in days.entries) ...[
-                    _DayHeader(
+                    DayHeader(
                       key: ValueKey('income-day-${day.key}'),
                       day: day.value.first.paidOn,
                       today: chosen.today,
                       totalMinor: dayTotals[day.key]!,
+                      currency: context.watch<CurrencyCubit>().state,
                     ),
                     for (final i in day.value)
                       _IncomeRow(
@@ -217,45 +222,6 @@ class _TotalCard extends StatelessWidget {
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
             child: Text(Money.withLabel(totalMinor, context.watch<CurrencyCubit>().state), style: AppType.heroAmount.copyWith(color: AppColors.income)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DayHeader extends StatelessWidget {
-  const _DayHeader({super.key, required this.day, required this.today, required this.totalMinor});
-  final DateTime day;
-
-  /// Now, by the chosen month's clock, for "Today" and "Yesterday".
-  final DateTime today;
-  final int totalMinor;
-
-  String _label() {
-    final now = this.today;
-    final today = DateTime(now.year, now.month, now.day);
-    final d = DateTime(day.year, day.month, day.day);
-    final diff = today.difference(d).inDays;
-    if (diff == 0) return 'Today';
-    if (diff == 1) return 'Yesterday';
-    final label = '${_weekdays[d.weekday - 1]}, ${d.day} ${_shortMonths[d.month - 1]}';
-    return d.year == now.year ? label : '$label ${d.year}';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 22, AppSpace.gutter, 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(_label(), style: AppType.caption.copyWith(color: scheme.onSurfaceVariant)),
-          ),
-          Text(
-            Money.withLabel(totalMinor, context.watch<CurrencyCubit>().state),
-            style: AppType.caption.copyWith(color: scheme.onSurfaceVariant, fontFeatures: AppFonts.tabular),
           ),
         ],
       ),

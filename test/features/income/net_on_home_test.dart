@@ -20,7 +20,6 @@ void main() {
 
   setUp(() async {
     db = await AppDatabase.open(factory: databaseFactoryFfiNoIsolate, path: inMemoryDatabasePath);
-    AddSheetMemory.reset();
   });
 
   tearDown(() => db.close());
@@ -55,14 +54,18 @@ void main() {
 
   Finder inCard(Finder f) => find.descendant(of: find.byKey(const Key('net-card')), matching: f);
 
+  /// Logs from the Expenses or Income page's + button, then returns to Home.
   Future<void> log(WidgetTester tester, EntryKind kind, String amount, String pick) async {
-    await tester.tap(find.byKey(const Key('add-expense-fab')));
+    final income = kind == EntryKind.income;
+    await tester.tap(find.byKey(Key(income ? 'nav-income' : 'nav-expenses')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(Key('entry-kind-${kind.name}')));
+    await tester.tap(find.byKey(Key(income ? 'add-income-btn' : 'add-expense-btn')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('expense-amount-field')), amount);
     await tester.tap(find.descendant(of: find.byType(ExpenseFormSheet), matching: find.text(pick)));
     await tester.tap(find.byKey(const Key('save-expense-btn')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('nav-home')));
     await tester.pumpAndSettle();
   }
 

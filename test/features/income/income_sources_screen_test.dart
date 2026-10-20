@@ -18,7 +18,6 @@ void main() {
   setUp(() async {
     db = await AppDatabase.open(factory: databaseFactoryFfiNoIsolate, path: inMemoryDatabasePath);
     incomeLedger = IncomeLedger(db);
-    AddSheetMemory.reset();
   });
 
   tearDown(() => db.close());
@@ -62,9 +61,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Dental clinic'), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('add-expense-fab')));
+    await tester.tap(find.byTooltip('Back'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('entry-kind-income')));
+    await tester.tap(find.byKey(const Key('nav-income')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('add-income-btn')));
     await tester.pumpAndSettle();
     expect(inSheet(find.text('Dental clinic')), findsOneWidget);
   });
@@ -78,6 +79,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('income-sources-screen')), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('income-screen')), findsOneWidget);
   });
 
   testWidgets('a deleted source leaves the picker but its past Income keeps its name', (tester) async {
@@ -85,9 +90,9 @@ void main() {
     await pumpApp(tester);
 
     // Log one Salary Income.
-    await tester.tap(find.byKey(const Key('add-expense-fab')));
+    await tester.tap(find.byKey(const Key('nav-income')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('entry-kind-income')));
+    await tester.tap(find.byKey(const Key('add-income-btn')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('expense-amount-field')), '900');
     await tester.tap(inSheet(find.text('Salary')));
@@ -106,12 +111,16 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('income-source-item-src_salary')), findsNothing);
 
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('nav-income')));
     await tester.pumpAndSettle();
     expect(find.text('Salary'), findsOneWidget);
     expect(find.text('+900'), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('add-expense-fab')));
+    await tester.tap(find.byKey(const Key('nav-expenses')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('add-expense-btn')));
     await tester.pumpAndSettle();
     expect(inSheet(find.text('Salary')), findsNothing);
   });

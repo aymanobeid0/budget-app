@@ -17,7 +17,6 @@ void main() {
 
   setUp(() async {
     db = await AppDatabase.open(factory: databaseFactoryFfiNoIsolate, path: inMemoryDatabasePath);
-    AddSheetMemory.reset();
   });
 
   tearDown(() => db.close());
@@ -63,23 +62,25 @@ void main() {
     expect(find.descendant(of: find.byKey(const Key('profile-currency-row')), matching: find.text('EUR')),
         findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('nav-expenses')));
+    await tester.tap(find.byKey(const Key('nav-home')));
     await tester.pumpAndSettle();
     expect(onHome('EUR'), findsWidgets);
     expect(onHome('MRU'), findsNothing);
     expect(find.descendant(of: find.byKey(const Key('net-card')), matching: find.textContaining('EUR')),
         findsWidgets);
 
-    await tester.tap(find.byKey(const Key('add-expense-fab')));
+    await tester.tap(find.byKey(const Key('nav-expenses')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('add-expense-btn')));
     await tester.pumpAndSettle();
     expect(find.descendant(of: find.byType(ExpenseFormSheet), matching: find.text('EUR')), findsOneWidget);
   });
 
   testWidgets('Income totals use the chosen Currency', (tester) async {
     await launch(tester, CurrencyStorage.inMemory(Currency.usd));
-    await tester.tap(find.byKey(const Key('add-expense-fab')));
+    await tester.tap(find.byKey(const Key('nav-income')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('entry-kind-income')));
+    await tester.tap(find.byKey(const Key('add-income-btn')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('expense-amount-field')), '1000');
     await tester.tap(find.descendant(of: find.byType(ExpenseFormSheet), matching: find.text('Salary')));

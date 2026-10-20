@@ -19,7 +19,6 @@ void main() {
 
   setUp(() async {
     db = await AppDatabase.open(factory: databaseFactoryFfiNoIsolate, path: inMemoryDatabasePath);
-    AddSheetMemory.reset();
   });
 
   tearDown(() => db.close());
@@ -50,7 +49,9 @@ void main() {
 
   /// Fills and saves the Add sheet, leaving the closing route to settle.
   Future<void> addExpense(WidgetTester tester, String amount) async {
-    await tester.tap(find.byKey(const Key('add-expense-fab')));
+    await tester.tap(find.byKey(const Key('nav-expenses')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('add-expense-btn')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('expense-amount-field')), amount);
     await tester.tap(inSheet(find.text('Transport')));
@@ -79,7 +80,7 @@ void main() {
     return opacityOf(tester, f);
   }
 
-  testWidgets('a new Expense fades into the Home list', (tester) async {
+  testWidgets('a new Expense fades into the Expenses list', (tester) async {
     await pumpApp(tester);
 
     await addExpense(tester, '42');
@@ -102,6 +103,10 @@ void main() {
     return faded;
   }
 
+  /// [f] within the Expenses page only: Home, in the background, lists the same Expense.
+  Finder onExpensesPage(Finder f) =>
+      find.descendant(of: find.byKey(const Key('expense-list-screen'), skipOffstage: false), matching: f);
+
   Future<void> deleteFromSheet(WidgetTester tester, Finder row) async {
     await tester.tap(row);
     await tester.pumpAndSettle();
@@ -110,22 +115,20 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
   }
 
-  testWidgets('a deleted Expense fades out of the Home list', (tester) async {
+  testWidgets('a deleted Expense fades out of the Expenses list', (tester) async {
     await pumpApp(tester);
     await addExpense(tester, '42');
     await tester.pumpAndSettle();
 
     await deleteFromSheet(tester, find.text('−42'));
 
-    expect(await fadesOut(tester, find.text('−42', skipOffstage: false)), isTrue);
+    expect(await fadesOut(tester, onExpensesPage(find.text('−42', skipOffstage: false))), isTrue);
   });
 
   Future<void> addIncomeOnIncomeTab(WidgetTester tester, String amount) async {
     await tester.tap(find.byKey(const Key('nav-income')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('add-expense-fab')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('entry-kind-income')));
+    await tester.tap(find.byKey(const Key('add-income-btn')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('expense-amount-field')), amount);
     await tester.tap(inSheet(find.text('Salary')));
@@ -170,7 +173,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await deleteFromSheet(tester, find.text('−42'));
-    expect(await fadesOut(tester, find.text('−42', skipOffstage: false)), isFalse);
+    expect(await fadesOut(tester, onExpensesPage(find.text('−42', skipOffstage: false))), isFalse);
   });
 
   testWidgets('saving an Expense from the Add sheet gives a light haptic tap', (tester) async {
@@ -185,7 +188,9 @@ void main() {
   testWidgets('a rejected save gives no haptic tap', (tester) async {
     await pumpApp(tester);
 
-    await tester.tap(find.byKey(const Key('add-expense-fab')));
+    await tester.tap(find.byKey(const Key('nav-expenses')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('add-expense-btn')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('save-expense-btn')));
     await tester.pumpAndSettle();

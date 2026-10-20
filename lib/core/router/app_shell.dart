@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../features/expenses/ui/expense_form_sheet.dart';
 import '../theme/tokens.dart';
 
-/// Bottom-navigation scaffold: icon-only tabs with a raised blue
-/// "add expense" button in the centre.
+/// Bottom-navigation scaffold: five icon-only tabs, each opening its page.
 class AppShell extends StatelessWidget {
   const AppShell({super.key, required this.navigationShell});
 
@@ -22,19 +20,22 @@ class AppShell extends StatelessWidget {
           i,
           initialLocation: i == navigationShell.currentIndex,
         ),
-        onAdd: () => showExpenseSheet(context),
       ),
     );
   }
 }
 
 class _NavItem {
-  const _NavItem(this.branch, this.key, this.label, this.icon, this.selectedIcon);
+  const _NavItem(this.branch, this.key, this.label, this.icon, this.selectedIcon, {this.badge});
   final int branch; // index in the router's branches
   final String key;
   final String label;
   final IconData icon;
   final IconData selectedIcon;
+
+  /// A small glyph on the icon's top-right corner, like the arrow of money
+  /// leaving the Expenses wallet.
+  final IconData? badge;
 }
 
 class AppNavBar extends StatelessWidget {
@@ -42,28 +43,21 @@ class AppNavBar extends StatelessWidget {
     super.key,
     required this.currentIndex,
     required this.onSelect,
-    required this.onAdd,
   });
 
   final int currentIndex;
   final ValueChanged<int> onSelect;
-  final VoidCallback onAdd;
 
-  // Visual order: Home, Income, [+], Consultant, Profile. Categories live
-  // in Profile.
-  static const _left = [
-    _NavItem(0, 'expenses', 'Home', Icons.home_outlined, Icons.home_rounded),
+  static const _items = [
+    _NavItem(0, 'home', 'Home', Icons.home_outlined, Icons.home_rounded),
     _NavItem(1, 'income', 'Income', Icons.payments_outlined, Icons.payments_rounded),
-  ];
-  static const _right = [
-    _NavItem(2, 'consultant', 'Consultant', Icons.auto_awesome_outlined, Icons.auto_awesome),
-    _NavItem(3, 'settings', 'Profile and settings', Icons.person_outline_rounded, Icons.person_rounded),
+    _NavItem(2, 'expenses', 'Expenses', Icons.account_balance_wallet_outlined, Icons.account_balance_wallet_rounded,
+        badge: Icons.north_east_rounded),
+    _NavItem(3, 'consultant', 'Consultant', Icons.auto_awesome_outlined, Icons.auto_awesome),
+    _NavItem(4, 'settings', 'Profile and settings', Icons.person_outline_rounded, Icons.person_rounded),
   ];
 
   static const _barHeight = 72.0;
-  static const _rise = 30.0;
-  static const _addSize = 60.0;
-  static const _ring = 5.0;
 
   @override
   Widget build(BuildContext context) {
@@ -79,68 +73,15 @@ class AppNavBar extends StatelessWidget {
           ),
         );
 
-    return SizedBox(
-      height: _barHeight + bottomInset + _rise,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            height: _barHeight + bottomInset,
-            child: Container(
-              padding: EdgeInsets.only(left: 12, right: 12, bottom: bottomInset),
-              decoration: BoxDecoration(
-                color: scheme.surface,
-                boxShadow: isDark ? null : AppShadows.navBar,
-                border: isDark ? const Border(top: BorderSide(color: AppColors.darkBorder)) : null,
-              ),
-              child: Row(
-                children: [
-                  ..._left.map(tab),
-                  const SizedBox(width: _addSize + _ring * 2 + 12),
-                  ..._right.map(tab),
-                ],
-              ),
-            ),
-          ),
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: Tooltip(
-                message: 'Add expense',
-                child: Container(
-                  key: const Key('add-expense-fab'),
-                  width: _addSize + _ring * 2,
-                  height: _addSize + _ring * 2,
-                  decoration: BoxDecoration(color: scheme.surface, shape: BoxShape.circle),
-                  padding: const EdgeInsets.all(_ring),
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      boxShadow: isDark ? null : AppShadows.fab,
-                    ),
-                    child: Material(
-                      color: scheme.primary,
-                      shape: const CircleBorder(),
-                      child: InkWell(
-                        customBorder: const CircleBorder(),
-                        onTap: onAdd,
-                        child: const Center(
-                          child: Icon(Icons.add_rounded, size: 30, color: Colors.white, semanticLabel: 'Add expense'),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
+    return Container(
+      height: _barHeight + bottomInset,
+      padding: EdgeInsets.only(left: 12, right: 12, bottom: bottomInset),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        boxShadow: isDark ? null : AppShadows.navBar,
+        border: isDark ? const Border(top: BorderSide(color: AppColors.darkBorder)) : null,
       ),
+      child: Row(children: _items.map(tab).toList()),
     );
   }
 }
@@ -173,7 +114,7 @@ class _NavTab extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(selected ? item.selectedIcon : item.icon, size: 26, color: color),
+                _TabIcon(icon: selected ? item.selectedIcon : item.icon, badge: item.badge, color: color),
                 const SizedBox(height: 5),
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 180),
@@ -188,6 +129,39 @@ class _NavTab extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _TabIcon extends StatelessWidget {
+  const _TabIcon({required this.icon, required this.badge, required this.color});
+  final IconData icon;
+  final IconData? badge;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final glyph = Icon(icon, size: 26, color: color);
+    if (badge == null) return glyph;
+    return SizedBox(
+      width: 30,
+      height: 26,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(left: 0, bottom: 0, child: glyph),
+          Positioned(
+            right: -2,
+            top: -3,
+            // Cut out of the icon in the bar's colour, so the badge reads apart.
+            child: Container(
+              decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface, shape: BoxShape.circle),
+              padding: const EdgeInsets.all(1),
+              child: Icon(badge, size: 14, color: color),
+            ),
+          ),
+        ],
       ),
     );
   }

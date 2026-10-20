@@ -4,6 +4,7 @@ import 'package:budget_app/core/router/app_shell.dart';
 import 'package:budget_app/core/sync/cloud_sync_client.dart';
 import 'package:budget_app/core/sync/sync_engine.dart';
 import 'package:budget_app/core/theme/theme_cubit.dart';
+import 'package:budget_app/core/theme/widgets.dart';
 import 'package:budget_app/features/categories/category_store.dart';
 import 'package:budget_app/features/expenses/expense_ledger.dart';
 import 'package:budget_app/features/expenses/ui/expense_form_sheet.dart';
@@ -59,17 +60,18 @@ void main() {
 
   tearDown(() => db.close());
 
-  testWidgets('shell shows Home, Income, Consultant and Profile tabs plus the add button and starts on Expenses', (tester) async {
+  testWidgets('shell shows Home, Income, Expenses, Consultant and Profile tabs and starts on Home', (tester) async {
     await tester.pumpWidget(BudgetApp(categoryStore: store, expenseLedger: ledger));
     await tester.pumpAndSettle();
 
     expect(find.byType(AppNavBar), findsOneWidget);
-    for (final label in ['Expenses', 'Income', 'Consultant', 'Settings']) {
-      expect(find.byKey(Key('nav-${label.toLowerCase()}')), findsOneWidget);
+    for (final key in ['home', 'income', 'expenses', 'consultant', 'settings']) {
+      expect(find.byKey(Key('nav-$key')), findsOneWidget);
     }
     expect(find.byKey(const Key('nav-categories')), findsNothing);
-    expect(find.byKey(const Key('add-expense-fab')), findsOneWidget);
     expect(find.byKey(const Key('expenses-screen')), findsOneWidget);
+    // Home has no add button; adding lives on the Expenses and Income pages.
+    expect(find.byTooltip('Add expense'), findsNothing);
   });
 
   testWidgets('tapping a tab switches the visible screen', (tester) async {
@@ -99,25 +101,86 @@ void main() {
     await tester.tap(find.byTooltip('Back'));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('settings-screen')), findsOneWidget);
-
-    // The add button still opens the Add sheet from Categories.
-    await tester.tap(find.byKey(const Key('profile-categories-row')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('add-expense-fab')));
-    await tester.pumpAndSettle();
-    expect(find.byType(ExpenseFormSheet), findsOneWidget);
   });
 
-  testWidgets('raised add button in the nav bar opens the expense sheet', (tester) async {
+  testWidgets('Categories opened from Home go back to Home, and Profile stays on its own page', (tester) async {
     await tester.pumpWidget(BudgetApp(categoryStore: store, expenseLedger: ledger));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('add-expense-fab')));
+    await tester.tap(find.byTooltip('Categories'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('categories-screen')), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('expenses-screen')), findsOneWidget);
+    expect(find.byKey(const Key('settings-screen')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('nav-settings')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('settings-screen')), findsOneWidget);
+    expect(find.byKey(const Key('categories-screen')), findsNothing);
+  });
+
+  testWidgets('the Expenses tab opens the Expenses page, and is active only while it shows', (tester) async {
+    await tester.pumpWidget(BudgetApp(categoryStore: store, expenseLedger: ledger));
     await tester.pumpAndSettle();
 
+    Color iconColor(String key) =>
+        tester.widget<Icon>(find.descendant(of: find.byKey(Key(key)), matching: find.byType(Icon)).first).color!;
+    final inactive = iconColor('nav-income');
+    final active = iconColor('nav-home');
+    expect(iconColor('nav-expenses'), inactive); // grey like the other tabs
+
+    await tester.tap(find.byKey(const Key('nav-expenses')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('expense-list-screen')), findsOneWidget);
+    expect(iconColor('nav-expenses'), active);
+    expect(iconColor('nav-home'), inactive);
+
+    await tester.tap(find.byKey(const Key('nav-home')));
+    await tester.pumpAndSettle();
+    expect(iconColor('nav-expenses'), inactive);
+  });
+
+  testWidgets("the Expenses page's top-left + opens Add Expense with no Income option", (tester) async {
+    await tester.pumpWidget(BudgetApp(categoryStore: store, expenseLedger: ledger));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('nav-expenses')));
+    await tester.pumpAndSettle();
+
+    final header = find.byType(ScreenHeader);
+    final add = tester.getRect(find.descendant(of: header, matching: find.byKey(const Key('add-expense-btn'))));
+    final categories = tester.getRect(find.descendant(of: header, matching: find.byTooltip('Categories')));
+    expect(add.center.dx, lessThan(categories.center.dx)); // + on the left, Categories on the right
+
+    await tester.tap(find.byKey(const Key('add-expense-btn')));
+    await tester.pumpAndSettle();
     expect(find.byType(ExpenseFormSheet), findsOneWidget);
     expect(find.text('Add Expense'), findsWidgets);
     expect(find.byKey(const Key('week-strip')), findsOneWidget);
+    expect(find.text('Income'), findsNothing);
+    expect(find.text('Income Source'), findsNothing);
+  });
+
+  testWidgets('a saved Expense shows on the Expenses page under its day', (tester) async {
+    await tester.pumpWidget(BudgetApp(categoryStore: store, expenseLedger: ledger));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('nav-expenses')));
+    await tester.pumpAndSettle();
+    expect(find.text('No Expenses yet'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('add-expense-btn')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('expense-amount-field')), '42');
+    await tester.tap(find.descendant(of: find.byType(ExpenseFormSheet), matching: find.text('Food')));
+    await tester.tap(find.byKey(const Key('save-expense-btn')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('expense-list-screen')), findsOneWidget);
+    expect(find.text('Today'), findsOneWidget);
+    expect(find.text('−42'), findsOneWidget);
+    expect(find.byKey(const Key('expense-total')), findsOneWidget);
   });
 
   testWidgets('app starts in light mode', (tester) async {
@@ -136,15 +199,17 @@ void main() {
 
     await tester.pumpWidget(BudgetApp(categoryStore: store, expenseLedger: ledger, themeCubit: cubit));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('nav-settings'))); // the toggle sits in Profile's header
+    await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('theme-toggle')));
     await tester.pumpAndSettle();
-    expect(Theme.of(tester.element(find.byKey(const Key('expenses-screen')))).brightness, Brightness.dark);
+    expect(Theme.of(tester.element(find.byKey(const Key('settings-screen')))).brightness, Brightness.dark);
     expect(await storage.read(), ThemeMode.dark);
 
     await tester.tap(find.byKey(const Key('theme-toggle')));
     await tester.pumpAndSettle();
-    expect(Theme.of(tester.element(find.byKey(const Key('expenses-screen')))).brightness, Brightness.light);
+    expect(Theme.of(tester.element(find.byKey(const Key('settings-screen')))).brightness, Brightness.light);
     expect(await storage.read(), ThemeMode.light);
   });
 

@@ -22,7 +22,6 @@ void main() {
     db = await AppDatabase.open(factory: databaseFactoryFfiNoIsolate, path: inMemoryDatabasePath);
     incomeLedger = IncomeLedger(db);
     expenseLedger = ExpenseLedger(db);
-    AddSheetMemory.reset();
   });
 
   tearDown(() => db.close());
@@ -52,14 +51,53 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(inSheet(find.text('Income Source')), findsOneWidget);
+    expect(find.byKey(const Key('entry-kind-switch')), findsNothing); // Income only
   });
 
-  testWidgets('switching the Add sheet to Income logs an Income from a picked source', (tester) async {
+  testWidgets("the Income tab's add button opens Add Income with no Expense option", (tester) async {
+    await pumpApp(tester);
+    await tester.tap(find.byKey(const Key('nav-income')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('add-income-btn')));
+    await tester.pumpAndSettle();
+
+    expect(inSheet(find.text('Add Income')), findsWidgets); // title and save button
+    expect(inSheet(find.text('Income Source')), findsOneWidget);
+    expect(find.byKey(const Key('entry-kind-switch')), findsNothing);
+    expect(inSheet(find.text('Food')), findsNothing);
+  });
+
+  testWidgets('each add button does one job: Income adds Income, Expenses adds Expenses', (tester) async {
+    await incomeLedger.loadSources();
+    await pumpApp(tester);
+    await tester.tap(find.byKey(const Key('nav-income')));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Add expense'), findsNothing); // the Income page only adds Income
+
+    // Log an Income from the Income tab.
+    await tester.tap(find.byKey(const Key('add-income-btn')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('expense-amount-field')), '900');
+    await tester.tap(inSheet(find.text('Salary')));
+    await tester.tap(find.byKey(const Key('save-expense-btn')));
+    await tester.pumpAndSettle();
+
+    // The Expenses page's + still opens Add Expense.
+    await tester.tap(find.byKey(const Key('nav-expenses')));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Add income'), findsNothing);
+    await tester.tap(find.byKey(const Key('add-expense-btn')));
+    await tester.pumpAndSettle();
+    expect(inSheet(find.text('Add Expense')), findsWidgets);
+    expect(inSheet(find.text('Category')), findsOneWidget);
+  });
+
+  testWidgets('Add Income logs an Income from a picked source', (tester) async {
     await pumpApp(tester);
 
-    await tester.tap(find.byKey(const Key('add-expense-fab')));
+    await tester.tap(find.byKey(const Key('nav-income')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('entry-kind-income')));
+    await tester.tap(find.byKey(const Key('add-income-btn')));
     await tester.pumpAndSettle();
 
     expect(inSheet(find.text('Income Source')), findsOneWidget);
@@ -86,9 +124,9 @@ void main() {
   testWidgets('Income needs an amount above zero and an Income Source', (tester) async {
     await pumpApp(tester);
 
-    await tester.tap(find.byKey(const Key('add-expense-fab')));
+    await tester.tap(find.byKey(const Key('nav-income')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('entry-kind-income')));
+    await tester.tap(find.byKey(const Key('add-income-btn')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('save-expense-btn')));
     await tester.pumpAndSettle();
@@ -99,27 +137,29 @@ void main() {
     expect(await incomeLedger.loadIncome(), isEmpty);
   });
 
-  testWidgets('the Add sheet reopens on the mode used last', (tester) async {
+  testWidgets('Add Expense opens on Expense even right after adding Income', (tester) async {
     await pumpApp(tester);
 
-    await tester.tap(find.byKey(const Key('add-expense-fab')));
+    await tester.tap(find.byKey(const Key('nav-income')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('entry-kind-income')));
+    await tester.tap(find.byKey(const Key('add-income-btn')));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Back'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('add-expense-fab')));
+    await tester.tap(find.byKey(const Key('nav-expenses')));
     await tester.pumpAndSettle();
-    expect(inSheet(find.text('Income Source')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('add-expense-btn')));
+    await tester.pumpAndSettle();
+    expect(inSheet(find.text('Category')), findsOneWidget);
   });
 
   testWidgets('tapping an Income edits it, and it can be deleted', (tester) async {
     await incomeLedger.loadSources();
     await pumpApp(tester);
-    await tester.tap(find.byKey(const Key('add-expense-fab')));
+    await tester.tap(find.byKey(const Key('nav-income')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('entry-kind-income')));
+    await tester.tap(find.byKey(const Key('add-income-btn')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('expense-amount-field')), '200');
     await tester.tap(inSheet(find.text('Freelance')));
@@ -154,9 +194,9 @@ void main() {
 
   testWidgets('the Income Source picker follows source changes while the sheet is open', (tester) async {
     await pumpApp(tester);
-    await tester.tap(find.byKey(const Key('add-expense-fab')));
+    await tester.tap(find.byKey(const Key('nav-income')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('entry-kind-income')));
+    await tester.tap(find.byKey(const Key('add-income-btn')));
     await tester.pumpAndSettle();
 
     final cubit = tester.element(find.byType(ExpenseFormSheet)).read<IncomeCubit>();
@@ -168,9 +208,9 @@ void main() {
 
   testWidgets('editing Income from a deleted source still shows that source picked', (tester) async {
     await pumpApp(tester);
-    await tester.tap(find.byKey(const Key('add-expense-fab')));
+    await tester.tap(find.byKey(const Key('nav-income')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('entry-kind-income')));
+    await tester.tap(find.byKey(const Key('add-income-btn')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('expense-amount-field')), '75');
     await tester.tap(inSheet(find.text('Freelance')));
