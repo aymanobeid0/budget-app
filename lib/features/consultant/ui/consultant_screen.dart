@@ -1,14 +1,17 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/empty_state.dart';
 import '../../../core/theme/widgets.dart';
+import '../../ai_provider/cubit/ai_provider_cubit.dart';
 import '../cubit/consultant_cubit.dart';
 import '../cubit/consultant_state.dart';
 import '../models/chat_message.dart';
 
-/// Conversational AI Expense Consultant powered by Google Gemini.
+/// Conversational AI Expense Consultant, answering with the user's AI Provider.
 class ConsultantScreen extends StatefulWidget {
   const ConsultantScreen({super.key, this.cubit});
 
@@ -81,6 +84,13 @@ class _ConsultantScreenState extends State<ConsultantScreen> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+
+    // Rebuild when a key is saved or removed in Settings.
+    try {
+      context.watch<AiProviderCubit>();
+    } catch (_) {
+      // Screen used without the AI provider feature (tests).
+    }
 
     return Scaffold(
       key: const Key('consultant-screen'),
@@ -158,12 +168,28 @@ class _ConsultantScreenState extends State<ConsultantScreen> {
   }
 
   Widget _buildOff() {
-    return const SingleChildScrollView(
+    if (kIsWeb) {
+      return const SingleChildScrollView(
+        child: EmptyState(
+          icon: Icons.phone_iphone_rounded,
+          title: 'The Consultant is in the app',
+          message: 'The Expense Consultant is available in the mobile and desktop apps, '
+              'where your API key can be kept safely. Your Expenses and Income work here as usual.',
+        ),
+      );
+    }
+    return SingleChildScrollView(
       child: EmptyState(
-        icon: Icons.cloud_off_rounded,
-        title: 'The Consultant is off',
-        message: 'No Gemini API key is set, so the Expense Consultant cannot answer. '
-            'Add GEMINI_API_KEY to .env and restart the app. Your Expenses and Income keep working offline.',
+        icon: Icons.key_rounded,
+        title: 'Connect an AI provider',
+        message: 'The Expense Consultant answers with your own API key from Google Gemini or another AI provider. '
+            'Add it in Settings. Your Expenses and Income keep working without it.',
+        action: FilledButton.icon(
+          key: const Key('connect-ai-provider-btn'),
+          onPressed: () => context.push('/ai-provider'),
+          icon: const Icon(Icons.settings_rounded),
+          label: const Text('Add your API key'),
+        ),
       ),
     );
   }

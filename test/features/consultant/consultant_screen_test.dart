@@ -102,14 +102,14 @@ void main() {
     expect(find.descendant(of: empty, matching: find.text('Where did I spend the most?')), findsOneWidget);
   });
 
-  testWidgets('without a Gemini key the Consultant says it is off before anything is typed', (tester) async {
+  testWidgets('without an AI Provider key the Consultant asks to connect one before anything is typed', (tester) async {
     client.isConfigured = false;
 
     await tester.pumpWidget(buildTestWidget());
     await tester.pumpAndSettle();
 
     final empty = find.byType(EmptyState);
-    expect(find.descendant(of: empty, matching: find.text('The Consultant is off')), findsOneWidget);
+    expect(find.descendant(of: empty, matching: find.text('Connect an AI provider')), findsOneWidget);
     expect(find.text('Where did I spend the most?'), findsNothing);
     expect(tester.widget<TextField>(find.byKey(const Key('consultant-input-field'))).enabled, isFalse);
   });

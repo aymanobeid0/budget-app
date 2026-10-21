@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 import 'app.dart';
 import 'core/config/app_config.dart';
@@ -8,12 +10,17 @@ import 'core/database/open_app_database.dart';
 import 'core/format/money.dart';
 import 'core/month/chosen_month_cubit.dart';
 import 'core/network/supabase_bootstrap.dart';
+import 'core/prefs/text_pref.dart';
 import 'core/sync/cloud_sync_client.dart';
 import 'core/sync/sync_engine.dart';
 import 'core/theme/theme_cubit.dart';
 import 'features/account/account_service.dart';
 import 'features/account/data/account_prefs.dart';
 import 'features/account/data/auth_gateway.dart';
+import 'features/ai_provider/data/ai_provider_store.dart';
+import 'features/ai_provider/data/gemini_adapter.dart';
+import 'features/ai_provider/data/secret_store.dart';
+import 'features/ai_provider/models/ai_provider.dart';
 import 'features/categories/category_store.dart';
 import 'features/expenses/expense_ledger.dart';
 import 'features/income/cubit/net_period_cubit.dart';
@@ -81,6 +88,15 @@ Future<void> main() async {
     initial: await currencyStorage.read() ?? Currency.fallback,
   );
 
+  // The user's own AI Provider keys, kept on this device only. None on web,
+  // where a key could only sit in browser storage (ADR 0009).
+  final aiProviderStore = AiProviderStore(
+    secrets: DeviceSecretStore(),
+    prefs: FileTextPref('ai_provider.json'),
+    adapters: kIsWeb ? const {} : {AiProviderKind.gemini: GeminiAdapter(http.Client())},
+  );
+  await aiProviderStore.load();
+
   runApp(BudgetApp(
     categoryStore: categoryStore,
     expenseLedger: expenseLedger,
@@ -91,5 +107,6 @@ Future<void> main() async {
     chosenMonthCubit: chosenMonthCubit,
     currencyCubit: currencyCubit,
     accountService: accountService,
+    aiProviderStore: aiProviderStore,
   ));
 }

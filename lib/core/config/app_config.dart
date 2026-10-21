@@ -12,7 +12,6 @@ class AppConfig {
 
   static String _supabaseUrl = const String.fromEnvironment('SUPABASE_URL');
   static String _supabaseAnonKey = const String.fromEnvironment('SUPABASE_ANON_KEY');
-  static String _geminiApiKey = const String.fromEnvironment('GEMINI_API_KEY');
 
   static void load() {
     // If environment defines are already present, keep them.
@@ -39,8 +38,6 @@ class AppConfig {
               _supabaseUrl = value;
             } else if (key == 'SUPABASE_ANON_KEY' && _supabaseAnonKey.isEmpty) {
               _supabaseAnonKey = value;
-            } else if (key == 'GEMINI_API_KEY' && _geminiApiKey.isEmpty) {
-              _geminiApiKey = value;
             }
           }
           if (_supabaseAnonKey.isNotEmpty) break;
@@ -54,6 +51,4 @@ class AppConfig {
   static String get supabaseUrl => _supabaseUrl;
   static String get supabaseAnonKey => _supabaseAnonKey;
   static bool get hasSupabase => _supabaseAnonKey.isNotEmpty;
-  static String get geminiApiKey => _geminiApiKey;
-  static bool get hasGemini => _geminiApiKey.isNotEmpty;
 }

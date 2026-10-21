@@ -129,7 +129,7 @@ class ConsultantCubit extends Cubit<ConsultantState> {
           if (index != -1) {
             currentMessages[index] = currentMessages[index].copyWith(
               text: buffer.isEmpty
-                  ? 'Unable to connect to AI Consultant. Please check network and Gemini API key.'
+                  ? 'Unable to reach the AI provider. Check your connection and your key in Settings.'
                   : buffer.toString(),
               isStreaming: false,
             );
@@ -148,7 +148,7 @@ class ConsultantCubit extends Cubit<ConsultantState> {
       final index = currentMessages.indexWhere((m) => m.id == assistantMsgId);
       if (index != -1) {
         currentMessages[index] = currentMessages[index].copyWith(
-          text: 'Unable to connect to AI Consultant. Please check network and Gemini API key.',
+          text: 'Unable to reach the AI provider. Check your connection and your key in Settings.',
           isStreaming: false,
         );
       }

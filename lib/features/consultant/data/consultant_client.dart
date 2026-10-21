@@ -1,12 +1,10 @@
-import 'package:google_generative_ai/google_generative_ai.dart';
-
 import '../../../core/format/money.dart';
 import '../models/chat_message.dart';
 
 /// Contract for AI Expense Consultant reasoning and streaming responses.
 abstract class ConsultantClient {
-  /// False when the client cannot answer at all (no Gemini key), so the
-  /// screen can say the Consultant is off before the user types.
+  /// False when the client cannot answer at all (no AI Provider key saved),
+  /// so the screen can say the Consultant is off before the user types.
   bool get isConfigured;
 
   /// [currency] is the Currency chosen in Settings; amounts in
@@ -34,58 +32,3 @@ Guidelines:
 Here is the user's current spending breakdown and recent transactions:
 $contextSummary
 ''';
-
-/// Production implementation backed by Google Gemini.
-class GeminiConsultantClient implements ConsultantClient {
-  GeminiConsultantClient({
-    required this.apiKey,
-    this.modelName = 'gemini-1.5-flash',
-  });
-
-  final String apiKey;
-  final String modelName;
-
-  @override
-  bool get isConfigured => apiKey.isNotEmpty;
-
-  @override
-  Stream<String> streamConsultantResponse({
-    required String prompt,
-    required String contextSummary,
-    required Currency currency,
-    List<ChatMessage> conversationHistory = const [],
-  }) async* {
-    if (apiKey.isEmpty) {
-      yield 'Google Gemini API key is missing. Please configure GEMINI_API_KEY to enable the AI Consultant.';
-      return;
-    }
-
-    final systemInstruction = consultantSystemInstruction(contextSummary: contextSummary, currency: currency);
-
-    final model = GenerativeModel(
-      model: modelName,
-      apiKey: apiKey,
-      systemInstruction: Content.system(systemInstruction),
-    );
-
-    // Convert history into Gemini Content objects
-    final history = <Content>[];
-    for (final msg in conversationHistory) {
-      if (msg.isUser) {
-        history.add(Content.text(msg.text));
-      } else {
-        history.add(Content.model([TextPart(msg.text)]));
-      }
-    }
-
-    final chat = model.startChat(history: history);
-    final responseStream = chat.sendMessageStream(Content.text(prompt));
-
-    await for (final response in responseStream) {
-      final text = response.text;
-      if (text != null && text.isNotEmpty) {
-        yield text;
-      }
-    }
-  }
-}

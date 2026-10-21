@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'core/config/app_config.dart';
 import 'core/month/chosen_month_cubit.dart';
+import 'core/prefs/text_pref.dart';
 import 'core/router/app_router.dart';
 import 'core/sync/sync_engine.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_cubit.dart';
 import 'features/account/account_service.dart';
 import 'features/account/cubit/account_cubit.dart';
+import 'features/ai_provider/cubit/ai_provider_cubit.dart';
+import 'features/ai_provider/data/ai_provider_store.dart';
+import 'features/ai_provider/data/secret_store.dart';
 import 'features/categories/category_store.dart';
 import 'features/categories/cubit/category_cubit.dart';
 import 'features/consultant/cubit/consultant_cubit.dart';
@@ -28,6 +31,7 @@ class BudgetApp extends StatefulWidget {
     this.incomeLedger,
     this.syncEngine,
     this.consultantClient,
+    this.aiProviderStore,
     this.themeCubit,
     this.netPeriodCubit,
     this.chosenMonthCubit,
@@ -40,6 +44,10 @@ class BudgetApp extends StatefulWidget {
   final IncomeLedger? incomeLedger;
   final SyncEngine? syncEngine;
   final ConsultantClient? consultantClient;
+
+  /// The user's AI Provider keys; its client answers for the Consultant
+  /// unless [consultantClient] is given. Defaults to none saved, in memory.
+  final AiProviderStore? aiProviderStore;
 
   /// Light/dark mode. Defaults to light, kept in memory, when not given.
   final ThemeCubit? themeCubit;
@@ -68,6 +76,8 @@ class _BudgetAppState extends State<BudgetApp> {
   late final NetPeriodCubit _netPeriodCubit = widget.netPeriodCubit ?? NetPeriodCubit();
   late final ChosenMonthCubit _chosenMonthCubit = widget.chosenMonthCubit ?? ChosenMonthCubit();
   late final CurrencyCubit _currencyCubit = widget.currencyCubit ?? CurrencyCubit();
+  late final AiProviderCubit _aiProviderCubit = AiProviderCubit(widget.aiProviderStore ??
+      AiProviderStore(secrets: InMemorySecretStore(), prefs: InMemoryTextPref(), adapters: const {}));
 
   late final CategoryCubit? _categoryCubit =
       widget.categoryStore == null ? null : (CategoryCubit(widget.categoryStore!)..load());
@@ -82,8 +92,7 @@ class _BudgetAppState extends State<BudgetApp> {
               categoryStore: widget.categoryStore!,
               incomeLedger: widget.incomeLedger,
               currency: () => _currencyCubit.state,
-              client: widget.consultantClient ??
-                  GeminiConsultantClient(apiKey: AppConfig.geminiApiKey),
+              client: widget.consultantClient ?? _aiProviderCubit.store.consultantClient,
             )
           : null;
   late final AccountCubit _accountCubit = AccountCubit(
@@ -125,6 +134,7 @@ class _BudgetAppState extends State<BudgetApp> {
     _expenseCubit?.close();
     _incomeCubit?.close();
     _consultantCubit?.close();
+    _aiProviderCubit.close();
     _accountCubit.close();
     super.dispose();
   }
@@ -149,6 +159,7 @@ class _BudgetAppState extends State<BudgetApp> {
       BlocProvider<ChosenMonthCubit>.value(value: _chosenMonthCubit),
       BlocProvider<CurrencyCubit>.value(value: _currencyCubit),
       BlocProvider<AccountCubit>.value(value: _accountCubit),
+      BlocProvider<AiProviderCubit>.value(value: _aiProviderCubit),
       if (_categoryCubit != null) BlocProvider<CategoryCubit>.value(value: _categoryCubit),
       if (_expenseCubit != null) BlocProvider<ExpenseCubit>.value(value: _expenseCubit),
       if (_incomeCubit != null) BlocProvider<IncomeCubit>.value(value: _incomeCubit),

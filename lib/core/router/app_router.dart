@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 
+import '../../features/ai_provider/ui/ai_provider_screen.dart';
 import '../../features/categories/ui/categories_screen.dart';
 import '../../features/consultant/ui/consultant_screen.dart';
 import '../../features/expenses/ui/expense_list_screen.dart';
@@ -56,6 +57,10 @@ GoRouter buildRouter() => GoRouter(
         GoRoute(
           path: '/income-sources',
           builder: (_, _) => const IncomeSourcesScreen(),
+        ),
+        GoRoute(
+          path: '/ai-provider',
+          builder: (_, _) => const AiProviderScreen(),
         ),
       ],
     );

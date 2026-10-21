@@ -219,6 +219,9 @@ void main() {
 
     await tester.tap(find.byKey(const Key('nav-settings')));
     await tester.pumpAndSettle();
+    // Centred, so it isn't under the floating nav bar.
+    await Scrollable.ensureVisible(tester.element(find.byKey(const Key('dark-mode-switch'))), alignment: 0.5);
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('dark-mode-switch')));
     await tester.pumpAndSettle();
 
