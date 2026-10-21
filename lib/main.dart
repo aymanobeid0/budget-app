@@ -103,6 +103,7 @@ Future<void> main() async {
             AiProviderKind.openAi: OpenAiCompatibleAdapter.openAi(httpClient),
             AiProviderKind.anthropic: AnthropicAdapter(httpClient),
             AiProviderKind.groq: OpenAiCompatibleAdapter.groq(httpClient),
+            AiProviderKind.openRouter: OpenRouterAdapter(httpClient),
           },
   );
   await aiProviderStore.load();

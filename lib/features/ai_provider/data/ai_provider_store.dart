@@ -64,12 +64,23 @@ class AiProviderStore {
   /// The Test button: lists [kind]'s chat models with [apiKey], or with the
   /// saved key when [apiKey] is null. Throws a [ProviderFailure]. Testing the
   /// saved key also updates its status, so Settings shows what Test found.
-  Future<List<String>> listModels(AiProviderKind kind, [String? apiKey]) async {
+  Future<List<String>> listModels(AiProviderKind kind, [String? apiKey]) =>
+      _testing(kind, apiKey, (adapter, key) => adapter.listModels(key));
+
+  /// The Test button for a provider whose model is typed
+  /// ([AiProviderKind.typesModel]): checks the key and that [model] exists.
+  /// Throws and records status as [listModels] does.
+  Future<void> testModel(AiProviderKind kind, String model, [String? apiKey]) =>
+      _testing(kind, apiKey, (adapter, key) => (adapter as TypedModelAdapter).testModel(key, model));
+
+  /// Runs [test] with [apiKey] or the saved key; testing the saved key
+  /// records the result as its status.
+  Future<T> _testing<T>(AiProviderKind kind, String? apiKey, Future<T> Function(ProviderAdapter adapter, String key) test) async {
     final saved = apiKey == null ? _settings.saved[kind] : null;
     try {
-      final models = await _adapters[kind]!.listModels(apiKey ?? _keys[kind] ?? '');
+      final result = await test(_adapters[kind]!, apiKey ?? _keys[kind] ?? '');
       if (saved != null) await _recordStatus(kind, null);
-      return models;
+      return result;
     } on ProviderFailure catch (failure) {
       if (saved != null) await _recordStatus(kind, failure);
       rethrow;

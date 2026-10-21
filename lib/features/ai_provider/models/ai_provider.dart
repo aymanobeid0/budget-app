@@ -3,14 +3,19 @@ enum AiProviderKind {
   gemini('Google Gemini', 'gemini-2.5-flash', 'aistudio.google.com/apikey'),
   openAi('OpenAI', 'gpt-4.1-mini', 'platform.openai.com/api-keys'),
   anthropic('Anthropic Claude', 'claude-haiku-5-5', 'console.anthropic.com/settings/keys'),
-  groq('Groq', 'llama-3.1-8b-instant', 'console.groq.com/keys');
+  groq('Groq', 'llama-3.1-8b-instant', 'console.groq.com/keys'),
+  openRouter('OpenRouter', 'openai/gpt-4.1-mini', 'openrouter.ai/keys');
 
   const AiProviderKind(this.displayName, this.defaultModel, this.keyUrl);
 
   final String displayName;
 
-  /// The cheap chat model preselected after a key passes the test.
+  /// The cheap chat model preselected after a key passes the test, or the
+  /// suggested id when [typesModel].
   final String defaultModel;
+
+  /// Whether the user types the model id instead of picking it from a list.
+  bool get typesModel => this == openRouter;
 
   /// Where the user gets a key, shown under the key field.
   final String keyUrl;

@@ -114,3 +114,30 @@ class OpenAiCompatibleAdapter implements ProviderAdapter {
     }
   }
 }
+
+/// OpenRouter: chats as OpenAI does, but its `/models` list is public and
+/// too long to pick from, so the user types a model id. Test checks the key
+/// with `GET /key`, then looks the typed id up in `/models`.
+class OpenRouterAdapter extends OpenAiCompatibleAdapter implements TypedModelAdapter {
+  OpenRouterAdapter(http.Client client) : super._(client, Uri.parse('https://openrouter.ai/api/v1/'), _anyModel);
+
+  static bool _anyModel(String id) => true;
+
+  /// Checks the key with `GET /key`, then lists every model.
+  @override
+  Future<List<String>> listModels(String apiKey) async {
+    await providerRequest(
+      () => _http.get(_baseUrl.resolve('key'), headers: _headers(apiKey)),
+      classify: OpenAiCompatibleAdapter._classify,
+    );
+    return super.listModels(apiKey);
+  }
+
+  @override
+  Future<void> testModel(String apiKey, String model) async {
+    final models = await listModels(apiKey);
+    if (!models.contains(model)) {
+      throw ProviderFailure(ConnectionOutcome.modelNotFound, '"$model" isn\'t an OpenRouter model id. Copy one from openrouter.ai/models.');
+    }
+  }
+}
