@@ -1,6 +1,8 @@
 /// The AI Providers a user can connect with their own API key.
 enum AiProviderKind {
-  gemini('Google Gemini', 'gemini-2.5-flash', 'aistudio.google.com/apikey');
+  gemini('Google Gemini', 'gemini-2.5-flash', 'aistudio.google.com/apikey'),
+  openAi('OpenAI', 'gpt-4.1-mini', 'platform.openai.com/api-keys'),
+  groq('Groq', 'llama-3.1-8b-instant', 'console.groq.com/keys');
 
   const AiProviderKind(this.displayName, this.defaultModel, this.keyUrl);
 

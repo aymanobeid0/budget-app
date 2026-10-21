@@ -19,6 +19,7 @@ import 'features/account/data/account_prefs.dart';
 import 'features/account/data/auth_gateway.dart';
 import 'features/ai_provider/data/ai_provider_store.dart';
 import 'features/ai_provider/data/gemini_adapter.dart';
+import 'features/ai_provider/data/open_ai_compatible_adapter.dart';
 import 'features/ai_provider/data/secret_store.dart';
 import 'features/ai_provider/models/ai_provider.dart';
 import 'features/categories/category_store.dart';
@@ -90,10 +91,17 @@ Future<void> main() async {
 
   // The user's own AI Provider keys, kept on this device only. None on web,
   // where a key could only sit in browser storage (ADR 0009).
+  final httpClient = http.Client();
   final aiProviderStore = AiProviderStore(
     secrets: DeviceSecretStore(),
     prefs: FileTextPref('ai_provider.json'),
-    adapters: kIsWeb ? const {} : {AiProviderKind.gemini: GeminiAdapter(http.Client())},
+    adapters: kIsWeb
+        ? const {}
+        : {
+            AiProviderKind.gemini: GeminiAdapter(httpClient),
+            AiProviderKind.openAi: OpenAiCompatibleAdapter.openAi(httpClient),
+            AiProviderKind.groq: OpenAiCompatibleAdapter.groq(httpClient),
+          },
   );
   await aiProviderStore.load();
 
