@@ -14,12 +14,12 @@ class OpenAiCompatibleAdapter implements ProviderAdapter {
   OpenAiCompatibleAdapter._(this._http, this._baseUrl, this._isChatModel);
 
   /// OpenAI: the `gpt-*` and o-series models, minus speech, image and
-  /// search variants.
+  /// search variants and the models `/chat/completions` can't serve.
   OpenAiCompatibleAdapter.openAi(http.Client client)
       : this._(client, Uri.parse('https://api.openai.com/v1/'), _openAiChat);
 
-  /// Groq: every model but Whisper (speech to text) and the Guard
-  /// classifiers.
+  /// Groq: every model but Whisper (speech to text), text to speech and the
+  /// Guard classifiers.
   OpenAiCompatibleAdapter.groq(http.Client client)
       : this._(client, Uri.parse('https://api.groq.com/openai/v1/'), _groqChat);
 
@@ -33,9 +33,9 @@ class OpenAiCompatibleAdapter implements ProviderAdapter {
 
   static bool _openAiChat(String id) =>
       (id.startsWith('gpt-') || RegExp(r'^o\d').hasMatch(id)) &&
-      !const ['audio', 'realtime', 'image', 'transcribe', 'tts', 'search'].any(id.contains);
+      !const ['audio', 'realtime', 'image', 'transcribe', 'tts', 'search', 'instruct', '-pro', 'deep-research'].any(id.contains);
 
-  static bool _groqChat(String id) => !id.contains('whisper') && !id.contains('guard');
+  static bool _groqChat(String id) => !const ['whisper', 'guard', 'tts'].any(id.contains);
 
   Map<String, String> _headers(String apiKey) => {'authorization': 'Bearer $apiKey'};
 
@@ -61,8 +61,15 @@ class OpenAiCompatibleAdapter implements ProviderAdapter {
     ]..sort();
   }
 
+  /// A reasoning model spends its one token thinking and reports the limit
+  /// as an error, though it proved the key, model and credit all work.
+  static bool _ranOutOfTokens(ProviderFailure failure) =>
+      failure.outcome == ConnectionOutcome.providerError && failure.message.contains('max_tokens or model output limit');
+
   @override
-  Future<void> ping(String apiKey, String model) => providerRequest(
+  Future<void> ping(String apiKey, String model) async {
+    try {
+      await providerRequest(
         () => _http.post(
           _baseUrl.resolve('chat/completions'),
           headers: _jsonHeaders(apiKey),
@@ -74,6 +81,10 @@ class OpenAiCompatibleAdapter implements ProviderAdapter {
         ),
         classify: _classify,
       );
+    } on ProviderFailure catch (failure) {
+      if (!_ranOutOfTokens(failure)) rethrow;
+    }
+  }
 
   @override
   Stream<String> streamReply({

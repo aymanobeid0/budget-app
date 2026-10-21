@@ -30,6 +30,9 @@ void main() {
           'gpt-4o-transcribe',
           'gpt-4o-mini-tts',
           'gpt-4o-search-preview',
+          'gpt-3.5-turbo-instruct',
+          'o1-pro',
+          'o3-deep-research',
           'text-embedding-3-small',
           'dall-e-3',
           'whisper-1',
@@ -56,6 +59,7 @@ void main() {
           'meta-llama/llama-guard-4-12b',
           'openai/gpt-oss-20b',
           'meta-llama/llama-prompt-guard-2-86m',
+          'playai-tts',
           'llama-3.1-8b-instant',
         ]);
       }));
@@ -102,6 +106,21 @@ void main() {
         'messages': [{'role': 'user', 'content': 'ping'}],
         'max_completion_tokens': 1,
       });
+    });
+
+    test('a reasoning model that runs out of its one token still passes', () async {
+      final adapter = OpenAiCompatibleAdapter.openAi(MockClient((_) async => http.Response(
+            jsonEncode({
+              'error': {
+                'message': 'Could not finish the message because max_tokens or model output limit was reached. Please try again with higher max_tokens.',
+                'type': 'invalid_request_error',
+                'code': null,
+              },
+            }),
+            400,
+          )));
+
+      await adapter.ping('k', 'o4-mini');
     });
 
     test("no credit left is 'No credit or rate-limited'", () async {
