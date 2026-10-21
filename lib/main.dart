@@ -18,6 +18,7 @@ import 'features/account/account_service.dart';
 import 'features/account/data/account_prefs.dart';
 import 'features/account/data/auth_gateway.dart';
 import 'features/ai_provider/data/ai_provider_store.dart';
+import 'features/ai_provider/data/anthropic_adapter.dart';
 import 'features/ai_provider/data/gemini_adapter.dart';
 import 'features/ai_provider/data/open_ai_compatible_adapter.dart';
 import 'features/ai_provider/data/secret_store.dart';
@@ -100,7 +101,9 @@ Future<void> main() async {
         : {
             AiProviderKind.gemini: GeminiAdapter(httpClient),
             AiProviderKind.openAi: OpenAiCompatibleAdapter.openAi(httpClient),
+            AiProviderKind.anthropic: AnthropicAdapter(httpClient),
             AiProviderKind.groq: OpenAiCompatibleAdapter.groq(httpClient),
+            AiProviderKind.openRouter: OpenRouterAdapter(httpClient),
           },
   );
   await aiProviderStore.load();
