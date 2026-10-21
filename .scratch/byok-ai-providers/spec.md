@@ -43,7 +43,7 @@ In Settings, an "AI provider" row opens a screen listing five AI Providers: Goog
   - OpenRouter tests with `GET /key` (its `/models` is public), then checks that the typed id is in `/models`.
   - Anthropic: `api.anthropic.com/v1`, headers `x-api-key` and `anthropic-version: 2023-06-01`, `/models` and `/messages` streaming.
 - **Outcomes**: 401/403 → Key not accepted; 402/429 → No credit or rate-limited; 404 or unknown model → Model not found; socket error or 15s timeout → Can't reach provider; anything else → Provider error. The raw provider message is kept for display.
-- **Status**: Connected, Not verified (saved without a test, or the test couldn't reach the provider) or Failed with an outcome. Set by Test, Save and every chat call.
+- **Status**: Connected, Not verified (saved without a test, or the test couldn't reach the provider) or Failed with an outcome. Set by Test, Save and every chat call, except that a chat which can't reach the provider leaves it as it was: being offline says nothing about the key.
 - **Settings**: an "AI provider" `MenuRow` (subtitle: provider, model, status) opens `/ai-provider`, which follows the Categories screen pattern. The row is hidden on web.
 - **Consultant**: keeps `ConsultantClient` and `consultantSystemInstruction`. The empty state becomes "Connect an AI provider in Settings" with a button. Switching provider adds a marker line to the thread.
 

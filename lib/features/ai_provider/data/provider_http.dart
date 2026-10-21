@@ -43,7 +43,8 @@ Future<http.Response> providerRequest(
 
 /// Sends a streaming [request] and returns its SSE `data:` payloads. The
 /// timeout covers waiting for the response to start, not the whole reply.
-/// Failures are thrown as in [providerRequest].
+/// Failures are thrown as in [providerRequest]; the connection dropping
+/// mid-reply is [ConnectionOutcome.unreachable] too.
 Stream<String> providerStream(
   http.Client client,
   http.BaseRequest request, {
@@ -53,7 +54,28 @@ Stream<String> providerStream(
   if (response.statusCode < 200 || response.statusCode >= 300) {
     throw failureFor(response.statusCode, await response.stream.bytesToString(), classify: classify);
   }
-  yield* sseData(response.stream);
+  try {
+    // Not yield*: it would pass a dropped connection on without catching it.
+    await for (final data in sseData(response.stream)) {
+      yield data;
+    }
+  } on SocketException catch (e) {
+    throw ProviderFailure(ConnectionOutcome.unreachable, e.message);
+  } on http.ClientException catch (e) {
+    throw ProviderFailure(ConnectionOutcome.unreachable, e.message);
+  }
+}
+
+/// One SSE event's JSON object. A payload that isn't one is
+/// [ConnectionOutcome.providerError].
+Map<String, dynamic> decodeEvent(String data) {
+  try {
+    final decoded = jsonDecode(data);
+    if (decoded is Map<String, dynamic>) return decoded;
+  } on FormatException {
+    // Falls through to the failure below.
+  }
+  throw ProviderFailure(ConnectionOutcome.providerError, 'Unexpected reply: $data');
 }
 
 /// The failure for an error response. Providers wrap their message as

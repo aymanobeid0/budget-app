@@ -94,7 +94,7 @@ class AnthropicAdapter implements ProviderAdapter {
         ],
       });
     await for (final data in providerStream(_http, request, classify: _classify)) {
-      final event = jsonDecode(data) as Map<String, dynamic>;
+      final event = decodeEvent(data);
       switch (event['type']) {
         case 'content_block_delta':
           final delta = event['delta'] as Map<String, dynamic>?;

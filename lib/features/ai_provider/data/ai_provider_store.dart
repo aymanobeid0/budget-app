@@ -259,7 +259,8 @@ class _ActiveProviderClient implements ConsultantClient {
     );
   }
 
-  /// Passes [reply] through, writing its outcome back to [kind]'s status.
+  /// Passes [reply] through, writing its outcome back to [kind]'s status:
+  /// Connected from the first chunk, or when a reply with none ends.
   Stream<String> _recordingOutcome(AiProviderKind kind, Stream<String> reply) async* {
     var answered = false;
     try {
@@ -270,6 +271,7 @@ class _ActiveProviderClient implements ConsultantClient {
         }
         yield chunk;
       }
+      if (!answered) await _store._recordChatOutcome(kind, null);
     } on ProviderFailure catch (failure) {
       await _store._recordChatOutcome(kind, failure);
       rethrow;

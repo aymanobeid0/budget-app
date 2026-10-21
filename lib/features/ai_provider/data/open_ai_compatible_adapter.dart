@@ -107,7 +107,7 @@ class OpenAiCompatibleAdapter implements ProviderAdapter {
       });
     await for (final data in providerStream(_http, request, classify: _classify)) {
       if (data == '[DONE]') return;
-      final event = jsonDecode(data) as Map<String, dynamic>;
+      final event = decodeEvent(data);
       final choices = (event['choices'] as List? ?? const []).cast<Map<String, dynamic>>();
       final text = choices.isEmpty ? null : choices.first['delta']?['content'] as String?;
       if (text != null && text.isNotEmpty) yield text;

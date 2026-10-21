@@ -142,4 +142,18 @@ void main() {
     expect(store.settings.activeProvider!.status, KeyStatus.connected);
     expect((await newStore().load()).activeProvider!.status, KeyStatus.connected);
   });
+
+  test('a chat the provider accepts but answers empty still makes the key Connected', () async {
+    await store.save(
+      AiProviderKind.gemini,
+      apiKey: key,
+      model: 'model-a',
+      failure: const ProviderFailure(ConnectionOutcome.unreachable),
+    );
+    gemini.reply = const [];
+
+    expect(await chat(), isEmpty);
+
+    expect(store.settings.activeProvider!.status, KeyStatus.connected);
+  });
 }

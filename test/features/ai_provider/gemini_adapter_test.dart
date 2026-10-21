@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:budget_app/features/ai_provider/data/gemini_adapter.dart';
@@ -168,6 +169,38 @@ void main() {
       final stream = adapter.streamReply(apiKey: 'k', model: 'm', systemInstruction: '', history: const [], prompt: 'hi');
 
       expect(stream.toList(), throwsA(isA<ProviderFailure>().having((f) => f.outcome, 'outcome', ConnectionOutcome.noCredit)));
+    });
+
+    test("a connection dropped mid-reply fails the stream as Can't reach provider", () async {
+      final adapter = GeminiAdapter(MockClient.streaming((_, _) async {
+        final body = StreamController<List<int>>();
+        body.add(utf8.encode(event('You spent ')));
+        body.addError(http.ClientException('Connection closed while receiving data'));
+        unawaited(body.close());
+        return http.StreamedResponse(body.stream, 200);
+      }));
+
+      final stream = adapter.streamReply(apiKey: 'k', model: 'm', systemInstruction: '', history: const [], prompt: 'hi');
+
+      await expectLater(
+        stream.toList(),
+        throwsA(isA<ProviderFailure>()
+            .having((f) => f.outcome, 'outcome', ConnectionOutcome.unreachable)
+            .having((f) => f.message, 'message', 'Connection closed while receiving data')),
+      );
+    });
+
+    test("a reply that isn't JSON fails the stream as Provider error", () async {
+      final adapter = GeminiAdapter(MockClient.streaming(
+        (_, _) async => http.StreamedResponse(Stream.value(utf8.encode('data: {not json\n\n')), 200),
+      ));
+
+      final stream = adapter.streamReply(apiKey: 'k', model: 'm', systemInstruction: '', history: const [], prompt: 'hi');
+
+      await expectLater(
+        stream.toList(),
+        throwsA(isA<ProviderFailure>().having((f) => f.outcome, 'outcome', ConnectionOutcome.providerError)),
+      );
     });
   });
 }

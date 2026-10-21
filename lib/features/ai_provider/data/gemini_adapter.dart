@@ -75,7 +75,7 @@ class GeminiAdapter implements ProviderAdapter {
         ],
       });
     await for (final data in providerStream(_http, request, classify: _classify)) {
-      final event = jsonDecode(data) as Map<String, dynamic>;
+      final event = decodeEvent(data);
       final candidates = (event['candidates'] as List? ?? const []).cast<Map<String, dynamic>>();
       final parts = candidates.isEmpty ? const [] : (candidates.first['content']?['parts'] as List? ?? const []);
       for (final part in parts.cast<Map<String, dynamic>>()) {
