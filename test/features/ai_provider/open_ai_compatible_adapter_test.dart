@@ -88,6 +88,53 @@ void main() {
     });
   });
 
+  group('OpenRouter testModel', () {
+    /// Answers `GET /key` with [keyStatus] and `GET /models` with [ids].
+    MockClient openRouter(List<http.Request> sent, {int keyStatus = 200, List<String> ids = const []}) =>
+        MockClient((request) async {
+          sent.add(request);
+          return switch (request.url.path) {
+            '/api/v1/key' => keyStatus == 200
+                ? http.Response(jsonEncode({'data': {'label': 'sk-or-v1-abc...', 'limit': null, 'usage': 0}}), 200)
+                : http.Response(jsonEncode({'error': {'message': 'User not found.', 'code': keyStatus}}), keyStatus),
+            '/api/v1/models' => modelList(ids),
+            _ => http.Response('unexpected ${request.url}', 500),
+          };
+        });
+
+    test('checks the key with GET /key, then finds the typed model in /models', () async {
+      final sent = <http.Request>[];
+      final adapter = OpenRouterAdapter(openRouter(sent, ids: ['openai/gpt-4.1-mini', 'meta-llama/llama-3.3-70b-instruct']));
+
+      await adapter.testModel('sk-or-123', 'meta-llama/llama-3.3-70b-instruct');
+
+      expect([for (final r in sent) r.url.toString()], ['https://openrouter.ai/api/v1/key', 'https://openrouter.ai/api/v1/models']);
+      expect(sent.first.headers['authorization'], 'Bearer sk-or-123');
+    });
+
+    test("a valid key with an unknown model is 'Model not found'", () async {
+      final adapter = OpenRouterAdapter(openRouter([], ids: ['openai/gpt-4.1-mini']));
+
+      expect(
+        adapter.testModel('sk-or-123', 'openai/gpt-nope'),
+        throwsA(isA<ProviderFailure>()
+            .having((f) => f.outcome, 'outcome', ConnectionOutcome.modelNotFound)
+            .having((f) => f.message, 'message', contains('openai/gpt-nope'))),
+      );
+    });
+
+    test("a rejected key is 'Key not accepted' and skips the model lookup", () async {
+      final sent = <http.Request>[];
+      final adapter = OpenRouterAdapter(openRouter(sent, keyStatus: 401, ids: ['openai/gpt-4.1-mini']));
+
+      await expectLater(
+        adapter.testModel('sk-or-bad', 'openai/gpt-4.1-mini'),
+        throwsA(isA<ProviderFailure>().having((f) => f.outcome, 'outcome', ConnectionOutcome.keyNotAccepted)),
+      );
+      expect(sent, hasLength(1));
+    });
+  });
+
   group('ping', () {
     test('asks the chosen model for a single completion token', () async {
       http.Request? sent;

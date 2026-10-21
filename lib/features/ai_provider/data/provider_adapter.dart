@@ -19,3 +19,12 @@ abstract class ProviderAdapter {
     required String prompt,
   });
 }
+
+/// A provider whose model the user types instead of picking from a list.
+/// The Test button calls [testModel] rather than [listModels].
+abstract interface class TypedModelAdapter implements ProviderAdapter {
+  /// Checks the key, then that [model] is one of the provider's models
+  /// (`ConnectionOutcome.modelNotFound` when not). Throws a
+  /// `ProviderFailure`.
+  Future<void> testModel(String apiKey, String model);
+}

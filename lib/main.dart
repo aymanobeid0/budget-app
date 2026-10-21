@@ -101,6 +101,7 @@ Future<void> main() async {
             AiProviderKind.gemini: GeminiAdapter(httpClient),
             AiProviderKind.openAi: OpenAiCompatibleAdapter.openAi(httpClient),
             AiProviderKind.groq: OpenAiCompatibleAdapter.groq(httpClient),
+            AiProviderKind.openRouter: OpenRouterAdapter(httpClient),
           },
   );
   await aiProviderStore.load();

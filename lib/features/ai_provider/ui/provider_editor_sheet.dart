@@ -25,6 +25,9 @@ class _ProviderEditorSheetState extends State<ProviderEditorSheet> {
   late final SavedProvider? _saved = _cubit.state.saved[widget.kind];
   late String _model = _saved?.model ?? widget.kind.defaultModel;
 
+  /// The typed model id, for a provider whose model is typed.
+  late final _modelController = TextEditingController(text: _model);
+
   List<String>? _models;
   ProviderFailure? _testFailure;
   bool _tested = false;
@@ -36,13 +39,21 @@ class _ProviderEditorSheetState extends State<ProviderEditorSheet> {
     return key.isEmpty ? null : key;
   }
 
-  bool get _hasKey => _typedKey != null || _saved != null;
+  /// A key to use and a model to try.
+  bool get _ready => (_typedKey != null || _saved != null) && _model.isNotEmpty;
 
   @override
   void dispose() {
     _keyController.dispose();
+    _modelController.dispose();
     super.dispose();
   }
+
+  void _modelTyped(String text) => setState(() {
+        _model = text.trim();
+        _tested = false;
+        _testFailure = null;
+      });
 
   void _keyChanged() => setState(() {
         _tested = false;
@@ -53,6 +64,11 @@ class _ProviderEditorSheetState extends State<ProviderEditorSheet> {
   Future<void> _test() async {
     setState(() => _busy = true);
     try {
+      if (widget.kind.typesModel) {
+        await _cubit.testModel(widget.kind, _model, _typedKey);
+        if (mounted) setState(() => _testFailure = null);
+        return;
+      }
       final models = await _cubit.listModels(widget.kind, _typedKey);
       if (!mounted) return;
       setState(() {
@@ -168,15 +184,32 @@ class _ProviderEditorSheetState extends State<ProviderEditorSheet> {
             const SizedBox(height: 12),
             OutlinedButton.icon(
               key: const Key('test-connection-btn'),
-              onPressed: _busy || !_hasKey ? null : _test,
+              onPressed: _busy || !_ready ? null : _test,
               icon: const Icon(Icons.wifi_tethering_rounded),
               label: const Text('Test connection'),
             ),
             if (_tested) ...[
               const SizedBox(height: 12),
-              _TestResult(failure: _testFailure, modelCount: models?.length ?? 0),
+              _TestResult(
+                failure: _testFailure,
+                found: widget.kind.typesModel ? 'Connected · $_model found' : 'Connected · ${models?.length ?? 0} models',
+              ),
             ],
             const SizedBox(height: 16),
+            if (widget.kind.typesModel)
+              TextField(
+                key: const Key('provider-model-id-field'),
+                controller: _modelController,
+                autocorrect: false,
+                enableSuggestions: false,
+                onChanged: _modelTyped,
+                decoration: InputDecoration(
+                  labelText: 'Model id',
+                  hintText: widget.kind.defaultModel,
+                  helperText: 'For example ${widget.kind.defaultModel}. Find ids at openrouter.ai/models',
+                ),
+              )
+            else
             DropdownButtonFormField<String>(
               // Keyed by the model so a Test that picks another one shows it.
               key: ValueKey('provider-model-field-$_model'),
@@ -201,7 +234,7 @@ class _ProviderEditorSheetState extends State<ProviderEditorSheet> {
               key: const Key('save-provider-btn'),
               label: 'Save',
               busy: _busy,
-              onPressed: _hasKey ? _save : null,
+              onPressed: _ready ? _save : null,
             ),
             if (_saved != null) ...[
               const SizedBox(height: 8),
@@ -220,10 +253,12 @@ class _ProviderEditorSheetState extends State<ProviderEditorSheet> {
 }
 
 class _TestResult extends StatelessWidget {
-  const _TestResult({required this.failure, required this.modelCount});
+  const _TestResult({required this.failure, required this.found});
 
   final ProviderFailure? failure;
-  final int modelCount;
+
+  /// What a passing test found, e.g. "Connected · 12 models".
+  final String found;
 
   @override
   Widget build(BuildContext context) {
@@ -243,7 +278,7 @@ class _TestResult extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  ok ? 'Connected · $modelCount models' : failure!.outcome.label,
+                  ok ? found : failure!.outcome.label,
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: color),
                 ),
                 if (!ok && failure!.message.isNotEmpty)

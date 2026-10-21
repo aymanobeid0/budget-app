@@ -22,6 +22,16 @@ class AiProviderCubit extends Cubit<AiProviderSettings> {
     }
   }
 
+  /// Checks [apiKey] (or the saved key) and that the typed [model] exists,
+  /// for a provider whose model is typed. Throws a `ProviderFailure`.
+  Future<void> testModel(AiProviderKind kind, String model, [String? apiKey]) async {
+    try {
+      await store.testModel(kind, model, apiKey);
+    } finally {
+      if (!isClosed) emit(store.settings);
+    }
+  }
+
   Future<void> save(AiProviderKind kind, {String? apiKey, required String model, ProviderFailure? failure}) async =>
       emit(await store.save(kind, apiKey: apiKey, model: model, failure: failure));
 
