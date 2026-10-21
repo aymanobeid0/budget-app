@@ -32,6 +32,27 @@ void main() {
 
   Widget screen() => MaterialApp(home: BlocProvider.value(value: cubit, child: const AiProviderScreen()));
 
+  /// Shows the provider screen on a phone-sized view and opens [kind]'s editor.
+  Future<void> openEditor(WidgetTester tester, AiProviderKind kind) async {
+    tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(screen());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(Key('provider-row-${kind.name}')));
+    await tester.pumpAndSettle();
+  }
+
+  Future<void> tapInSheet(WidgetTester tester, String key) async {
+    await tester.ensureVisible(find.byKey(Key(key)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(Key(key)));
+    await tester.pumpAndSettle();
+  }
+
+  Finder inTestResult(String text) =>
+      find.descendant(of: find.byKey(const Key('test-result')), matching: find.text(text));
+
   testWidgets('Set active on a saved provider makes it the one the Consultant answers with', (tester) async {
     newCubit();
     await cubit.save(AiProviderKind.gemini, apiKey: 'gem-key-123456789', model: 'model-a');
@@ -78,5 +99,61 @@ void main() {
 
     expect(find.text('No credit or rate-limited'), findsWidgets);
     expect(find.text('You exceeded your current quota.'), findsOneWidget);
+  });
+
+  testWidgets('a key that passes Test unlocks the model picker with the default model picked', (tester) async {
+    newCubit();
+    gemini.models = const ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemma-3'];
+    await openEditor(tester, AiProviderKind.gemini);
+    final picker = find.byType(DropdownButton<String>);
+    expect(tester.widget<DropdownButton<String>>(picker).onChanged, isNull);
+
+    await tester.enterText(find.byKey(const Key('provider-key-field')), 'gem-key-123456789');
+    await tapInSheet(tester, 'test-connection-btn');
+
+    expect(inTestResult('Connected · 3 models'), findsOneWidget);
+    expect(tester.widget<DropdownButton<String>>(picker).onChanged, isNotNull);
+    expect(tester.widget<DropdownButton<String>>(picker).value, 'gemini-2.5-flash');
+  });
+
+  testWidgets("a key that fails Test shows the outcome and the provider's message", (tester) async {
+    newCubit();
+    gemini.listFailure = const ProviderFailure(ConnectionOutcome.keyNotAccepted, 'API key not valid.');
+    await openEditor(tester, AiProviderKind.gemini);
+
+    await tester.enterText(find.byKey(const Key('provider-key-field')), 'bad-key-123456789');
+    await tapInSheet(tester, 'test-connection-btn');
+
+    expect(inTestResult('Key not accepted'), findsOneWidget);
+    expect(inTestResult('API key not valid.'), findsOneWidget);
+  });
+
+  testWidgets('Save when the model does not answer asks first, then saves anyway', (tester) async {
+    newCubit();
+    gemini.pingFailure = const ProviderFailure(ConnectionOutcome.noCredit, 'Quota exceeded');
+    await openEditor(tester, AiProviderKind.gemini);
+
+    await tester.enterText(find.byKey(const Key('provider-key-field')), 'gem-key-123456789');
+    await tapInSheet(tester, 'save-provider-btn');
+
+    expect(find.textContaining('Save the key anyway?'), findsOneWidget);
+    expect(find.textContaining('Quota exceeded'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('save-anyway-btn')));
+    await tester.pumpAndSettle();
+
+    expect(cubit.state.active, AiProviderKind.gemini);
+    expect(cubit.state.activeProvider!.statusLabel, 'No credit or rate-limited');
+    expect(find.byKey(const Key('save-provider-btn')), findsNothing); // the sheet closed
+    expect(find.text('••••6789 · gemini-2.5-flash · active'), findsOneWidget);
+  });
+
+  testWidgets('OpenRouter asks for a typed model id instead of a picker', (tester) async {
+    newCubit();
+    await openEditor(tester, AiProviderKind.openRouter);
+
+    expect(find.byKey(const Key('provider-model-id-field')), findsOneWidget);
+    final field = tester.widget<TextField>(find.byKey(const Key('provider-model-id-field')));
+    expect(field.controller!.text, 'openai/gpt-4.1-mini');
+    expect(find.byType(DropdownButton<String>), findsNothing);
   });
 }

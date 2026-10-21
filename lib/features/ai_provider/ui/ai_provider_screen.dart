@@ -101,6 +101,8 @@ class KeyStatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = keyStatusColor(provider.status);
     return Container(
+      // A long outcome wraps instead of pushing the row off a phone screen.
+      constraints: const BoxConstraints(maxWidth: 130),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
@@ -108,6 +110,7 @@ class KeyStatusChip extends StatelessWidget {
       ),
       child: Text(
         provider.statusLabel,
+        textAlign: TextAlign.center,
         style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color),
       ),
     );
