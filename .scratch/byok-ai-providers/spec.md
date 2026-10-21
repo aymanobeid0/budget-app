@@ -1,6 +1,6 @@
 # Bring-Your-Own-Key AI Providers
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 ## Problem Statement
 
