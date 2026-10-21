@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import '../../../core/format/money.dart';
@@ -25,8 +26,13 @@ class AiProviderStore {
   final _keys = <AiProviderKind, String>{};
   AiProviderSettings _settings = const AiProviderSettings();
 
+  final _changes = StreamController<AiProviderSettings>.broadcast();
+
   /// What was last loaded or saved.
   AiProviderSettings get settings => _settings;
+
+  /// Every saved change, including a status set by a chat call.
+  Stream<AiProviderSettings> get changes => _changes.stream;
 
   /// The providers this build can talk to, in display order.
   List<AiProviderKind> get providers => [for (final kind in AiProviderKind.values) if (_adapters.containsKey(kind)) kind];
@@ -110,16 +116,36 @@ class AiProviderStore {
     return _settings;
   }
 
+  /// Makes [kind], already saved, the provider the Consultant answers with.
+  Future<AiProviderSettings> setActive(AiProviderKind kind) async {
+    if (!_settings.saved.containsKey(kind)) throw StateError('No key saved for ${kind.displayName}');
+    if (_settings.active == kind) return _settings;
+    _settings = AiProviderSettings(active: kind, saved: _settings.saved);
+    await _persist();
+    return _settings;
+  }
+
   /// Keeps [kind]'s model and key, with the status [failure] implies.
+  /// Nothing is written when the status is already that.
   Future<void> _recordStatus(AiProviderKind kind, ProviderFailure? failure) async {
     final saved = _settings.saved[kind];
     final key = _keys[kind];
     if (saved == null || key == null) return;
+    final updated = _savedProvider(saved.model, key, failure);
+    if (updated.status == saved.status && updated.outcome == saved.outcome && updated.message == saved.message) return;
     _settings = AiProviderSettings(
       active: _settings.active,
-      saved: {..._settings.saved, kind: _savedProvider(saved.model, key, failure)},
+      saved: {..._settings.saved, kind: updated},
     );
     await _persist();
+  }
+
+  /// A chat call's outcome becomes [kind]'s status: a reply is Connected, a
+  /// refusal its failure. Not reaching the provider says nothing about the
+  /// key, so the status stays.
+  Future<void> _recordChatOutcome(AiProviderKind kind, ProviderFailure? failure) async {
+    if (failure?.outcome == ConnectionOutcome.unreachable) return;
+    await _recordStatus(kind, failure);
   }
 
   /// None is Connected, unreachable is Not verified, anything else Failed.
@@ -155,15 +181,17 @@ class AiProviderStore {
 
   /// The active provider's adapter, key and model, or null when none is
   /// connected.
-  ({ProviderAdapter adapter, String apiKey, String model})? _activeSetup() {
+  ({AiProviderKind kind, ProviderAdapter adapter, String apiKey, String model})? _activeSetup() {
     final active = _settings.active;
     final key = active == null ? null : _keys[active];
     final saved = active == null ? null : _settings.saved[active];
     if (active == null || key == null || saved == null) return null;
-    return (adapter: _adapters[active]!, apiKey: key, model: saved.model);
+    return (kind: active, adapter: _adapters[active]!, apiKey: key, model: saved.model);
   }
 
-  Future<void> _persist() => _prefs.write(jsonEncode({
+  Future<void> _persist() {
+    _changes.add(_settings);
+    return _prefs.write(jsonEncode({
         'active': _settings.active?.name,
         'providers': {
           for (final MapEntry(:key, :value) in _settings.saved.entries)
@@ -175,6 +203,7 @@ class AiProviderStore {
             },
         },
       }));
+  }
 
   static String _secretName(AiProviderKind kind) => 'ai_provider_key_${kind.name}';
 
@@ -191,6 +220,12 @@ class _ActiveProviderClient implements ConsultantClient {
   bool get isConfigured => _store._activeSetup() != null;
 
   @override
+  String? get answeredBy {
+    final setup = _store._activeSetup();
+    return setup == null ? null : '${setup.kind.displayName} · ${setup.model}';
+  }
+
+  @override
   Stream<String> streamConsultantResponse({
     required String prompt,
     required String contextSummary,
@@ -201,12 +236,32 @@ class _ActiveProviderClient implements ConsultantClient {
     if (setup == null) {
       return Stream.value('No AI Provider is connected. Add your API key in Settings → AI provider.');
     }
-    return setup.adapter.streamReply(
-      apiKey: setup.apiKey,
-      model: setup.model,
-      systemInstruction: consultantSystemInstruction(contextSummary: contextSummary, currency: currency),
-      history: conversationHistory,
-      prompt: prompt,
+    return _recordingOutcome(
+      setup.kind,
+      setup.adapter.streamReply(
+        apiKey: setup.apiKey,
+        model: setup.model,
+        systemInstruction: consultantSystemInstruction(contextSummary: contextSummary, currency: currency),
+        history: conversationHistory,
+        prompt: prompt,
+      ),
     );
+  }
+
+  /// Passes [reply] through, writing its outcome back to [kind]'s status.
+  Stream<String> _recordingOutcome(AiProviderKind kind, Stream<String> reply) async* {
+    var answered = false;
+    try {
+      await for (final chunk in reply) {
+        if (!answered) {
+          answered = true;
+          await _store._recordChatOutcome(kind, null);
+        }
+        yield chunk;
+      }
+    } on ProviderFailure catch (failure) {
+      await _store._recordChatOutcome(kind, failure);
+      rethrow;
+    }
   }
 }

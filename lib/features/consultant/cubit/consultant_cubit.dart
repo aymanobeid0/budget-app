@@ -34,6 +34,9 @@ class ConsultantCubit extends Cubit<ConsultantState> {
 
   StreamSubscription<String>? _streamSub;
 
+  /// Who answered the last message sent, to spot a provider switch.
+  String? _lastAnsweredBy;
+
   Future<void> sendMessage(String prompt) async {
     final cleanPrompt = prompt.trim();
     if (cleanPrompt.isEmpty || state.isStreaming) return;
@@ -56,12 +59,26 @@ class ConsultantCubit extends Cubit<ConsultantState> {
     );
 
     final priorHistory = state.messages
-        .where((m) => !m.isStreaming && m.text.isNotEmpty)
+        .where((m) => !m.isStreaming && !m.isMarker && m.text.isNotEmpty)
         .toList();
 
-    final updatedMessages = List<ChatMessage>.from(state.messages)
-      ..add(userMessage)
-      ..add(placeholderAssistantMessage);
+    final answeredBy = client.answeredBy;
+    final switched = state.messages.isNotEmpty && _lastAnsweredBy != null && answeredBy != null && answeredBy != _lastAnsweredBy;
+    _lastAnsweredBy = answeredBy;
+
+    final updatedMessages = [
+      ...state.messages,
+      if (switched)
+        ChatMessage(
+          id: 'mkr_${now.millisecondsSinceEpoch}',
+          text: 'Now answering with $answeredBy',
+          isUser: false,
+          timestamp: now,
+          isMarker: true,
+        ),
+      userMessage,
+      placeholderAssistantMessage,
+    ];
 
     emit(state.copyWith(
       messages: updatedMessages,

@@ -7,6 +7,10 @@ abstract class ConsultantClient {
   /// so the screen can say the Consultant is off before the user types.
   bool get isConfigured;
 
+  /// Who answers the next message, as "Google Gemini · gemini-2.5-flash", or null when
+  /// not configured. A change mid-conversation adds a marker line.
+  String? get answeredBy;
+
   /// [currency] is the Currency chosen in Settings; amounts in
   /// [contextSummary] are already labelled with it.
   Stream<String> streamConsultantResponse({

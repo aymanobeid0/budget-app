@@ -158,6 +158,12 @@ class _ConsultantScreenState extends State<ConsultantScreen> {
             ),
           ),
           TextButton(
+            key: const Key('consultant-settings-link'),
+            onPressed: () => context.push('/ai-provider'),
+            style: TextButton.styleFrom(foregroundColor: AppColors.expense),
+            child: const Text('Settings'),
+          ),
+          TextButton(
             onPressed: () => _cubit.retryLastMessage(),
             style: TextButton.styleFrom(foregroundColor: AppColors.expense),
             child: const Text('Retry'),
@@ -249,7 +255,33 @@ class _ConsultantScreenState extends State<ConsultantScreen> {
       controller: _scrollController,
       padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 18, AppSpace.gutter, 12),
       itemCount: messages.length,
-      itemBuilder: (context, index) => _buildBubble(messages[index]),
+      itemBuilder: (context, index) =>
+          messages[index].isMarker ? _buildMarker(messages[index]) : _buildBubble(messages[index]),
+    );
+  }
+
+  /// "Now answering with OpenAI · gpt-4.1-mini", centred between the turns.
+  Widget _buildMarker(ChatMessage message) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        children: [
+          Expanded(child: Divider(color: scheme.outlineVariant)),
+          Flexible(
+            flex: 4,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Text(
+                message.text,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+              ),
+            ),
+          ),
+          Expanded(child: Divider(color: scheme.outlineVariant)),
+        ],
+      ),
     );
   }
 

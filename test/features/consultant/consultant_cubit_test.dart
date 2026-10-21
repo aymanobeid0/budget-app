@@ -18,9 +18,13 @@ class FakeConsultantClient implements ConsultantClient {
   String? lastPrompt;
   String? lastContextSummary;
   Currency? lastCurrency;
+  List<ChatMessage> lastHistory = const [];
 
   @override
   bool get isConfigured => true;
+
+  @override
+  String? answeredBy = 'Google Gemini · gemini-2.5-flash';
 
   @override
   Stream<String> streamConsultantResponse({
@@ -32,6 +36,7 @@ class FakeConsultantClient implements ConsultantClient {
     lastPrompt = prompt;
     lastContextSummary = contextSummary;
     lastCurrency = currency;
+    lastHistory = conversationHistory;
     for (final chunk in chunks) {
       yield chunk;
     }
@@ -141,5 +146,39 @@ void main() {
     expect(prompt, contains('EUR'));
     expect(prompt, contains('25 EUR'));
     expect(prompt, isNot(contains('\$')));
+  });
+
+  test('switching provider mid-conversation keeps the chat and adds a line naming who answers now', () async {
+    await cubit.sendMessage('First question');
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+
+    client.answeredBy = 'OpenAI · gpt-4.1-mini';
+    await cubit.sendMessage('Second question');
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+
+    final messages = cubit.state.messages;
+    expect(messages.map((m) => m.text).toList(), [
+      'First question',
+      'You spent \$50 on food.',
+      'Now answering with OpenAI · gpt-4.1-mini',
+      'Second question',
+      'You spent \$50 on food.',
+    ]);
+    expect(messages[2].isMarker, isTrue);
+    expect(client.lastHistory.map((m) => m.text), ['First question', 'You spent \$50 on food.']);
+  });
+
+  test('no switch line when the provider stays the same or the chat was cleared', () async {
+    await cubit.sendMessage('First question');
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    await cubit.sendMessage('Second question');
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    expect(cubit.state.messages.where((m) => m.isMarker), isEmpty);
+
+    cubit.clearChat();
+    client.answeredBy = 'OpenAI · gpt-4.1-mini';
+    await cubit.sendMessage('Fresh start');
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    expect(cubit.state.messages.where((m) => m.isMarker), isEmpty);
   });
 }

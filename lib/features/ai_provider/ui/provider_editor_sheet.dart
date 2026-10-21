@@ -106,6 +106,12 @@ class _ProviderEditorSheetState extends State<ProviderEditorSheet> {
     return yes ?? false;
   }
 
+  /// Answers with this provider's saved key and model from the next message.
+  Future<void> _setActive() async {
+    await _cubit.setActive(widget.kind);
+    if (mounted) Navigator.of(context).pop();
+  }
+
   Future<void> _remove() async {
     await _cubit.remove(widget.kind);
     if (mounted) Navigator.of(context).pop();
@@ -203,6 +209,14 @@ class _ProviderEditorSheetState extends State<ProviderEditorSheet> {
               busy: _busy,
               onPressed: _hasKey ? _save : null,
             ),
+            if (_saved != null && _cubit.state.active != widget.kind) ...[
+              const SizedBox(height: 8),
+              OutlinedButton(
+                key: const Key('set-active-btn'),
+                onPressed: _busy ? null : _setActive,
+                child: const Text('Set active'),
+              ),
+            ],
             if (_saved != null) ...[
               const SizedBox(height: 8),
               TextButton(
