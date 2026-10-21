@@ -2,6 +2,7 @@
 enum AiProviderKind {
   gemini('Google Gemini', 'gemini-2.5-flash', 'aistudio.google.com/apikey'),
   openAi('OpenAI', 'gpt-4.1-mini', 'platform.openai.com/api-keys'),
+  anthropic('Anthropic Claude', 'claude-haiku-5-5', 'console.anthropic.com/settings/keys'),
   groq('Groq', 'llama-3.1-8b-instant', 'console.groq.com/keys');
 
   const AiProviderKind(this.displayName, this.defaultModel, this.keyUrl);
