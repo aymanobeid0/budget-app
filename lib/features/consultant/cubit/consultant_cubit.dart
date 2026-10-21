@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/format/money.dart';
+import '../../../core/ids.dart';
 import '../../categories/category_store.dart';
 import '../../expenses/expense_ledger.dart';
 import '../../income/income_ledger.dart';
@@ -10,6 +11,9 @@ import '../data/consultant_client.dart';
 import '../data/spending_context_builder.dart';
 import '../models/chat_message.dart';
 import 'consultant_state.dart';
+
+/// The reply shown when a message gets no answer at all.
+const _unreachableReply = 'Unable to reach the AI provider. Check your connection and your key in Settings.';
 
 class ConsultantCubit extends Cubit<ConsultantState> {
   ConsultantCubit({
@@ -70,7 +74,7 @@ class ConsultantCubit extends Cubit<ConsultantState> {
       ...state.messages,
       if (switched)
         ChatMessage(
-          id: 'mkr_${now.millisecondsSinceEpoch}',
+          id: randomId('mkr_'),
           text: 'Now answering with $answeredBy',
           isUser: false,
           timestamp: now,
@@ -146,7 +150,7 @@ class ConsultantCubit extends Cubit<ConsultantState> {
           if (index != -1) {
             currentMessages[index] = currentMessages[index].copyWith(
               text: buffer.isEmpty
-                  ? 'Unable to reach the AI provider. Check your connection and your key in Settings.'
+                  ? _unreachableReply
                   : buffer.toString(),
               isStreaming: false,
             );
@@ -165,7 +169,7 @@ class ConsultantCubit extends Cubit<ConsultantState> {
       final index = currentMessages.indexWhere((m) => m.id == assistantMsgId);
       if (index != -1) {
         currentMessages[index] = currentMessages[index].copyWith(
-          text: 'Unable to reach the AI provider. Check your connection and your key in Settings.',
+          text: _unreachableReply,
           isStreaming: false,
         );
       }

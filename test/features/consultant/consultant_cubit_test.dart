@@ -1,9 +1,12 @@
 import 'dart:async';
 
+import 'package:bloc_test/bloc_test.dart';
 import 'package:budget_app/core/database/app_database.dart';
 import 'package:budget_app/core/format/money.dart';
 import 'package:budget_app/features/categories/category_store.dart';
+import 'package:budget_app/features/ai_provider/models/ai_provider.dart';
 import 'package:budget_app/features/consultant/cubit/consultant_cubit.dart';
+import 'package:budget_app/features/consultant/cubit/consultant_state.dart';
 import 'package:budget_app/features/consultant/data/consultant_client.dart';
 import 'package:budget_app/features/consultant/models/chat_message.dart';
 import 'package:budget_app/features/expenses/expense.dart';
@@ -15,6 +18,12 @@ class FakeConsultantClient implements ConsultantClient {
   FakeConsultantClient({this.chunks = const ['You spent ', '\$50 ', 'on food.']});
 
   final List<String> chunks;
+
+  /// Thrown instead of answering, when set.
+  Object? failure;
+
+  /// Thrown after every chunk has been sent, when set.
+  Object? failAfterChunks;
   String? lastPrompt;
   String? lastContextSummary;
   Currency? lastCurrency;
@@ -37,9 +46,11 @@ class FakeConsultantClient implements ConsultantClient {
     lastContextSummary = contextSummary;
     lastCurrency = currency;
     lastHistory = conversationHistory;
+    if (failure != null) throw failure!;
     for (final chunk in chunks) {
       yield chunk;
     }
+    if (failAfterChunks != null) throw failAfterChunks!;
   }
 }
 
@@ -148,37 +159,81 @@ void main() {
     expect(prompt, isNot(contains('\$')));
   });
 
-  test('switching provider mid-conversation keeps the chat and adds a line naming who answers now', () async {
-    await cubit.sendMessage('First question');
-    await Future<void>.delayed(const Duration(milliseconds: 50));
+  ConsultantCubit build() => ConsultantCubit(ledger: ledger, categoryStore: store, client: client);
 
-    client.answeredBy = 'OpenAI · gpt-4.1-mini';
-    await cubit.sendMessage('Second question');
+  /// Sends [prompt] and lets the fake reply stream to the end.
+  Future<void> send(ConsultantCubit cubit, String prompt) async {
+    await cubit.sendMessage(prompt);
     await Future<void>.delayed(const Duration(milliseconds: 50));
+  }
 
-    final messages = cubit.state.messages;
-    expect(messages.map((m) => m.text).toList(), [
-      'First question',
-      'You spent \$50 on food.',
-      'Now answering with OpenAI · gpt-4.1-mini',
-      'Second question',
-      'You spent \$50 on food.',
-    ]);
-    expect(messages[2].isMarker, isTrue);
-    expect(client.lastHistory.map((m) => m.text), ['First question', 'You spent \$50 on food.']);
-  });
+  blocTest<ConsultantCubit, ConsultantState>(
+    'switching provider mid-conversation keeps the chat and adds a line naming who answers now',
+    build: build,
+    act: (cubit) async {
+      await send(cubit, 'First question');
+      client.answeredBy = 'OpenAI · gpt-4.1-mini';
+      await send(cubit, 'Second question');
+    },
+    verify: (cubit) {
+      final messages = cubit.state.messages;
+      expect(messages.map((m) => m.text).toList(), [
+        'First question',
+        'You spent \$50 on food.',
+        'Now answering with OpenAI · gpt-4.1-mini',
+        'Second question',
+        'You spent \$50 on food.',
+      ]);
+      expect(messages[2].isMarker, isTrue);
+      expect(messages[2].id, startsWith('mkr_'));
+      expect(client.lastHistory.map((m) => m.text), ['First question', 'You spent \$50 on food.']);
+    },
+  );
 
-  test('no switch line when the provider stays the same or the chat was cleared', () async {
-    await cubit.sendMessage('First question');
-    await Future<void>.delayed(const Duration(milliseconds: 50));
-    await cubit.sendMessage('Second question');
-    await Future<void>.delayed(const Duration(milliseconds: 50));
-    expect(cubit.state.messages.where((m) => m.isMarker), isEmpty);
+  blocTest<ConsultantCubit, ConsultantState>(
+    'no switch line when the provider stays the same',
+    build: build,
+    act: (cubit) async {
+      await send(cubit, 'First question');
+      await send(cubit, 'Second question');
+    },
+    verify: (cubit) => expect(cubit.state.messages.where((m) => m.isMarker), isEmpty),
+  );
 
-    cubit.clearChat();
-    client.answeredBy = 'OpenAI · gpt-4.1-mini';
-    await cubit.sendMessage('Fresh start');
-    await Future<void>.delayed(const Duration(milliseconds: 50));
-    expect(cubit.state.messages.where((m) => m.isMarker), isEmpty);
-  });
+  blocTest<ConsultantCubit, ConsultantState>(
+    'no switch line after the chat was cleared',
+    build: build,
+    act: (cubit) async {
+      await send(cubit, 'First question');
+      cubit.clearChat();
+      client.answeredBy = 'OpenAI · gpt-4.1-mini';
+      await send(cubit, 'Fresh start');
+    },
+    verify: (cubit) => expect(cubit.state.messages.where((m) => m.isMarker), isEmpty),
+  );
+
+  blocTest<ConsultantCubit, ConsultantState>(
+    'a reply that fails before any text says the provider could not be reached',
+    build: build,
+    setUp: () => client.failure = const ProviderFailure(ConnectionOutcome.keyNotAccepted, 'API key not valid'),
+    act: (cubit) => send(cubit, 'Hi'),
+    verify: (cubit) {
+      expect(cubit.state.status, ConsultantStatus.error);
+      expect(cubit.state.errorMessage, 'Key not accepted: API key not valid');
+      expect(cubit.state.messages.last.text,
+          'Unable to reach the AI provider. Check your connection and your key in Settings.');
+      expect(cubit.state.messages.last.isStreaming, isFalse);
+    },
+  );
+
+  blocTest<ConsultantCubit, ConsultantState>(
+    'a reply that fails part-way keeps the text that arrived',
+    build: build,
+    setUp: () => client.failAfterChunks = const ProviderFailure(ConnectionOutcome.unreachable),
+    act: (cubit) => send(cubit, 'Hi'),
+    verify: (cubit) {
+      expect(cubit.state.status, ConsultantStatus.error);
+      expect(cubit.state.messages.last.text, 'You spent \$50 on food.');
+    },
+  );
 }
