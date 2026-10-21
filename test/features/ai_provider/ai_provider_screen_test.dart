@@ -12,14 +12,20 @@ import 'fake_provider_adapter.dart';
 
 void main() {
   late AiProviderCubit cubit;
+  late FakeProviderAdapter gemini;
 
   // Made inside each test, so the store's change stream runs in the test's
   // fake-async zone and reaches the screen on pump.
   void newCubit() {
+    gemini = FakeProviderAdapter();
     cubit = AiProviderCubit(AiProviderStore(
       secrets: InMemorySecretStore(),
       prefs: InMemoryTextPref(),
-      adapters: {AiProviderKind.gemini: FakeProviderAdapter(), AiProviderKind.openAi: FakeProviderAdapter()},
+      adapters: {
+        AiProviderKind.gemini: gemini,
+        AiProviderKind.openAi: FakeProviderAdapter(),
+        AiProviderKind.openRouter: FakeProviderAdapter(),
+      },
     ));
     addTearDown(cubit.close);
   }
@@ -54,5 +60,23 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('set-active-btn')), findsNothing);
+  });
+
+  testWidgets("a saved key that failed shows the provider's message in its editor", (tester) async {
+    newCubit();
+    await cubit.save(
+      AiProviderKind.gemini,
+      apiKey: 'gem-key-123456789',
+      model: 'model-a',
+      failure: const ProviderFailure(ConnectionOutcome.noCredit, 'You exceeded your current quota.'),
+    );
+    await tester.pumpWidget(screen());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('provider-row-gemini')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No credit or rate-limited'), findsWidgets);
+    expect(find.text('You exceeded your current quota.'), findsOneWidget);
   });
 }

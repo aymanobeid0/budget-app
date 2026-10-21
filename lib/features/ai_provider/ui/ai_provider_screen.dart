@@ -31,7 +31,7 @@ class AiProviderScreen extends StatelessWidget {
     final canPop = Navigator.of(context).canPop();
     final cubit = context.watch<AiProviderCubit>();
     final settings = cubit.state;
-    final providers = cubit.store.providers;
+    final providers = cubit.providers;
 
     return Scaffold(
       key: const Key('ai-provider-screen'),

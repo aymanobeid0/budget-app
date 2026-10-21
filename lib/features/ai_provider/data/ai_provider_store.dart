@@ -35,7 +35,10 @@ class AiProviderStore {
   Stream<AiProviderSettings> get changes => _changes.stream;
 
   /// The providers this build can talk to, in display order.
-  List<AiProviderKind> get providers => [for (final kind in AiProviderKind.values) if (_adapters.containsKey(kind)) kind];
+  List<AiProviderKind> get providers => [
+        for (final kind in AiProviderKind.values)
+          if (_adapters.containsKey(kind)) kind,
+      ];
 
   /// Reads the saved setup. A provider whose key is gone from the secure
   /// store is dropped.
@@ -63,7 +66,10 @@ class AiProviderStore {
       );
     }
     final active = AiProviderKind.values.asNameMap()[json['active']];
-    _settings = AiProviderSettings(active: saved.containsKey(active) ? active : saved.keys.firstOrNull, saved: saved);
+    _settings = AiProviderSettings(
+      active: saved.containsKey(active) ? active : saved.keys.firstOrNull,
+      saved: saved,
+    );
     return _settings;
   }
 
@@ -81,7 +87,11 @@ class AiProviderStore {
 
   /// Runs [test] with [apiKey] or the saved key; testing the saved key
   /// records the result as its status.
-  Future<T> _testing<T>(AiProviderKind kind, String? apiKey, Future<T> Function(ProviderAdapter adapter, String key) test) async {
+  Future<T> _testing<T>(
+    AiProviderKind kind,
+    String? apiKey,
+    Future<T> Function(ProviderAdapter adapter, String key) test,
+  ) async {
     final saved = apiKey == null ? _settings.saved[kind] : null;
     try {
       final result = await test(_adapters[kind]!, apiKey ?? _keys[kind] ?? '');
@@ -95,7 +105,7 @@ class AiProviderStore {
 
   /// The check before saving: a one-token request to [model]. Null when it
   /// answered, otherwise why not.
-  Future<ProviderFailure?> check(AiProviderKind kind, String model, [String? apiKey]) async {
+  Future<ProviderFailure?> ping(AiProviderKind kind, String model, [String? apiKey]) async {
     try {
       await _adapters[kind]!.ping(apiKey ?? _keys[kind] ?? '', model);
       return null;
@@ -105,7 +115,7 @@ class AiProviderStore {
   }
 
   /// Saves [kind] with [model] and makes it the active provider. [apiKey]
-  /// replaces the saved key; null keeps it. [failure] is what [check] found:
+  /// replaces the saved key; null keeps it. [failure] is what [ping] found:
   /// none is Connected, unreachable is Not verified, anything else Failed.
   Future<AiProviderSettings> save(
     AiProviderKind kind, {
@@ -143,7 +153,11 @@ class AiProviderStore {
     final key = _keys[kind];
     if (saved == null || key == null) return;
     final updated = _savedProvider(saved.model, key, failure);
-    if (updated.status == saved.status && updated.outcome == saved.outcome && updated.message == saved.message) return;
+    if (updated.status == saved.status &&
+        updated.outcome == saved.outcome &&
+        updated.message == saved.message) {
+      return;
+    }
     _settings = AiProviderSettings(
       active: _settings.active,
       saved: {..._settings.saved, kind: updated},

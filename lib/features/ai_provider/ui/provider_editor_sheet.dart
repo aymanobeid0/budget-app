@@ -92,7 +92,7 @@ class _ProviderEditorSheetState extends State<ProviderEditorSheet> {
 
   Future<void> _save() async {
     setState(() => _busy = true);
-    final failure = await _cubit.store.check(widget.kind, _model, _typedKey);
+    final failure = await _cubit.ping(widget.kind, _model, _typedKey);
     if (!mounted) return;
     setState(() => _busy = false);
     if (failure != null && !await _confirmSaveAnyway(failure)) return;
@@ -173,6 +173,15 @@ class _ProviderEditorSheetState extends State<ProviderEditorSheet> {
                 if (_saved != null) KeyStatusChip(provider: _saved),
               ],
             ),
+            // Why the saved key last failed, in the provider's own words.
+            if (_saved != null && _saved.status != KeyStatus.connected && _saved.message.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                _saved.message,
+                key: const Key('saved-status-message'),
+                style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+              ),
+            ],
             const SizedBox(height: 20),
             TextField(
               key: const Key('provider-key-field'),
@@ -216,20 +225,21 @@ class _ProviderEditorSheetState extends State<ProviderEditorSheet> {
                 ),
               )
             else
-            DropdownButtonFormField<String>(
-              // Keyed by the model so a Test that picks another one shows it.
-              key: ValueKey('provider-model-field-$_model'),
-              initialValue: _model,
-              isExpanded: true,
-              decoration: InputDecoration(
-                labelText: 'Model',
-                helperText: models == null ? 'Test the key to see every model' : null,
+              DropdownButtonFormField<String>(
+                // Keyed by the model so a Test that picks another one shows it.
+                key: ValueKey('provider-model-field-$_model'),
+                initialValue: _model,
+                isExpanded: true,
+                decoration: InputDecoration(
+                  labelText: 'Model',
+                  helperText: models == null ? 'Test the key to see every model' : null,
+                ),
+                items: [
+                  for (final m in {...?models, _model})
+                    DropdownMenuItem(value: m, child: Text(m, overflow: TextOverflow.ellipsis)),
+                ],
+                onChanged: models == null ? null : (m) => setState(() => _model = m ?? _model),
               ),
-              items: [
-                for (final m in {...?models, _model}) DropdownMenuItem(value: m, child: Text(m, overflow: TextOverflow.ellipsis)),
-              ],
-              onChanged: models == null ? null : (m) => setState(() => _model = m ?? _model),
-            ),
             const SizedBox(height: 16),
             Text(
               'When you chat, your Expense and Income summary is sent to ${widget.kind.displayName} under your own account.',

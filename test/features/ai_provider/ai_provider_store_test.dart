@@ -38,7 +38,7 @@ void main() {
   test('a key that passes Test and Save is Connected, active, and survives a restart', () async {
     final models = await store.listModels(AiProviderKind.gemini, key);
     expect(models, ['model-a', 'model-b']);
-    final failure = await store.check(AiProviderKind.gemini, 'model-b', key);
+    final failure = await store.ping(AiProviderKind.gemini, 'model-b', key);
     await store.save(AiProviderKind.gemini, apiKey: key, model: 'model-b', failure: failure);
 
     final reloaded = await newStore().load();
@@ -50,7 +50,7 @@ void main() {
 
   test('a key saved without a test that could not reach the provider is Not verified', () async {
     gemini.pingFailure = const ProviderFailure(ConnectionOutcome.unreachable);
-    final failure = await store.check(AiProviderKind.gemini, 'model-a', key);
+    final failure = await store.ping(AiProviderKind.gemini, 'model-a', key);
     final settings = await store.save(AiProviderKind.gemini, apiKey: key, model: 'model-a', failure: failure);
 
     expect(settings.activeProvider!.status, KeyStatus.notVerified);
@@ -59,7 +59,7 @@ void main() {
 
   test('a key saved anyway after the ping fails keeps the failure as its status', () async {
     gemini.pingFailure = const ProviderFailure(ConnectionOutcome.noCredit, 'insufficient_quota');
-    final failure = await store.check(AiProviderKind.gemini, 'model-a', key);
+    final failure = await store.ping(AiProviderKind.gemini, 'model-a', key);
     final settings = await store.save(AiProviderKind.gemini, apiKey: key, model: 'model-a', failure: failure);
 
     expect(settings.activeProvider!.status, KeyStatus.failed);

@@ -16,6 +16,9 @@ class AiProviderCubit extends Cubit<AiProviderSettings> {
   final AiProviderStore store;
   late final StreamSubscription<AiProviderSettings> _changes;
 
+  /// The providers this build can talk to, in display order.
+  List<AiProviderKind> get providers => store.providers;
+
   Future<void> load() async => emit(await store.load());
 
   /// Lists [kind]'s models with [apiKey] (or the saved key, whose status
@@ -37,6 +40,11 @@ class AiProviderCubit extends Cubit<AiProviderSettings> {
       if (!isClosed) emit(store.settings);
     }
   }
+
+  /// The check before saving: a one-token request to [model] with [apiKey]
+  /// (or the saved key). Null when it answered, otherwise why not.
+  Future<ProviderFailure?> ping(AiProviderKind kind, String model, [String? apiKey]) =>
+      store.ping(kind, model, apiKey);
 
   Future<void> save(AiProviderKind kind, {String? apiKey, required String model, ProviderFailure? failure}) async =>
       emit(await store.save(kind, apiKey: apiKey, model: model, failure: failure));
