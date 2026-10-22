@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/format/money.dart';
+import '../../../core/ids.dart';
 import '../../categories/category_store.dart';
 import '../../expenses/expense_ledger.dart';
 import '../../income/income_ledger.dart';
@@ -10,6 +11,9 @@ import '../data/consultant_client.dart';
 import '../data/spending_context_builder.dart';
 import '../models/chat_message.dart';
 import 'consultant_state.dart';
+
+/// The reply shown when a message gets no answer at all.
+const _unreachableReply = 'Unable to reach the AI provider. Check your connection and your key in Settings.';
 
 class ConsultantCubit extends Cubit<ConsultantState> {
   ConsultantCubit({
@@ -34,6 +38,9 @@ class ConsultantCubit extends Cubit<ConsultantState> {
 
   StreamSubscription<String>? _streamSub;
 
+  /// Who answered the last message sent, to spot a provider switch.
+  String? _lastAnsweredBy;
+
   Future<void> sendMessage(String prompt) async {
     final cleanPrompt = prompt.trim();
     if (cleanPrompt.isEmpty || state.isStreaming) return;
@@ -56,12 +63,26 @@ class ConsultantCubit extends Cubit<ConsultantState> {
     );
 
     final priorHistory = state.messages
-        .where((m) => !m.isStreaming && m.text.isNotEmpty)
+        .where((m) => !m.isStreaming && !m.isMarker && m.text.isNotEmpty)
         .toList();
 
-    final updatedMessages = List<ChatMessage>.from(state.messages)
-      ..add(userMessage)
-      ..add(placeholderAssistantMessage);
+    final answeredBy = client.answeredBy;
+    final switched = state.messages.isNotEmpty && _lastAnsweredBy != null && answeredBy != null && answeredBy != _lastAnsweredBy;
+    _lastAnsweredBy = answeredBy;
+
+    final updatedMessages = [
+      ...state.messages,
+      if (switched)
+        ChatMessage(
+          id: randomId('mkr_'),
+          text: 'Now answering with $answeredBy',
+          isUser: false,
+          timestamp: now,
+          isMarker: true,
+        ),
+      userMessage,
+      placeholderAssistantMessage,
+    ];
 
     emit(state.copyWith(
       messages: updatedMessages,
@@ -129,7 +150,7 @@ class ConsultantCubit extends Cubit<ConsultantState> {
           if (index != -1) {
             currentMessages[index] = currentMessages[index].copyWith(
               text: buffer.isEmpty
-                  ? 'Unable to connect to AI Consultant. Please check network and Gemini API key.'
+                  ? _unreachableReply
                   : buffer.toString(),
               isStreaming: false,
             );
@@ -148,7 +169,7 @@ class ConsultantCubit extends Cubit<ConsultantState> {
       final index = currentMessages.indexWhere((m) => m.id == assistantMsgId);
       if (index != -1) {
         currentMessages[index] = currentMessages[index].copyWith(
-          text: 'Unable to connect to AI Consultant. Please check network and Gemini API key.',
+          text: _unreachableReply,
           isStreaming: false,
         );
       }

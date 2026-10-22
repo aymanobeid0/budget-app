@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -7,9 +8,11 @@ import '../../../core/sync/sync_status.dart';
 import '../../../core/sync/sync_status_view.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_cubit.dart';
-import '../../../core/theme/theme_toggle_button.dart';
 import '../../../core/theme/widgets.dart';
 import '../../account/ui/account_section.dart';
+import '../../ai_provider/cubit/ai_provider_cubit.dart';
+import '../../ai_provider/models/ai_provider.dart';
+import '../../ai_provider/ui/ai_provider_screen.dart';
 import '../cubit/currency_cubit.dart';
 import 'currency_picker.dart';
 
@@ -40,7 +43,7 @@ class SettingsScreen extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.only(bottom: 130),
           children: [
-            const ScreenHeader(title: 'Profile', trailing: ThemeToggleButton()),
+            const ScreenHeader(title: 'Profile'),
             const SizedBox(height: 18),
             const AccountProfileHeader(),
             const SizedBox(height: 24),
@@ -54,7 +57,7 @@ class SettingsScreen extends StatelessWidget {
                     icon: Icons.grid_view_rounded,
                     color: scheme.primary,
                     title: 'Categories',
-                    subtitle: 'Add, rename or remove expense categories',
+                    subtitle: 'Add, rename or remove Categories',
                     trailing: const Chevron(),
                     onTap: () => context.push('/categories'),
                   ),
@@ -67,6 +70,8 @@ class SettingsScreen extends StatelessWidget {
                     trailing: const Chevron(),
                     onTap: () => context.push('/income-sources'),
                   ),
+                  // The web build has no safe place for a key (ADR 0009).
+                  if (!kIsWeb) const _AiProviderRow(),
                   MenuRow(
                     icon: Icons.dark_mode_rounded,
                     color: const Color(0xFF1F2A44),
@@ -81,7 +86,7 @@ class SettingsScreen extends StatelessWidget {
                   ),
                   MenuRow(
                     key: const Key('profile-currency-row'),
-                    icon: Icons.payments_rounded,
+                    icon: Icons.currency_exchange_rounded,
                     color: CategoryPalette.utilities,
                     title: 'Currency',
                     subtitle: 'Shown next to every amount',
@@ -123,6 +128,33 @@ class SettingsScreen extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// The active AI Provider with its model and status; opens the provider screen.
+class _AiProviderRow extends StatelessWidget {
+  const _AiProviderRow();
+
+  @override
+  Widget build(BuildContext context) {
+    final AiProviderSettings settings;
+    try {
+      settings = context.watch<AiProviderCubit>().state;
+    } catch (_) {
+      return const SizedBox.shrink(); // screen used without the AI provider feature (tests)
+    }
+    final saved = settings.activeProvider;
+    return MenuRow(
+      key: const Key('profile-ai-provider-row'),
+      icon: Icons.auto_awesome,
+      color: Theme.of(context).colorScheme.primary,
+      title: 'AI provider',
+      subtitle: saved == null
+          ? 'Connect your own key for the Consultant'
+          : '${settings.active!.displayName} · ${saved.model}',
+      trailing: saved == null ? const Chevron() : KeyStatusChip(provider: saved),
+      onTap: () => context.push('/ai-provider'),
     );
   }
 }

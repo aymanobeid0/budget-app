@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/month/calendar_month.dart';
+import '../../../core/month/chosen_month_cubit.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/empty_state.dart';
 import '../../../core/theme/widgets.dart';
@@ -65,8 +67,19 @@ class CategoriesScreen extends StatelessWidget {
     );
   }
 
-  /// This month's expense count per category, when expenses are available.
-  Map<String, int> _monthCounts(BuildContext context) {
+  /// The month the counts cover: the one Home and the tabs show, or this
+  /// month by the clock when the screen runs on its own (tests).
+  (CalendarMonth, String) _month(BuildContext context) {
+    try {
+      final chosen = context.watch<ChosenMonthCubit>();
+      return (chosen.state, chosen.isCurrent ? 'this month' : 'in ${chosen.state.label(today: chosen.today)}');
+    } catch (_) {
+      return (CalendarMonth.of(DateTime.now()), 'this month');
+    }
+  }
+
+  /// [month]'s Expense count per Category, when Expenses are available.
+  Map<String, int> _monthCounts(BuildContext context, CalendarMonth month) {
     ExpenseState? state;
     try {
       state = context.watch<ExpenseCubit>().state;
@@ -74,10 +87,9 @@ class CategoriesScreen extends StatelessWidget {
       return const {}; // screen used without the expenses feature (tests)
     }
     if (state is! ExpenseLoaded) return const {};
-    final now = DateTime.now();
     final counts = <String, int>{};
     for (final e in state.expenses) {
-      if (e.spentOn.year == now.year && e.spentOn.month == now.month) {
+      if (e.deletedAt == null && month.contains(e.spentOn)) {
         counts[e.categoryId] = (counts[e.categoryId] ?? 0) + 1;
       }
     }
@@ -87,7 +99,8 @@ class CategoriesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final counts = _monthCounts(context);
+    final (month, period) = _month(context);
+    final counts = _monthCounts(context, month);
     // Pushed from Home or Profile; standalone (tests) there is nothing to go back to.
     final canPop = Navigator.of(context).canPop();
 
@@ -100,10 +113,10 @@ class CategoriesScreen extends StatelessWidget {
             final header = ScreenHeader(
               title: 'Categories',
               leading: canPop
-                  ? IconButton(
+                  ? SquareIconButton(
+                      icon: Icons.adaptive.arrow_back_rounded,
                       tooltip: 'Back',
-                      icon: const Icon(Icons.arrow_back_rounded),
-                      onPressed: () => context.pop(),
+                      onTap: () => context.pop(),
                     )
                   : null,
               trailing: SquareIconButton(
@@ -120,7 +133,7 @@ class CategoriesScreen extends StatelessWidget {
             if (state is CategoryError) {
               return Column(children: [
                 header,
-                Expanded(child: Center(child: Text('Error: ${state.message}', style: TextStyle(color: scheme.error)))),
+                Expanded(child: Center(child: LoadErrorState(what: 'your Categories', onRetry: () => context.read<CategoryCubit>().load()))),
               ]);
             }
             if (state is! CategoryLoaded) return const SizedBox.shrink();
@@ -149,7 +162,7 @@ class CategoriesScreen extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 18, AppSpace.gutter, 8),
                   child: Text(
-                    '${categories.length} ${categories.length == 1 ? 'category' : 'categories'} · tap one to edit',
+                    '${categories.length} ${categories.length == 1 ? 'Category' : 'Categories'} · tap one to edit',
                     style: TextStyle(fontSize: 14, color: scheme.onSurfaceVariant),
                   ),
                 ),
@@ -162,6 +175,7 @@ class CategoriesScreen extends StatelessWidget {
                         _CategoryMenuItem(
                           category: c,
                           count: counts[c.id] ?? 0,
+                          when: period,
                           onTap: () => _openCategorySheet(context, c),
                           onEdit: () => _openCategorySheet(context, c),
                           onDelete: () => _confirmDelete(context, c),
@@ -185,6 +199,7 @@ class _CategoryMenuItem extends StatelessWidget {
   const _CategoryMenuItem({
     required this.category,
     required this.count,
+    required this.when,
     required this.onTap,
     required this.onEdit,
     required this.onDelete,
@@ -192,6 +207,9 @@ class _CategoryMenuItem extends StatelessWidget {
 
   final Category category;
   final int count;
+
+  /// "this month" or "in September", after the count.
+  final String when;
   final VoidCallback onTap;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -204,7 +222,7 @@ class _CategoryMenuItem extends StatelessWidget {
       icon: CategoryIconHelper.getIcon(category.icon),
       color: Color(category.color),
       title: category.name,
-      subtitle: count == 0 ? 'No expenses this month' : '$count ${count == 1 ? 'expense' : 'expenses'} this month',
+      subtitle: count == 0 ? 'No Expenses $when' : '$count ${count == 1 ? 'Expense' : 'Expenses'} $when',
       showDivider: false,
       onTap: onTap,
       trailing: PopupMenuButton<String>(

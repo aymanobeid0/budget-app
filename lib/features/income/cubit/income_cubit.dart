@@ -50,16 +50,19 @@ class IncomeCubit extends Cubit<IncomeState> {
 
   Future<void> deleteIncome(String id) => _guard(() => _ledger.deleteIncome(id));
 
-  Future<void> addSource({required String name, required String icon, required int color}) {
+  /// Saves a new Income Source and returns its id.
+  Future<String> addSource({required String name, required String icon, required int color}) async {
     final now = DateTime.now();
-    return _guard(() => _ledger.saveSource(IncomeSource(
-          id: randomId('src_'),
+    final id = randomId('src_');
+    await _guard(() => _ledger.saveSource(IncomeSource(
+          id: id,
           name: name,
           icon: icon,
           color: color,
           createdAt: now,
           updatedAt: now,
         )));
+    return id;
   }
 
   Future<void> updateSource(IncomeSource source) =>

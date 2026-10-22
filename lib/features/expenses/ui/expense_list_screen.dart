@@ -31,16 +31,35 @@ import 'expenses_screen.dart';
 /// month header and total card (swipe either to change month) over that
 /// month's Expenses, newest first and grouped by day. Tapping the total card
 /// breaks the month down by Category; picking one filters the list to it.
+///
+/// Under the router the filter is part of the location
+/// (`/expenses?category=<id>`), so Home's breakdown can open this tab
+/// filtered; standalone (tests) it is kept here.
 class ExpenseListScreen extends StatefulWidget {
-  const ExpenseListScreen({super.key});
+  const ExpenseListScreen({super.key, this.categoryFilter});
+
+  /// The Category the router's location filters to, if any.
+  final String? categoryFilter;
 
   @override
   State<ExpenseListScreen> createState() => _ExpenseListScreenState();
 }
 
 class _ExpenseListScreenState extends State<ExpenseListScreen> {
-  /// The Category the list is filtered to. Kept when the month changes.
-  String? _categoryFilter;
+  /// The filter when there is no router. Either way it is kept when the
+  /// month changes.
+  String? _localFilter;
+
+  String? get _categoryFilter => GoRouter.maybeOf(context) == null ? _localFilter : widget.categoryFilter;
+
+  void _setFilter(String? categoryId) {
+    final router = GoRouter.maybeOf(context);
+    if (router == null) {
+      setState(() => _localFilter = categoryId);
+    } else {
+      router.go(categoryId == null ? '/expenses' : expensesFilteredTo(categoryId));
+    }
+  }
 
   Future<void> _openBreakdown(
       {required String label, required List<Expense> expenses, required Map<String, Category> byId}) async {
@@ -60,7 +79,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
       rows: rows,
       currency: context.read<CurrencyCubit>().state,
     );
-    if (picked != null && mounted) setState(() => _categoryFilter = picked);
+    if (picked != null && mounted) _setFilter(picked);
   }
 
   Future<bool> _confirmDelete(BuildContext context, Expense expense) async {
@@ -71,25 +90,17 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final router = GoRouter.maybeOf(context);
     final chosen = context.watch<ChosenMonthCubit>();
     final month = chosen.state;
     final currency = context.watch<CurrencyCubit>().state;
     final income = _watchIncome(context);
     final header = ScreenHeader(
       title: 'Expenses',
-      leading: SquareIconButton(
+      leading: AddEntryButton(
         key: const Key('add-expense-btn'),
-        icon: Icons.add_rounded,
+        label: 'Add Expense',
         tooltip: 'Add expense',
-        onTap: () => showExpenseSheet(context),
-      ),
-      trailing: SquareIconButton(
-        key: const Key('expense-categories-btn'),
-        icon: Icons.grid_view_rounded,
-        tooltip: 'Categories',
-        onTap: router == null ? null : () => router.push('/categories'),
+        onPressed: () => showExpenseSheet(context),
       ),
     );
 
@@ -108,7 +119,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                   return Column(children: [
                     header,
                     Expanded(
-                      child: Center(child: Text('Error: ${state.message}', style: TextStyle(color: scheme.error))),
+                      child: Center(child: LoadErrorState(what: 'your Expenses', onRetry: () => context.read<ExpenseCubit>().load())),
                     ),
                   ]);
                 }
@@ -158,7 +169,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                         padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 16, AppSpace.gutter, 0),
                         child: GroupFilterChip(
                           group: categoryGroup(filter, catMap[filter]),
-                          onClear: () => setState(() => _categoryFilter = null),
+                          onClear: () => _setFilter(null),
                         ),
                       ),
                     // Kept while the list is empty, so the first Expense animates in too.
@@ -184,7 +195,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                     ]),
                     // After the list, so a deleted last Expense leaves above it.
                     if (state.expenses.isEmpty)
-                      _EmptyExpenses(onAdd: () => showExpenseSheet(context))
+                      const _EmptyExpenses()
                     else if (days.isEmpty)
                       emptyMonthState(
                         entries: 'Expenses',
@@ -225,8 +236,9 @@ class _TotalCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Container(
       key: const Key('expense-total'),
+      width: double.infinity,
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
-      decoration: raisedDecoration(context, radius: AppRadius.xl, shadow: AppShadows.panel),
+      decoration: panelDecoration(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -250,21 +262,14 @@ class _TotalCard extends StatelessWidget {
 }
 
 class _EmptyExpenses extends StatelessWidget {
-  const _EmptyExpenses({required this.onAdd});
-  final VoidCallback onAdd;
+  const _EmptyExpenses();
 
   @override
   Widget build(BuildContext context) {
-    return EmptyState(
+    return const EmptyState(
       icon: Icons.receipt_long_rounded,
       title: 'No Expenses yet',
-      message: 'Log what you spend and see where your money goes, day by day.',
-      action: FilledButton.icon(
-        key: const Key('add-first-expense-in-list'),
-        onPressed: onAdd,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Log your first Expense'),
-      ),
+      message: 'Tap Add Expense to log what you spend and see where your money goes, day by day.',
     );
   }
 }

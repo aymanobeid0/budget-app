@@ -6,6 +6,7 @@ import 'package:budget_app/features/categories/category_store.dart';
 import 'package:budget_app/features/categories/cubit/category_cubit.dart';
 import 'package:budget_app/features/categories/cubit/category_state.dart';
 import 'package:budget_app/features/expenses/cubit/expense_cubit.dart';
+import 'package:budget_app/features/expenses/cubit/expense_state.dart';
 import 'package:budget_app/features/expenses/expense_ledger.dart';
 import 'package:budget_app/features/categories/ui/category_icon_helper.dart';
 import 'package:budget_app/features/expenses/ui/expense_form_sheet.dart';
@@ -59,20 +60,31 @@ void main() {
     );
   }
 
-  testWidgets('Home with no Expenses shows the shared empty state, and its action opens the Add sheet', (tester) async {
+  /// What the shell's Add Expense button does; Home alone has no shell.
+  Future<void> openAddExpense(WidgetTester tester) async {
+    showExpenseSheet(tester.element(find.byType(ExpensesScreen)));
+    await tester.pumpAndSettle();
+  }
+
+  String monthTotal(WidgetTester tester) =>
+      tester.widget<Text>(find.byKey(const Key('month-total'))).textSpan!.toPlainText();
+
+  testWidgets('Home with no Expenses shows the shared empty state, pointing at Add Expense', (tester) async {
     await expenseCubit.load();
     await tester.pumpWidget(buildTestWidget());
     await tester.pumpAndSettle();
 
     final empty = find.byType(EmptyState);
     expect(find.descendant(of: empty, matching: find.text('No Expenses yet')), findsOneWidget);
-    await tester.tap(find.descendant(of: empty, matching: find.byKey(const Key('add-first-expense'))));
-    await tester.pumpAndSettle();
+    expect(find.descendant(of: empty, matching: find.textContaining('Tap Add Expense')), findsOneWidget);
+    // One add action per screen: the empty state has no button of its own.
+    expect(find.descendant(of: empty, matching: find.byType(ButtonStyleButton)), findsNothing);
+    await openAddExpense(tester);
 
     expect(find.byType(ExpenseFormSheet), findsOneWidget);
   });
 
-  testWidgets('renders the blue summary card and the transaction row', (tester) async {
+  testWidgets('renders the gradient summary card over the Latest Entries', (tester) async {
     final now = DateTime.now();
     await expenseCubit.addExpense(
       amountMinor: 1550, // 15.50
@@ -83,9 +95,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('month-summary-card')), findsOneWidget);
-    expect(find.text('Transactions'), findsOneWidget);
-    expect(find.text('−15.50'), findsOneWidget); // red expense amount
-    expect(find.text('Food'), findsOneWidget);
+    expect(monthTotal(tester), '15.50  MRU');
+    expect(find.text('Latest Entries'), findsOneWidget);
+    expect(find.text('- 15.50'), findsOneWidget);
     expect(find.byType(CategoryIconTile), findsOneWidget);
   });
 
@@ -98,8 +110,7 @@ void main() {
     await tester.pumpWidget(buildTestWidget());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('add-first-expense')));
-    await tester.pumpAndSettle();
+    await openAddExpense(tester);
     expect(find.descendant(of: find.byType(ExpenseFormSheet), matching: find.text('Add Expense')), findsWidgets);
     expect(find.byKey(const Key('week-strip')), findsOneWidget);
 
@@ -109,8 +120,9 @@ void main() {
     await tester.tap(find.byKey(const Key('save-expense-btn')));
     await tester.pumpAndSettle();
 
-    expect(find.text('−42.50'), findsOneWidget);
-    expect(find.text('Transport'), findsOneWidget);
+    expect(monthTotal(tester), '42.50  MRU');
+    final saved = (expenseCubit.state as ExpenseLoaded).expenses.single;
+    expect((saved.amountMinor, saved.categoryId), (4250, 'cat_transport'));
   });
 
   testWidgets('saving without an amount shows an error and stays open', (tester) async {
@@ -122,8 +134,7 @@ void main() {
     await tester.pumpWidget(buildTestWidget());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('add-first-expense')));
-    await tester.pumpAndSettle();
+    await openAddExpense(tester);
     await tester.tap(find.byKey(const Key('save-expense-btn')));
     await tester.pumpAndSettle();
 
@@ -140,8 +151,7 @@ void main() {
     await tester.pumpWidget(buildTestWidget());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('add-first-expense')));
-    await tester.pumpAndSettle();
+    await openAddExpense(tester);
     final y = DateTime.now().subtract(const Duration(days: 1));
     if (DateTime.now().weekday == DateTime.monday) {
       await tester.tap(find.byTooltip('Previous week'));
@@ -149,11 +159,82 @@ void main() {
     }
     await tester.tap(find.byKey(Key('day-${y.year}-${y.month}-${y.day}')));
     await tester.enterText(find.byKey(const Key('expense-amount-field')), '1250');
+    await tester.tap(find.descendant(of: find.byType(ExpenseFormSheet), matching: find.text('Food')));
     await tester.tap(find.byKey(const Key('save-expense-btn')));
     await tester.pumpAndSettle();
 
-    expect(find.text('−1,250'), findsOneWidget);
-    expect(find.text('Yesterday'), findsOneWidget);
+    final saved = (expenseCubit.state as ExpenseLoaded).expenses.single;
+    expect(saved.amountMinor, 125000);
+    expect((saved.spentOn.year, saved.spentOn.month, saved.spentOn.day), (y.year, y.month, y.day));
+  });
+
+  group('the Category a new Expense starts on', () {
+    Future<void> pumpHome(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> save(WidgetTester tester, String amount) async {
+      await openAddExpense(tester);
+      await tester.enterText(find.byKey(const Key('expense-amount-field')), amount);
+      await tester.tap(find.byKey(const Key('save-expense-btn')));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('the first Expense has none: saving without one asks for a Category', (tester) async {
+      await expenseCubit.load();
+      await pumpHome(tester);
+
+      await save(tester, '450');
+
+      expect(find.text('Pick a Category'), findsOneWidget);
+      expect(find.byType(ExpenseFormSheet), findsOneWidget);
+      expect((expenseCubit.state as ExpenseLoaded).expenses, isEmpty);
+    });
+
+    testWidgets('after that, the last logged Expense\'s Category, not the first alphabetically', (tester) async {
+      await expenseCubit.addExpense(amountMinor: 900, categoryId: 'cat_transport', spentOn: DateTime.now());
+      await pumpHome(tester);
+
+      await save(tester, '450');
+
+      expect(find.byType(ExpenseFormSheet), findsNothing);
+      final latest = (expenseCubit.state as ExpenseLoaded).expenses.firstWhere((e) => e.amountMinor == 45000);
+      expect(latest.categoryId, 'cat_transport');
+    });
+
+    testWidgets('a deleted last Category is not picked for you', (tester) async {
+      await categoryCubit.addCategory(name: 'Gym', icon: 'fitness_center', color: 0xFF4CAF50);
+      final gymId = (categoryCubit.state as CategoryLoaded).categories.firstWhere((c) => c.name == 'Gym').id;
+      await expenseCubit.addExpense(amountMinor: 900, categoryId: gymId, spentOn: DateTime.now());
+      await categoryCubit.deleteCategory(gymId);
+      await pumpHome(tester);
+
+      await save(tester, '450');
+
+      expect(find.text('Pick a Category'), findsOneWidget);
+    });
+  });
+
+  testWidgets('an amount with more than two decimals is refused, with an example', (tester) async {
+    tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    await expenseCubit.load();
+    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpAndSettle();
+
+    await openAddExpense(tester);
+    await tester.enterText(find.byKey(const Key('expense-amount-field')), '12.345');
+    await tester.tap(find.descendant(of: find.byType(ExpenseFormSheet), matching: find.text('Food')));
+    await tester.tap(find.byKey(const Key('save-expense-btn')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Enter an amount like 450 or 12.50'), findsOneWidget);
+    expect((expenseCubit.state as ExpenseLoaded).expenses, isEmpty);
   });
 
   group('stepping between months', () {
@@ -163,8 +244,7 @@ void main() {
     Finder monthLabel(String text) =>
         find.descendant(of: find.byKey(const Key('month-header')), matching: find.text(text));
 
-    String total(WidgetTester tester) =>
-        tester.widget<Text>(find.byKey(const Key('month-total'))).textSpan!.toPlainText();
+    String total(WidgetTester tester) => monthTotal(tester);
 
     Future<void> pumpHome(WidgetTester tester) async {
       tester.view.physicalSize = const Size(390 * 3, 844 * 3);
@@ -177,7 +257,7 @@ void main() {
     IconButton arrow(WidgetTester tester, String tooltip) =>
         tester.widget<IconButton>(find.ancestor(of: find.byTooltip(tooltip), matching: find.byType(IconButton)));
 
-    testWidgets('step back a month and see only that month\'s total and Expenses', (tester) async {
+    testWidgets('step back a month and see only that month\'s total', (tester) async {
       await expenseCubit.addExpense(amountMinor: 30000, categoryId: 'cat_food', spentOn: DateTime.utc(2026, 10, 18));
       await expenseCubit.addExpense(amountMinor: 12500, categoryId: 'cat_transport', spentOn: DateTime.utc(2026, 9, 30));
       await expenseCubit.addExpense(amountMinor: 4000, categoryId: 'cat_food', spentOn: DateTime.utc(2026, 9, 2));
@@ -188,8 +268,6 @@ void main() {
       expect(inCard(find.text('Spent in October')), findsOneWidget);
       expect(total(tester), '300  MRU');
       expect(inCard(find.text('Today')), findsOneWidget);
-      expect(find.text('−300'), findsOneWidget);
-      expect(find.text('−125'), findsNothing);
       expect(arrow(tester, 'Next month').onPressed, isNull);
 
       await tester.tap(find.byTooltip('Previous month'));
@@ -200,9 +278,6 @@ void main() {
       expect(total(tester), '165  MRU');
       expect(inCard(find.text('Today')), findsNothing);
       expect(inCard(find.text('This week')), findsNothing);
-      expect(find.text('−125'), findsOneWidget);
-      expect(find.text('−40'), findsOneWidget);
-      expect(find.text('−300'), findsNothing);
 
       // September holds the first entry: no further back.
       expect(arrow(tester, 'Previous month').onPressed, isNull);
@@ -225,7 +300,7 @@ void main() {
       expect(inCard(find.text('35 MRU')), findsOneWidget); // this week: 10 + 20 + 5
     });
 
-    testWidgets('a month with no Expenses shows its own empty state', (tester) async {
+    testWidgets('a month with no Expenses shows zero, with no empty state on Home', (tester) async {
       await expenseCubit.addExpense(amountMinor: 30000, categoryId: 'cat_food', spentOn: DateTime.utc(2026, 10, 1));
       await expenseCubit.addExpense(amountMinor: 4000, categoryId: 'cat_food', spentOn: DateTime.utc(2026, 8, 20));
       await pumpHome(tester);
@@ -235,9 +310,7 @@ void main() {
 
       expect(monthLabel('September'), findsOneWidget);
       expect(total(tester), '0  MRU');
-      expect(find.text('No Expenses in September'), findsOneWidget);
-      expect(find.text('−300'), findsNothing);
-      expect(find.text('−40'), findsNothing);
+      expect(find.byType(EmptyState), findsNothing);
     });
 
     testWidgets('swiping the card changes month, and tapping a past month\'s label comes back', (tester) async {
@@ -257,7 +330,7 @@ void main() {
       await tester.fling(find.byKey(const Key('month-header')), const Offset(300, 0), 1000);
       await tester.pumpAndSettle();
       expect(monthLabel('August'), findsOneWidget);
-      expect(find.text('−40'), findsOneWidget);
+      expect(total(tester), '40  MRU');
 
       await tester.fling(find.byKey(const Key('month-summary-card')), const Offset(-300, 0), 1000);
       await tester.pumpAndSettle();
@@ -266,14 +339,13 @@ void main() {
       await tester.tap(monthLabel('September'));
       await tester.pumpAndSettle();
       expect(monthLabel('October'), findsOneWidget);
-      expect(find.text('−300'), findsOneWidget);
+      expect(total(tester), '300  MRU');
     });
 
     group('Category breakdown and filter', () {
       Finder sheet() => find.byKey(const Key('breakdown-sheet'));
       Finder inSheet(Finder f) => find.descendant(of: sheet(), matching: f);
       Finder row(String categoryId) => find.byKey(Key('breakdown-row-$categoryId'));
-      Finder chip() => find.byKey(const Key('group-filter-chip'));
 
       Future<String> addDeletedGym() async {
         await categoryCubit.addCategory(name: 'Gym', icon: 'fitness_center', color: 0xFF4CAF50);
@@ -309,46 +381,6 @@ void main() {
         }
         expect(inSheet(find.text('Health')), findsNothing); // September only
       });
-
-      testWidgets('tapping a Category filters the list, the filter follows the month, and × clears it',
-          (tester) async {
-        await expenseCubit.addExpense(amountMinor: 30000, categoryId: 'cat_food', spentOn: DateTime.utc(2026, 10, 18));
-        await expenseCubit.addExpense(amountMinor: 12500, categoryId: 'cat_transport', spentOn: DateTime.utc(2026, 10, 3));
-        await expenseCubit.addExpense(amountMinor: 4000, categoryId: 'cat_transport', spentOn: DateTime.utc(2026, 9, 3));
-        await expenseCubit.addExpense(amountMinor: 2000, categoryId: 'cat_food', spentOn: DateTime.utc(2026, 8, 3));
-        await pumpHome(tester);
-        expect(chip(), findsNothing);
-
-        await tester.tap(find.byKey(const Key('month-summary-card')));
-        await tester.pumpAndSettle();
-        await tester.tap(row('cat_transport'));
-        await tester.pumpAndSettle();
-
-        expect(sheet(), findsNothing);
-        expect(find.descendant(of: chip(), matching: find.text('Transport')), findsOneWidget);
-        expect(find.text('−125'), findsOneWidget);
-        expect(find.text('−300'), findsNothing);
-        expect(total(tester), '425  MRU'); // the card still shows the whole month
-
-        // The filter stays when stepping back.
-        await tester.tap(find.byTooltip('Previous month'));
-        await tester.pumpAndSettle();
-        expect(chip(), findsOneWidget);
-        expect(find.text('−40'), findsOneWidget);
-
-        // August has no Transport: the empty state, with the chip still there.
-        await tester.tap(find.byTooltip('Previous month'));
-        await tester.pumpAndSettle();
-        expect(chip(), findsOneWidget);
-        expect(find.byType(EmptyState), findsOneWidget);
-        expect(find.text('−20'), findsNothing);
-
-        await tester.tap(find.descendant(of: chip(), matching: find.byIcon(Icons.close_rounded)));
-        await tester.pumpAndSettle();
-        expect(chip(), findsNothing);
-        expect(find.byType(EmptyState), findsNothing);
-        expect(find.text('−20'), findsOneWidget);
-      });
     });
 
     testWidgets('the card compares the chosen month with the month before', (tester) async {
@@ -380,5 +412,18 @@ void main() {
       expect(arrow(tester, 'Next month').onPressed, isNull);
       expect(find.text('No Expenses yet'), findsOneWidget);
     });
+  });
+
+  testWidgets('a list that cannot load says so plainly and offers to try again, without the raw error',
+      (tester) async {
+    await db.close(); // the phone's storage is gone: loading throws
+    await expenseCubit.load();
+    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpAndSettle();
+
+    expect(find.text("Couldn't load your Expenses"), findsOneWidget);
+    expect(find.text('Try again'), findsOneWidget);
+    expect(find.textContaining('Error:'), findsNothing);
+    expect(find.textContaining('Exception'), findsNothing);
   });
 }

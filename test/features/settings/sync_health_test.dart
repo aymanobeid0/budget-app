@@ -136,5 +136,8 @@ void main() {
     expect(syncStatus('Not connected'), findsOneWidget);
     expect(syncStatus('kept on this phone only'), findsOneWidget);
     expect(find.byKey(const Key('sync-now-btn')), findsNothing);
+    // Said once, in plain words: no developer instructions on the user's screen.
+    expect(find.textContaining('.env'), findsNothing);
+    expect(find.text('Accounts unavailable'), findsNothing);
   });
 }

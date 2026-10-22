@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/format/money.dart';
 import '../../../core/month/breakdown_sheet.dart';
@@ -18,6 +17,7 @@ import '../../expenses/cubit/expense_cubit.dart';
 import '../../expenses/cubit/expense_state.dart';
 import '../../expenses/expense.dart';
 import '../../expenses/ui/expense_form_sheet.dart';
+import '../../expenses/ui/expenses_screen.dart' show confirmDeleteEntry;
 import '../../settings/cubit/currency_cubit.dart';
 import '../cubit/income_cubit.dart';
 import '../cubit/income_state.dart';
@@ -56,26 +56,25 @@ class _IncomeScreenState extends State<IncomeScreen> {
     if (picked != null && mounted) setState(() => _sourceFilter = picked);
   }
 
+  Future<bool> _confirmDelete(BuildContext context, Income income) async {
+    final yes = await confirmDeleteEntry(context,
+        noun: 'income', amountMinor: income.amountMinor, currency: context.read<CurrencyCubit>().state);
+    if (yes && context.mounted) context.read<IncomeCubit>().deleteIncome(income.id);
+    return false; // the list reloads from the cubit
+  }
+
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final router = GoRouter.maybeOf(context);
     final chosen = context.watch<ChosenMonthCubit>();
     final month = chosen.state;
     final expenses = _watchExpenses(context);
     final header = ScreenHeader(
       title: 'Income',
-      leading: SquareIconButton(
+      leading: AddEntryButton(
         key: const Key('add-income-btn'),
-        icon: Icons.add_rounded,
+        label: 'Add Income',
         tooltip: 'Add income',
-        onTap: () => showExpenseSheet(context, kind: EntryKind.income),
-      ),
-      trailing: SquareIconButton(
-        key: const Key('income-sources-btn'),
-        icon: Icons.tune_rounded,
-        tooltip: 'Income Sources',
-        onTap: router == null ? null : () => router.push('/income-sources'),
+        onPressed: () => showExpenseSheet(context, kind: EntryKind.income),
       ),
     );
 
@@ -91,7 +90,7 @@ class _IncomeScreenState extends State<IncomeScreen> {
                   header,
                   Expanded(
                     child: Center(
-                      child: Text('Error: ${state.message}', style: TextStyle(color: scheme.error)),
+                      child: LoadErrorState(what: 'your Income', onRetry: () => context.read<IncomeCubit>().load()),
                     ),
                   ),
                 ],
@@ -164,12 +163,13 @@ class _IncomeScreenState extends State<IncomeScreen> {
                         income: i,
                         source: sources[i.sourceId],
                         onTap: () => showExpenseSheet(context, income: i),
+                        onDelete: () => _confirmDelete(context, i),
                       ),
                   ],
                 ]),
                 // After the list, so a deleted last Income leaves above it.
                 if (state.income.isEmpty)
-                  _EmptyIncome(onAdd: () => showExpenseSheet(context, kind: EntryKind.income))
+                  const _EmptyIncome()
                 else if (days.isEmpty)
                   emptyMonthState(
                     entries: 'Income',
@@ -208,8 +208,9 @@ class _TotalCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Container(
       key: const Key('income-total'),
+      width: double.infinity,
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
-      decoration: raisedDecoration(context, radius: AppRadius.xl, shadow: AppShadows.panel),
+      decoration: panelDecoration(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -230,11 +231,13 @@ class _TotalCard extends StatelessWidget {
 }
 
 class _IncomeRow extends StatelessWidget {
-  const _IncomeRow({super.key, required this.income, required this.source, required this.onTap});
+  const _IncomeRow(
+      {super.key, required this.income, required this.source, required this.onTap, required this.onDelete});
 
   final Income income;
   final IncomeSource? source;
   final VoidCallback onTap;
+  final Future<bool> Function() onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -242,20 +245,31 @@ class _IncomeRow extends StatelessWidget {
     final color = source != null ? Color(source!.color) : AppColors.income;
     final icon = source != null ? CategoryIconHelper.getIcon(source!.icon) : Icons.payments_rounded;
 
-    return InkWell(
-      key: ValueKey('income-${income.id}'),
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpace.gutter, vertical: 10),
-        child: Row(
-          children: [
-            CategoryIconTile(icon: icon, color: color, size: 46),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Text(source?.name ?? 'Unknown source', style: AppType.rowTitle.copyWith(color: scheme.onSurface)),
-            ),
-            Text('+${Money.format(income.amountMinor)}', style: AppType.rowAmount.copyWith(color: AppColors.income)),
-          ],
+    return Dismissible(
+      key: ValueKey('income-swipe-${income.id}'),
+      direction: DismissDirection.endToStart,
+      confirmDismiss: (_) => onDelete(),
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: AppSpace.gutter),
+        color: AppColors.expense.withValues(alpha: 0.08),
+        child: const Icon(Icons.delete_outline_rounded, color: AppColors.expense),
+      ),
+      child: InkWell(
+        key: ValueKey('income-${income.id}'),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpace.gutter, vertical: 10),
+          child: Row(
+            children: [
+              CategoryIconTile(icon: icon, color: color, size: 46),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(source?.name ?? 'Unknown source', style: AppType.rowTitle.copyWith(color: scheme.onSurface)),
+              ),
+              Text('+${Money.format(income.amountMinor)}', style: AppType.rowAmount.copyWith(color: AppColors.income)),
+            ],
+          ),
         ),
       ),
     );
@@ -263,21 +277,14 @@ class _IncomeRow extends StatelessWidget {
 }
 
 class _EmptyIncome extends StatelessWidget {
-  const _EmptyIncome({required this.onAdd});
-  final VoidCallback onAdd;
+  const _EmptyIncome();
 
   @override
   Widget build(BuildContext context) {
-    return EmptyState(
+    return const EmptyState(
       icon: Icons.payments_rounded,
       title: 'No Income yet',
-      message: 'Log money you were paid and see what comes in next to what you spend.',
-      action: FilledButton.icon(
-        key: const Key('add-first-income'),
-        onPressed: onAdd,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Log your first Income'),
-      ),
+      message: 'Tap Add Income to log money you were paid and see it next to what you spend.',
     );
   }
 }

@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'core/config/app_config.dart';
 import 'core/month/chosen_month_cubit.dart';
+import 'core/prefs/text_pref.dart';
 import 'core/router/app_router.dart';
 import 'core/sync/sync_engine.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_cubit.dart';
 import 'features/account/account_service.dart';
 import 'features/account/cubit/account_cubit.dart';
+import 'features/ai_provider/cubit/ai_provider_cubit.dart';
+import 'features/ai_provider/data/ai_provider_store.dart';
+import 'features/ai_provider/data/secret_store.dart';
 import 'features/categories/category_store.dart';
 import 'features/categories/cubit/category_cubit.dart';
 import 'features/consultant/cubit/consultant_cubit.dart';
@@ -16,7 +19,6 @@ import 'features/consultant/data/consultant_client.dart';
 import 'features/expenses/cubit/expense_cubit.dart';
 import 'features/expenses/expense_ledger.dart';
 import 'features/income/cubit/income_cubit.dart';
-import 'features/income/cubit/net_period_cubit.dart';
 import 'features/income/income_ledger.dart';
 import 'features/settings/cubit/currency_cubit.dart';
 
@@ -28,8 +30,8 @@ class BudgetApp extends StatefulWidget {
     this.incomeLedger,
     this.syncEngine,
     this.consultantClient,
+    this.aiProviderStore,
     this.themeCubit,
-    this.netPeriodCubit,
     this.chosenMonthCubit,
     this.currencyCubit,
     this.accountService,
@@ -41,11 +43,12 @@ class BudgetApp extends StatefulWidget {
   final SyncEngine? syncEngine;
   final ConsultantClient? consultantClient;
 
+  /// The user's AI Provider keys; its client answers for the Consultant
+  /// unless [consultantClient] is given. Defaults to none saved, in memory.
+  final AiProviderStore? aiProviderStore;
+
   /// Light/dark mode. Defaults to light, kept in memory, when not given.
   final ThemeCubit? themeCubit;
-
-  /// Home's Net period. Defaults to this month, kept in memory, when not given.
-  final NetPeriodCubit? netPeriodCubit;
 
   /// The month Home and the Income tab show. Defaults to the current month
   /// by the device clock when not given.
@@ -65,9 +68,10 @@ class BudgetApp extends StatefulWidget {
 class _BudgetAppState extends State<BudgetApp> {
   late final _router = buildRouter();
   late final ThemeCubit _themeCubit = widget.themeCubit ?? ThemeCubit();
-  late final NetPeriodCubit _netPeriodCubit = widget.netPeriodCubit ?? NetPeriodCubit();
   late final ChosenMonthCubit _chosenMonthCubit = widget.chosenMonthCubit ?? ChosenMonthCubit();
   late final CurrencyCubit _currencyCubit = widget.currencyCubit ?? CurrencyCubit();
+  late final AiProviderCubit _aiProviderCubit = AiProviderCubit(widget.aiProviderStore ??
+      AiProviderStore(secrets: InMemorySecretStore(), prefs: InMemoryTextPref(), adapters: const {}));
 
   late final CategoryCubit? _categoryCubit =
       widget.categoryStore == null ? null : (CategoryCubit(widget.categoryStore!)..load());
@@ -82,8 +86,7 @@ class _BudgetAppState extends State<BudgetApp> {
               categoryStore: widget.categoryStore!,
               incomeLedger: widget.incomeLedger,
               currency: () => _currencyCubit.state,
-              client: widget.consultantClient ??
-                  GeminiConsultantClient(apiKey: AppConfig.geminiApiKey),
+              client: widget.consultantClient ?? _aiProviderCubit.store.consultantClient,
             )
           : null;
   late final AccountCubit _accountCubit = AccountCubit(
@@ -118,13 +121,13 @@ class _BudgetAppState extends State<BudgetApp> {
   void dispose() {
     _lifecycle.dispose();
     if (widget.themeCubit == null) _themeCubit.close();
-    if (widget.netPeriodCubit == null) _netPeriodCubit.close();
     if (widget.chosenMonthCubit == null) _chosenMonthCubit.close();
     if (widget.currencyCubit == null) _currencyCubit.close();
     _categoryCubit?.close();
     _expenseCubit?.close();
     _incomeCubit?.close();
     _consultantCubit?.close();
+    _aiProviderCubit.close();
     _accountCubit.close();
     super.dispose();
   }
@@ -134,21 +137,30 @@ class _BudgetAppState extends State<BudgetApp> {
     Widget app = BlocBuilder<ThemeCubit, ThemeMode>(
       bloc: _themeCubit,
       builder: (context, mode) => MaterialApp.router(
-        title: 'Budget',
+        title: 'expense-advisor',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light(),
         darkTheme: AppTheme.dark(),
         themeMode: mode,
         routerConfig: _router,
+        // Monex's type runs a touch smaller than Material's: every size at
+        // 90%, on top of the reader's own text-size setting.
+        builder: (context, child) {
+          final media = MediaQuery.of(context);
+          return MediaQuery(
+            data: media.copyWith(textScaler: _ScaledTextScaler(media.textScaler, 0.9)),
+            child: child!,
+          );
+        },
       ),
     );
 
     final providers = <BlocProvider>[
       BlocProvider<ThemeCubit>.value(value: _themeCubit),
-      BlocProvider<NetPeriodCubit>.value(value: _netPeriodCubit),
       BlocProvider<ChosenMonthCubit>.value(value: _chosenMonthCubit),
       BlocProvider<CurrencyCubit>.value(value: _currencyCubit),
       BlocProvider<AccountCubit>.value(value: _accountCubit),
+      BlocProvider<AiProviderCubit>.value(value: _aiProviderCubit),
       if (_categoryCubit != null) BlocProvider<CategoryCubit>.value(value: _categoryCubit),
       if (_expenseCubit != null) BlocProvider<ExpenseCubit>.value(value: _expenseCubit),
       if (_incomeCubit != null) BlocProvider<IncomeCubit>.value(value: _incomeCubit),
@@ -171,4 +183,24 @@ class _BudgetAppState extends State<BudgetApp> {
 
     return app;
   }
+}
+
+/// [base] (the reader's setting) times a fixed [factor].
+class _ScaledTextScaler extends TextScaler {
+  const _ScaledTextScaler(this.base, this.factor);
+  final TextScaler base;
+  final double factor;
+
+  @override
+  double scale(double fontSize) => base.scale(fontSize) * factor;
+
+  @override
+  // ignore: deprecated_member_use
+  double get textScaleFactor => base.textScaleFactor * factor;
+
+  @override
+  bool operator ==(Object other) => other is _ScaledTextScaler && other.base == base && other.factor == factor;
+
+  @override
+  int get hashCode => Object.hash(base, factor);
 }

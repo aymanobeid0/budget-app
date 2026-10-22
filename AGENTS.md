@@ -5,7 +5,7 @@ Offline-first Flutter app for logging Expenses and Income, with an AI Expense Co
 ## Commands
 
 - `flutter pub get`, then `flutter analyze` and `flutter test` (or one file: `flutter test test/features/income/net_test.dart`). Both must be clean before a commit.
-- Run the app: `flutter run --dart-define-from-file=.env` (copy `.env.example` to `.env`). Without keys the app still runs, offline and without the Consultant.
+- Run the app: `flutter run --dart-define-from-file=.env` (copy `.env.example` to `.env`). Without Supabase keys the app still runs, offline. The Consultant needs no build key: each user connects their own AI Provider in Settings (ADR 0009).
 - Local Supabase: see ADR 0005 and `docs/self_hosting_supabase.md`.
 - The code is not `dart format`ted. Format only the lines you touch, never whole files, so diffs stay reviewable.
 

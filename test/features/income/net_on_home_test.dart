@@ -5,10 +5,8 @@ import 'package:budget_app/features/categories/category_store.dart';
 import 'package:budget_app/features/expenses/expense.dart';
 import 'package:budget_app/features/expenses/expense_ledger.dart';
 import 'package:budget_app/features/expenses/ui/expense_form_sheet.dart';
-import 'package:budget_app/features/income/cubit/net_period_cubit.dart';
 import 'package:budget_app/features/income/income.dart';
 import 'package:budget_app/features/income/income_ledger.dart';
-import 'package:budget_app/features/income/net.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -24,13 +22,11 @@ void main() {
 
   tearDown(() => db.close());
 
-  Future<void> pumpApp(WidgetTester tester, NetPeriodStorage storage,
+  Future<void> pumpApp(WidgetTester tester,
       {DateTime Function()? clock, Future<void> Function(ExpenseLedger, IncomeLedger)? seed}) async {
     tester.view.physicalSize = const Size(390 * 3, 844 * 3);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
-    final cubit = NetPeriodCubit(storage: storage, initial: await storage.read() ?? NetPeriod.month);
-    addTearDown(cubit.close);
     final chosenMonth = ChosenMonthCubit(clock: clock);
     addTearDown(chosenMonth.close);
     final expenseLedger = ExpenseLedger(db);
@@ -46,7 +42,6 @@ void main() {
       categoryStore: categoryStore,
       expenseLedger: expenseLedger,
       incomeLedger: incomeLedger,
-      netPeriodCubit: cubit,
       chosenMonthCubit: chosenMonth,
     ));
     await tester.pumpAndSettle();
@@ -70,35 +65,25 @@ void main() {
   }
 
   testWidgets('Home shows this month\'s Net and updates it as Income and Expenses change', (tester) async {
-    await pumpApp(tester, NetPeriodStorage.inMemory());
+    await pumpApp(tester);
 
     expect(find.byKey(const Key('net-card')), findsOneWidget);
-    expect(inCard(find.text('This month')), findsOneWidget);
+    expect(inCard(find.textContaining('Net in ')), findsOneWidget);
 
     await log(tester, EntryKind.expense, '300', 'Food');
     expect(inCard(find.textContaining('−300')), findsOneWidget);
     expect(find.byKey(const Key('net-negative')), findsOneWidget);
+    // A sign, not a grade: Net is in ink, not Outflow Red, and has no "Behind" arrow.
+    final netText = tester.widget<Text>(find.byKey(const Key('net-negative')));
+    expect(netText.style!.color, Theme.of(tester.element(find.byKey(const Key('net-card')))).colorScheme.onSurface);
+    expect(inCard(find.byIcon(Icons.trending_down_rounded)), findsNothing);
 
     await log(tester, EntryKind.income, '1000', 'Salary');
     expect(inCard(find.textContaining('+700')), findsOneWidget);
     expect(find.byKey(const Key('net-positive')), findsOneWidget);
   });
 
-  testWidgets('the last picked period is remembered on the device', (tester) async {
-    final storage = NetPeriodStorage.inMemory();
-    await pumpApp(tester, storage);
-
-    await tester.tap(find.byKey(const Key('net-period-week')));
-    await tester.pumpAndSettle();
-    expect(await storage.read(), NetPeriod.week);
-
-    await tester.tap(find.byKey(const Key('net-period-allTime')));
-    await tester.pumpAndSettle();
-    expect(await storage.read(), NetPeriod.allTime);
-    expect(inCard(find.text('All time')), findsWidgets);
-  });
-
-  group('on a past month', () {
+  group('the chosen month', () {
     DateTime today() => DateTime(2026, 10, 18, 9, 30);
     final stamp = DateTime.utc(2026, 1, 1);
 
@@ -116,43 +101,32 @@ void main() {
       await income.logIncome(paid('inc_aug', 70000, DateTime.utc(2026, 8, 31)));
     }
 
-    SegmentedButton<NetPeriod> periodSwitch(WidgetTester tester) =>
-        tester.widget<SegmentedButton<NetPeriod>>(find.byType(SegmentedButton<NetPeriod>));
-
-    testWidgets('the card shows that month\'s Net and hides the switch', (tester) async {
-      final storage = NetPeriodStorage.inMemory();
-      await storage.write(NetPeriod.allTime);
-      await pumpApp(tester, storage, clock: today, seed: seed);
+    testWidgets('on a past month the card shows that month\'s Net', (tester) async {
+      await pumpApp(tester, clock: today, seed: seed);
 
       await tester.tap(find.byTooltip('Previous month'));
       await tester.pumpAndSettle();
 
       // September: 200 Income − 125 Expenses; the deleted Expense never counts.
-      expect(find.byType(SegmentedButton<NetPeriod>), findsNothing);
       expect(inCard(find.text('Net in September')), findsOneWidget);
       expect(inCard(find.textContaining('+75')), findsOneWidget);
       expect(inCard(find.textContaining('Income 200')), findsOneWidget);
       expect(inCard(find.textContaining('Expenses 125')), findsOneWidget);
-      expect(await storage.read(), NetPeriod.allTime);
     });
 
-    testWidgets('back on the current month the switch and stored period return', (tester) async {
-      final storage = NetPeriodStorage.inMemory();
-      await storage.write(NetPeriod.allTime);
-      await pumpApp(tester, storage, clock: today, seed: seed);
+    testWidgets('on the current month the card shows this month\'s Net, with no period switch', (tester) async {
+      await pumpApp(tester, clock: today, seed: seed);
 
-      // All time: 1,400 Income − 425 Expenses.
-      expect(inCard(find.text('Net')), findsOneWidget);
-      expect(periodSwitch(tester).selected, {NetPeriod.allTime});
-      expect(inCard(find.textContaining('+975')), findsOneWidget);
+      // October: 500 Income − 300 Expenses; September and August don't count.
+      expect(inCard(find.text('Net in October')), findsOneWidget);
+      expect(inCard(find.textContaining('+200')), findsOneWidget);
+      expect(find.byType(SegmentedButton), findsNothing);
 
       await tester.tap(find.byTooltip('Previous month'));
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Next month'));
       await tester.pumpAndSettle();
-
-      expect(periodSwitch(tester).selected, {NetPeriod.allTime});
-      expect(inCard(find.textContaining('+975')), findsOneWidget);
+      expect(inCard(find.textContaining('+200')), findsOneWidget);
     });
   });
 }

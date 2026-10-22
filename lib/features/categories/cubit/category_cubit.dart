@@ -32,13 +32,14 @@ class CategoryCubit extends Cubit<CategoryState> {
     }
   }
 
-  Future<void> addCategory({
+  /// Saves a new Category and returns its id, or null when saving failed.
+  Future<String?> addCategory({
     required String name,
     required String icon,
     required int color,
   }) async {
+    final id = randomId('cat_');
     try {
-      final id = randomId('cat_');
       final now = DateTime.now();
       final category = Category(
         id: id,
@@ -50,11 +51,13 @@ class CategoryCubit extends Cubit<CategoryState> {
       );
       await _store.saveCategory(category);
       final loaded = await _loaded();
-      if (isClosed) return;
+      if (isClosed) return id;
       emit(loaded);
+      return id;
     } catch (e) {
-      if (isClosed) return;
+      if (isClosed) return null;
       emit(CategoryError(e.toString()));
+      return null;
     }
   }
 

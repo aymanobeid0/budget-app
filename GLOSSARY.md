@@ -17,8 +17,12 @@ The deep module interface responsible for logging, deleting, caching, and stream
 _Avoid_: Expense repository, expense service, expense DAO
 
 **Expense Consultant**:
-A dedicated conversational chat assistant powered by Google Gemini that queries and analyzes logged expenses to answer user questions, highlight patterns, and provide tailored financial advice on demand.
+A dedicated conversational chat assistant, powered by the user's AI Provider, that queries and analyzes logged expenses to answer user questions, highlight patterns, and provide tailored financial advice on demand.
 _Avoid_: Financial advisor, notification bot, budget enforcer
+
+**AI Provider**:
+The service and model the user connects with their own API key to power the Expense Consultant (Google Gemini, OpenAI, Anthropic Claude, Groq or OpenRouter). One is active at a time; its key stays on the device.
+_Avoid_: LLM, vendor, backend, AI service
 
 **Currency**:
 The global monetary unit and symbol configured by the user (e.g., USD $, EUR €, EGP E£) applied across all logged expenses.
@@ -33,5 +37,5 @@ A user-managed label for where money comes from (e.g., Salary, Freelance, Dental
 _Avoid_: Category, account, employer, income type
 
 **Net**:
-Income minus Expenses over a chosen period: this week, this month or all time on the current month, or a whole past calendar month when Home shows one.
+Income minus Expenses over the calendar month Home shows: the current month so far, or a whole past month.
 _Avoid_: Balance, savings, profit

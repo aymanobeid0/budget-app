@@ -19,7 +19,7 @@ class AccountProfileHeader extends StatelessWidget {
     final subtitle = switch (state.status) {
       AccountStatus.signedIn => 'Signed in · synced to your server',
       AccountStatus.guest => 'Not linked to an account',
-      AccountStatus.unavailable => 'Cloud backup is off',
+      AccountStatus.unavailable => 'Using the app without an account',
     };
 
     return Column(
@@ -55,7 +55,7 @@ class AccountProfileHeader extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: scheme.surface,
                       shape: BoxShape.circle,
-                      boxShadow: AppShadows.raised,
+                      border: Border.all(color: scheme.outline),
                     ),
                     child: state.busy
                         ? const Padding(padding: EdgeInsets.all(7), child: CircularProgressIndicator(strokeWidth: 2))
@@ -66,9 +66,17 @@ class AccountProfileHeader extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 14),
-        Text(name, style: AppType.title.copyWith(fontSize: 20, color: scheme.onSurface)),
-        const SizedBox(height: 4),
-        Text(subtitle, style: TextStyle(fontSize: 14, color: scheme.onSurfaceVariant)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpace.gutter),
+          child: Column(
+            children: [
+              Text(name,
+                  textAlign: TextAlign.center, style: AppType.title.copyWith(fontSize: 20, color: scheme.onSurface)),
+              const SizedBox(height: 4),
+              Text(subtitle, textAlign: TextAlign.center, style: TextStyle(fontSize: 14, color: scheme.onSurfaceVariant)),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -123,12 +131,9 @@ class AccountSection extends StatelessWidget {
         final rows = <Widget>[];
         switch (state.status) {
           case AccountStatus.unavailable:
-            rows.add(const MenuRow(
-              icon: Icons.cloud_off_rounded,
-              color: AppColors.chevron,
-              title: 'Accounts unavailable',
-              subtitle: 'Add your Supabase keys to .env to enable accounts.',
-            ));
+            // This build has no account server: nothing to sign in to, and
+            // the sync row below already says the data stays on this phone.
+            break;
           case AccountStatus.guest:
             rows
               ..add(MenuRow(

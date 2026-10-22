@@ -3,7 +3,7 @@ import 'tokens.dart';
 
 export 'tokens.dart';
 
-/// App-wide theme built from the "Blue" tokens.
+/// App-wide theme built from the Monex tokens.
 class AppTheme {
   const AppTheme._();
 
@@ -89,20 +89,22 @@ class AppTheme {
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.xl)),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: surface,
+        fillColor: isDark ? AppColors.darkSurface : AppColors.surface,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        hintStyle: TextStyle(color: textSecondary, fontSize: 15),
+        hintStyle: TextStyle(color: isDark ? AppColors.darkTextSecondary : AppColors.chevron, fontSize: 16),
+        labelStyle: TextStyle(color: textSecondary, fontSize: 16),
+        floatingLabelStyle: TextStyle(color: primary),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.lg),
-          borderSide: BorderSide(color: border, width: 1.5),
+          borderSide: BorderSide(color: border),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.lg),
-          borderSide: BorderSide(color: border, width: 1.5),
+          borderSide: BorderSide(color: border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -118,7 +120,7 @@ class AppTheme {
           backgroundColor: primary,
           foregroundColor: Colors.white,
           elevation: 0,
-          minimumSize: const Size(64, 50),
+          minimumSize: const Size(64, 52),
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
           textStyle: const TextStyle(fontFamily: AppFonts.sans, fontSize: 16, fontWeight: FontWeight.w600),
@@ -127,8 +129,8 @@ class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: text,
-          minimumSize: const Size(64, 50),
-          side: BorderSide(color: border, width: 1.5),
+          minimumSize: const Size(64, 52),
+          side: BorderSide(color: border),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
           textStyle: const TextStyle(fontFamily: AppFonts.sans, fontSize: 16, fontWeight: FontWeight.w600),
         ),
@@ -143,8 +145,14 @@ class AppTheme {
         trackColor: WidgetStateProperty.resolveWith(
           (s) => s.contains(WidgetState.selected) ? primary : surfaceSubtle,
         ),
-        thumbColor: WidgetStateProperty.all(Colors.white),
-        trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
+        // Off: a slate thumb and outline (4.5:1 on white), so it reads as a
+        // switch and not an empty pill. On: white thumb on the accent.
+        thumbColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected) ? Colors.white : textSecondary,
+        ),
+        trackOutlineColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected) ? Colors.transparent : textSecondary,
+        ),
       ),
       chipTheme: ChipThemeData(
         backgroundColor: surfaceSubtle,
@@ -159,6 +167,36 @@ class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
       ),
       progressIndicatorTheme: ProgressIndicatorThemeData(color: primary),
+      // Material 3 navigation bar: flat, the selected icon in the accent on
+      // its tint pill; unselected tabs in secondary text, which keeps 4.5:1.
+      navigationRailTheme: NavigationRailThemeData(
+        backgroundColor: surface,
+        elevation: 0,
+        indicatorColor: isDark ? AppColors.darkPrimaryLight : AppColors.primaryLight,
+        selectedIconTheme: IconThemeData(size: 24, color: isDark ? AppColors.accentTextDark : AppColors.primary),
+        unselectedIconTheme: IconThemeData(size: 24, color: textSecondary),
+        selectedLabelTextStyle: AppType.navLabel.copyWith(fontFamily: AppFonts.sans, fontWeight: FontWeight.w700, color: text),
+        unselectedLabelTextStyle: AppType.navLabel.copyWith(fontFamily: AppFonts.sans, color: textSecondary),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        height: 72,
+        indicatorColor: isDark ? AppColors.darkPrimaryLight : AppColors.primaryLight,
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+        iconTheme: WidgetStateProperty.resolveWith((s) => IconThemeData(
+              size: 24,
+              color: s.contains(WidgetState.selected)
+                  ? (isDark ? AppColors.accentTextDark : AppColors.primary)
+                  : textSecondary,
+            )),
+        labelTextStyle: WidgetStateProperty.resolveWith((s) => AppType.navLabel.copyWith(
+              fontFamily: AppFonts.sans,
+              fontWeight: s.contains(WidgetState.selected) ? FontWeight.w700 : FontWeight.w500,
+              color: s.contains(WidgetState.selected) ? text : textSecondary,
+            )),
+      ),
     );
   }
 }

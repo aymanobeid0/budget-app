@@ -1,6 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Supabase sync and the Consultant's AI Provider calls need the network
+         in release builds too (the debug manifest alone grants it in debug). -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="budget_app"
+        android:label="Monex"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

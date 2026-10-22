@@ -6,14 +6,12 @@ import '../../../core/format/money.dart';
 import '../../../core/month/breakdown.dart';
 import '../../../core/month/breakdown_sheet.dart';
 import '../../../core/month/chosen_month_cubit.dart';
+import '../../../core/month/day_header.dart';
 import '../../../core/month/earliest_month.dart';
-import '../../../core/month/empty_month.dart';
 import '../../../core/month/month_header.dart';
 import '../../../core/sync/sync_status_view.dart';
-import '../../../core/theme/animated_entries.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/empty_state.dart';
-import '../../../core/theme/theme_toggle_button.dart';
 import '../../../core/theme/widgets.dart';
 import '../../categories/category.dart';
 import '../../categories/cubit/category_cubit.dart';
@@ -25,30 +23,22 @@ import '../../income/income.dart';
 import '../../income/ui/net_card.dart';
 import '../../settings/cubit/currency_cubit.dart';
 import '../cubit/expense_cubit.dart';
+import 'expense_form_sheet.dart';
 import '../cubit/expense_state.dart';
 import '../expense.dart';
 import '../month_spending.dart';
-import 'expense_form_sheet.dart';
 
-const _shortMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const _weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-/// Home: one month at a time. The month header and blue "spent" card (swipe
-/// either to change month) over that month's Expenses. Tapping the card
-/// breaks the month down by Category; picking one filters the list to it.
-class ExpensesScreen extends StatefulWidget {
+/// Home, Monex's Overview: the chosen month at a glance. The month header and
+/// gradient "spent" card (swipe either to change month) over that month's
+/// Net, then the latest Expenses. Tapping the card breaks the month down by
+/// Category; picking one opens the Expenses tab filtered to it.
+class ExpensesScreen extends StatelessWidget {
   const ExpensesScreen({super.key});
 
-  @override
-  State<ExpensesScreen> createState() => _ExpensesScreenState();
-}
-
-class _ExpensesScreenState extends State<ExpensesScreen> {
-  /// The Category the list is filtered to. Kept when the month changes.
-  String? _categoryFilter;
-
-  Future<void> _openBreakdown(
+  Future<void> _openBreakdown(BuildContext context,
       {required String label, required List<Expense> expenses, required Map<String, Category> byId}) async {
+    final router = GoRouter.maybeOf(context);
     final rows = monthBreakdown<Expense>(
       expenses,
       month: context.read<ChosenMonthCubit>().state,
@@ -65,18 +55,11 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
       rows: rows,
       currency: context.read<CurrencyCubit>().state,
     );
-    if (picked != null && mounted) setState(() => _categoryFilter = picked);
-  }
-
-  Future<bool> _confirmDelete(BuildContext context, Expense expense) async {
-    final result = await confirmDeleteExpense(context, expense);
-    if (result && context.mounted) context.read<ExpenseCubit>().deleteExpense(expense.id);
-    return false; // the list reloads from the cubit
+    if (picked != null) router?.go(expensesFilteredTo(picked));
   }
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final router = GoRouter.maybeOf(context);
     // Net needs Income; Home without the income feature (tests) skips it.
     final hasIncome = maybeIncomeCubit(context) != null;
@@ -97,12 +80,12 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
               builder: (context, state) {
                 final header = ScreenHeader(
                   title: 'Home',
-                  leading: SquareIconButton(
-                    icon: Icons.grid_view_rounded,
-                    tooltip: 'Categories',
-                    onTap: router == null ? null : () => router.push('/categories'),
+                  leading: AddEntryButton(
+                    key: const Key('add-expense-btn'),
+                    label: 'Add Expense',
+                    tooltip: 'Add expense',
+                    onPressed: () => showExpenseSheet(context),
                   ),
-                  trailing: const ThemeToggleButton(),
                 );
 
                 if (state is ExpenseLoading || state is ExpenseInitial) {
@@ -112,7 +95,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                   return Column(children: [
                     header,
                     Expanded(
-                      child: Center(child: Text('Error: ${state.message}', style: TextStyle(color: scheme.error))),
+                      child: Center(child: LoadErrorState(what: 'your Expenses', onRetry: () => context.read<ExpenseCubit>().load())),
                     ),
                   ]);
                 }
@@ -123,10 +106,6 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                   for (final i in income) if (i.deletedAt == null) i.paidOn,
                 ]);
                 final monthExpenses = [for (final e in state.expenses) if (month.contains(e.spentOn)) e];
-                final filter = _categoryFilter;
-                final expenses = filter == null
-                    ? monthExpenses
-                    : [for (final e in monthExpenses) if (e.categoryId == filter) e];
                 final label = month.label(today: chosen.today);
                 return ListView(
                   padding: const EdgeInsets.only(bottom: 130),
@@ -142,7 +121,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                           const SizedBox(height: 8),
                           // Tapping the card breaks the month down by Category.
                           GestureDetector(
-                            onTap: () => _openBreakdown(label: label, expenses: monthExpenses, byId: catMap),
+                            onTap: () => _openBreakdown(context, label: label, expenses: monthExpenses, byId: catMap),
                             child: _SpentCard(
                               label: label,
                               expenses: monthExpenses,
@@ -163,39 +142,13 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                         padding: EdgeInsets.fromLTRB(AppSpace.gutter, 16, AppSpace.gutter, 0),
                         child: NetCard(),
                       ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 26, AppSpace.gutter, 6),
-                      child: Text('Transactions', style: AppType.title.copyWith(color: scheme.onSurface)),
-                    ),
-                    if (filter != null)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 0, AppSpace.gutter, 4),
-                        child: GroupFilterChip(
-                          group: categoryGroup(filter, catMap[filter]),
-                          onClear: () => setState(() => _categoryFilter = null),
-                        ),
-                      ),
-                    // Kept while the list is empty, so the first Expense animates in too.
-                    // Keyed by month and filter, so a new month's rows show at once.
-                    AnimatedEntries(key: ValueKey((month, filter)), children: [
-                      for (final e in expenses)
-                        ExpenseRow(
-                          key: ValueKey('expense-row-${e.id}'),
-                          expense: e,
-                          category: catMap[e.categoryId],
-                          onTap: () => showExpenseSheet(context, expense: e),
-                          onDelete: () => _confirmDelete(context, e),
-                        ),
-                    ]),
                     if (state.expenses.isEmpty)
-                      _EmptyTransactions(onAdd: () => showExpenseSheet(context))
-                    else if (expenses.isEmpty)
-                      emptyMonthState(
-                        entries: 'Expenses',
-                        monthLabel: label,
-                        isCurrent: chosen.isCurrent,
-                        filteredTo: filter == null ? null : categoryGroup(filter, catMap[filter]).name,
-                        filteredMessage: 'Nothing in this Category this month.',
+                      const _EmptyHome()
+                    else
+                      _LatestEntries(
+                        expenses: state.expenses,
+                        byId: catMap,
+                        onSeeAll: router == null ? null : () => router.go('/expenses'),
                       ),
                   ],
                 );
@@ -207,6 +160,10 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     );
   }
 }
+
+/// The Expenses tab's location, filtered to [categoryId].
+String expensesFilteredTo(String categoryId) =>
+    Uri(path: '/expenses', queryParameters: {'category': categoryId}).toString();
 
 /// A Category as a breakdown group; Expenses whose Category is gone
 /// entirely show as Uncategorized, as their rows do.
@@ -275,8 +232,6 @@ class _SpentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final isDark = isDarkOf(context);
     final now = today;
     final day = now == null ? null : DateTime(now.year, now.month, now.day);
     final weekStart = day?.subtract(Duration(days: day.weekday - 1));
@@ -294,11 +249,7 @@ class _SpentCard extends StatelessWidget {
     return Container(
       key: const Key('month-summary-card'),
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
-      decoration: BoxDecoration(
-        color: scheme.primary,
-        borderRadius: BorderRadius.circular(AppRadius.xl),
-        boxShadow: isDark ? null : AppShadows.heroCard,
-      ),
+      decoration: gradientDecoration(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -332,13 +283,25 @@ class _SpentCard extends StatelessWidget {
           ],
           if (day != null) ...[
             const SizedBox(height: 18),
-            Row(
-              children: [
-                Expanded(child: _Stat(icon: Icons.today_rounded, label: 'Today', minor: todayTotal)),
-                const SizedBox(width: 12),
-                Expanded(child: _Stat(icon: Icons.bar_chart_rounded, label: 'This week', minor: week)),
-              ],
-            ),
+            // Side by side at the usual text sizes; stacked at large ones, so
+            // neither amount is cut off.
+            if (MediaQuery.textScalerOf(context).scale(10) > 12)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _Stat(icon: Icons.today_rounded, label: 'Today', minor: todayTotal),
+                  const SizedBox(height: 12),
+                  _Stat(icon: Icons.bar_chart_rounded, label: 'This week', minor: week),
+                ],
+              )
+            else
+              Row(
+                children: [
+                  Expanded(child: _Stat(icon: Icons.today_rounded, label: 'Today', minor: todayTotal)),
+                  const SizedBox(width: 12),
+                  Expanded(child: _Stat(icon: Icons.bar_chart_rounded, label: 'This week', minor: week)),
+                ],
+              ),
           ],
         ],
       ),
@@ -387,28 +350,61 @@ class _Stat extends StatelessWidget {
   }
 }
 
-class _EmptyTransactions extends StatelessWidget {
-  const _EmptyTransactions({required this.onAdd});
-  final VoidCallback onAdd;
+/// Monex's "Latest Entries": the five most recent Expenses, newest first,
+/// with a "more" button that opens the Expenses tab.
+class _LatestEntries extends StatelessWidget {
+  const _LatestEntries({required this.expenses, required this.byId, required this.onSeeAll});
+  final List<Expense> expenses;
+  final Map<String, Category> byId;
+  final VoidCallback? onSeeAll;
 
   @override
   Widget build(BuildContext context) {
-    return EmptyState(
-      icon: Icons.receipt_long_rounded,
-      title: 'No Expenses yet',
-      message: 'Log what you spend and your month takes shape here.',
-      action: FilledButton.icon(
-        key: const Key('add-first-expense'),
-        onPressed: onAdd,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Add your first Expense'),
-      ),
+    final scheme = Theme.of(context).colorScheme;
+    final latest = [for (final e in expenses) if (e.deletedAt == null) e]
+      ..sort((a, b) => b.spentOn.compareTo(a.spentOn));
+    return Column(
+      key: const Key('latest-entries'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(AppSpace.gutter, 28, AppSpace.gutter, 8),
+          child: Row(
+            children: [
+              Expanded(child: Text('Latest Entries', style: AppType.section.copyWith(color: scheme.onSurface))),
+              SquareIconButton(icon: Icons.more_horiz_rounded, tooltip: 'All Expenses', onTap: onSeeAll),
+            ],
+          ),
+        ),
+        for (final e in latest.take(5))
+          ExpenseRow(
+            key: ValueKey('home-row-${e.id}'),
+            expense: e,
+            category: byId[e.categoryId],
+            onTap: () => showExpenseSheet(context, expense: e),
+            onDelete: () => confirmDeleteExpense(context, e),
+          ),
+      ],
     );
   }
 }
 
-/// One Expense in a list: its Category and amount; tap to edit, swipe to
-/// delete.
+/// First launch: the Add Expense button below is the way in.
+class _EmptyHome extends StatelessWidget {
+  const _EmptyHome();
+
+  @override
+  Widget build(BuildContext context) {
+    return const EmptyState(
+      icon: Icons.receipt_long_rounded,
+      title: 'No Expenses yet',
+      message: 'Tap Add Expense to log what you spend, and your month takes shape here.',
+    );
+  }
+}
+
+/// One Expense in a day of the Expenses list: its Category and amount (the
+/// day header above names the day); tap to edit, swipe to delete.
 class ExpenseRow extends StatelessWidget {
   const ExpenseRow({
     super.key,
@@ -422,21 +418,6 @@ class ExpenseRow extends StatelessWidget {
   final Category? category;
   final VoidCallback onTap;
   final Future<bool> Function() onDelete;
-
-  String _subtitle() {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final d = DateTime(expense.spentOn.year, expense.spentOn.month, expense.spentOn.day);
-    final diff = today.difference(d).inDays;
-    if (diff == 0) {
-      final t = expense.createdAt.toLocal();
-      final h = t.hour % 12 == 0 ? 12 : t.hour % 12;
-      return '${h.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')} ${t.hour < 12 ? 'AM' : 'PM'}';
-    }
-    if (diff == 1) return 'Yesterday';
-    final label = '${_weekdays[d.weekday - 1]}, ${d.day} ${_shortMonths[d.month - 1]}';
-    return d.year == now.year ? label : '$label ${d.year}';
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -460,19 +441,19 @@ class ExpenseRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: AppSpace.gutter, vertical: 10),
           child: Row(
             children: [
-              CategoryIconTile(icon: icon, color: color, size: 46),
+              CategoryIconTile(icon: icon, color: color, size: 44),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(category?.name ?? 'Uncategorized', style: AppType.rowTitle.copyWith(color: scheme.onSurface)),
-                    const SizedBox(height: 3),
-                    Text(_subtitle(), style: AppType.caption.copyWith(color: scheme.onSurfaceVariant)),
+                    const SizedBox(height: 2),
+                    Text(shortDate(expense.spentOn), style: AppType.caption.copyWith(color: scheme.onSurfaceVariant)),
                   ],
                 ),
               ),
-              Text('−${Money.format(expense.amountMinor)}', style: AppType.rowAmount),
+              Text('- ${Money.format(expense.amountMinor)}', style: AppType.rowAmount.copyWith(color: scheme.onSurface)),
             ],
           ),
         ),

@@ -80,10 +80,10 @@ class IncomeSourcesScreen extends StatelessWidget {
             final header = ScreenHeader(
               title: 'Income Sources',
               leading: canPop
-                  ? IconButton(
+                  ? SquareIconButton(
+                      icon: Icons.adaptive.arrow_back_rounded,
                       tooltip: 'Back',
-                      icon: const Icon(Icons.arrow_back_rounded),
-                      onPressed: () => context.pop(),
+                      onTap: () => context.pop(),
                     )
                   : null,
               trailing: SquareIconButton(
@@ -97,7 +97,7 @@ class IncomeSourcesScreen extends StatelessWidget {
             if (state is IncomeError) {
               return Column(children: [
                 header,
-                Expanded(child: Center(child: Text('Error: ${state.message}', style: TextStyle(color: scheme.error)))),
+                Expanded(child: Center(child: LoadErrorState(what: 'your Income Sources', onRetry: () => context.read<IncomeCubit>().load()))),
               ]);
             }
             if (state is! IncomeLoaded) {

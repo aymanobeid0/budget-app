@@ -5,6 +5,9 @@ import '../theme/app_theme.dart';
 const _shortMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const _weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
+/// "20 Feb 2024": the date under an entry's title in a list row.
+String shortDate(DateTime d) => '${d.day} ${_shortMonths[d.month - 1]} ${d.year}';
+
 /// A day's heading in a month list: "Today", "Yesterday" or the date, with
 /// that day's total.
 class DayHeader extends StatelessWidget {
