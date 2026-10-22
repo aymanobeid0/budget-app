@@ -29,6 +29,10 @@ import 'features/income/income_ledger.dart';
 import 'features/settings/cubit/currency_cubit.dart';
 
 Future<void> main() async {
+  // debugPrint still reaches the phone's system log in release builds; its
+  // messages carry errors, user ids and the server URL, so a release says
+  // nothing there.
+  if (kReleaseMode) debugPrint = (String? message, {int? wrapWidth}) {};
   WidgetsFlutterBinding.ensureInitialized();
   AppConfig.load();
   // Local-first: SQLite opens before anything else. Feature modules
