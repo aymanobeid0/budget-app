@@ -60,8 +60,8 @@ class _ConsultantScreenState extends State<ConsultantScreen> {
     showDialog(
       context: context,
       builder: (dialogCtx) => AlertDialog(
-        title: const Text('Clear Conversation', style: TextStyle(fontWeight: FontWeight.w700)),
-        content: const Text('This clears the chat history. Your logged expenses stay safe.'),
+        title: const Text('Clear this conversation?', style: TextStyle(fontWeight: FontWeight.w700)),
+        content: const Text('The chat is deleted from this phone. Your Expenses and Income stay as they are.'),
         actions: [
           TextButton(onPressed: () => Navigator.of(dialogCtx).pop(), child: const Text('Cancel')),
           FilledButton(
@@ -74,7 +74,7 @@ class _ConsultantScreenState extends State<ConsultantScreen> {
               _cubit.clearChat();
               Navigator.of(dialogCtx).pop();
             },
-            child: const Text('Clear'),
+            child: const Text('Clear chat'),
           ),
         ],
       ),
@@ -104,19 +104,13 @@ class _ConsultantScreenState extends State<ConsultantScreen> {
               children: [
                 ScreenHeader(
                   title: 'Consultant',
-                  leading: Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: scheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(AppRadius.md),
-                    ),
-                    child: Icon(Icons.auto_awesome, size: 21, color: scheme.onPrimaryContainer),
-                  ),
+                  // Nothing to clear until there is a chat.
                   trailing: SquareIconButton(
-                    icon: Icons.edit_square,
-                    tooltip: 'Clear Chat',
-                    onTap: _confirmClearChat,
+                    key: const Key('clear-chat-btn'),
+                    icon: Icons.delete_sweep_outlined,
+                    tooltip: 'Clear chat',
+                    color: state.messages.isEmpty ? scheme.onSurfaceVariant.withValues(alpha: 0.45) : null,
+                    onTap: state.messages.isEmpty ? null : _confirmClearChat,
                   ),
                 ),
                 if (state.errorMessage != null && state.status == ConsultantStatus.error)
@@ -188,8 +182,8 @@ class _ConsultantScreenState extends State<ConsultantScreen> {
       child: EmptyState(
         icon: Icons.key_rounded,
         title: 'Connect an AI provider',
-        message: 'The Expense Consultant answers with your own API key from Google Gemini or another AI provider. '
-            'Add it in Settings. Your Expenses and Income keep working without it.',
+        message: 'The Consultant answers with your own API key from Google Gemini, OpenAI, Anthropic Claude, '
+            'Groq or OpenRouter. The key stays on this phone, and your Expenses and Income work without it.',
         action: FilledButton.icon(
           key: const Key('connect-ai-provider-btn'),
           onPressed: () => context.push('/ai-provider'),
@@ -218,10 +212,8 @@ class _ConsultantScreenState extends State<ConsultantScreen> {
               Padding(
                 padding: const EdgeInsets.only(bottom: 10),
                 child: Material(
-                  color: raisedColor(context),
-                  elevation: raisedElevation(context),
-                  shadowColor: raisedShadowColor,
-                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                  color: panelColor(context),
+                  shape: panelShape(context, AppRadius.lg),
                   child: InkWell(
                     onTap: () => _handleSend(prompt),
                     borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -353,10 +345,8 @@ class _ConsultantScreenState extends State<ConsultantScreen> {
           final first = index == 0;
           return Material(
             key: Key('consultant-chip-$index'),
-            color: first ? scheme.primaryContainer : raisedColor(context),
-            elevation: first ? 0 : raisedElevation(context),
-            shadowColor: raisedShadowColor,
-            borderRadius: BorderRadius.circular(10),
+            color: first ? scheme.primaryContainer : panelColor(context),
+            shape: first ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)) : panelShape(context, 10),
             child: InkWell(
               borderRadius: BorderRadius.circular(10),
               onTap: state.isStreaming ? null : () => _handleSend(state.suggestedPrompts[index]),
@@ -405,10 +395,12 @@ class _ConsultantScreenState extends State<ConsultantScreen> {
           DecoratedBox(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(AppRadius.lg),
-              boxShadow: isStreaming || isDarkOf(context) ? null : AppShadows.fab,
+              boxShadow: isStreaming || !enabled || isDarkOf(context) ? null : AppShadows.fab,
             ),
             child: Material(
-              color: isStreaming ? scheme.primaryContainer : scheme.primary,
+              color: isStreaming
+                  ? scheme.primaryContainer
+                  : (enabled ? scheme.primary : scheme.onSurface.withValues(alpha: 0.12)),
               borderRadius: BorderRadius.circular(AppRadius.lg),
               child: InkWell(
                 key: const Key('consultant-send-btn'),
@@ -419,7 +411,10 @@ class _ConsultantScreenState extends State<ConsultantScreen> {
                   height: 52,
                   child: isStreaming
                       ? const Padding(padding: EdgeInsets.all(15), child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Icon(Icons.send_rounded, color: Colors.white, size: 21, semanticLabel: 'Send'),
+                      : Icon(Icons.send_rounded,
+                          color: enabled ? Colors.white : scheme.onSurface.withValues(alpha: 0.38),
+                          size: 21,
+                          semanticLabel: 'Send'),
                 ),
               ),
             ),

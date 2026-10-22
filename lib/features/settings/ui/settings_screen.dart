@@ -8,7 +8,6 @@ import '../../../core/sync/sync_status.dart';
 import '../../../core/sync/sync_status_view.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_cubit.dart';
-import '../../../core/theme/theme_toggle_button.dart';
 import '../../../core/theme/widgets.dart';
 import '../../account/ui/account_section.dart';
 import '../../ai_provider/cubit/ai_provider_cubit.dart';
@@ -44,7 +43,7 @@ class SettingsScreen extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.only(bottom: 130),
           children: [
-            const ScreenHeader(title: 'Profile', trailing: ThemeToggleButton()),
+            const ScreenHeader(title: 'Profile'),
             const SizedBox(height: 18),
             const AccountProfileHeader(),
             const SizedBox(height: 24),
@@ -58,7 +57,7 @@ class SettingsScreen extends StatelessWidget {
                     icon: Icons.grid_view_rounded,
                     color: scheme.primary,
                     title: 'Categories',
-                    subtitle: 'Add, rename or remove expense categories',
+                    subtitle: 'Add, rename or remove Categories',
                     trailing: const Chevron(),
                     onTap: () => context.push('/categories'),
                   ),
@@ -87,7 +86,7 @@ class SettingsScreen extends StatelessWidget {
                   ),
                   MenuRow(
                     key: const Key('profile-currency-row'),
-                    icon: Icons.payments_rounded,
+                    icon: Icons.currency_exchange_rounded,
                     color: CategoryPalette.utilities,
                     title: 'Currency',
                     subtitle: 'Shown next to every amount',

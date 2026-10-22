@@ -85,9 +85,9 @@ void main() {
 
     await addExpense(tester, '42');
 
-    expect(await opacityWhenItAppears(tester, find.text('−42')), lessThan(1));
+    expect(await opacityWhenItAppears(tester, find.text('- 42')), lessThan(1));
     await tester.pumpAndSettle();
-    expect(opacityOf(tester, find.text('−42')), 1);
+    expect(opacityOf(tester, find.text('- 42')), 1);
   });
 
   /// Pumps frame by frame until [f] is gone; true if it was ever drawn
@@ -120,9 +120,9 @@ void main() {
     await addExpense(tester, '42');
     await tester.pumpAndSettle();
 
-    await deleteFromSheet(tester, find.text('−42'));
+    await deleteFromSheet(tester, find.text('- 42'));
 
-    expect(await fadesOut(tester, onExpensesPage(find.text('−42', skipOffstage: false))), isTrue);
+    expect(await fadesOut(tester, onExpensesPage(find.text('- 42', skipOffstage: false))), isTrue);
   });
 
   Future<void> addIncomeOnIncomeTab(WidgetTester tester, String amount) async {
@@ -169,11 +169,11 @@ void main() {
     await pumpApp(tester, reducedMotion: true);
 
     await addExpense(tester, '42');
-    expect(await opacityWhenItAppears(tester, find.text('−42')), 1);
+    expect(await opacityWhenItAppears(tester, find.text('- 42')), 1);
     await tester.pumpAndSettle();
 
-    await deleteFromSheet(tester, find.text('−42'));
-    expect(await fadesOut(tester, onExpensesPage(find.text('−42', skipOffstage: false))), isFalse);
+    await deleteFromSheet(tester, find.text('- 42'));
+    expect(await fadesOut(tester, onExpensesPage(find.text('- 42', skipOffstage: false))), isFalse);
   });
 
   testWidgets('saving an Expense from the Add sheet gives a light haptic tap', (tester) async {

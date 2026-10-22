@@ -156,4 +156,21 @@ void main() {
     expect(field.controller!.text, 'openai/gpt-4.1-mini');
     expect(find.byType(DropdownButton<String>), findsNothing);
   });
+
+  testWidgets('Remove key asks first; Cancel keeps the key, confirming deletes it', (tester) async {
+    newCubit();
+    await cubit.save(AiProviderKind.gemini, apiKey: 'gem-key-123456789', model: 'model-a');
+    await openEditor(tester, AiProviderKind.gemini);
+
+    await tapInSheet(tester, 'remove-key-btn');
+    expect(find.text('Remove your Google Gemini key?'), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(cubit.state.saved[AiProviderKind.gemini], isNotNull);
+
+    await tapInSheet(tester, 'remove-key-btn');
+    await tester.tap(find.byKey(const Key('confirm-remove-key-btn')));
+    await tester.pumpAndSettle();
+    expect(cubit.state.saved[AiProviderKind.gemini], isNull);
+  });
 }

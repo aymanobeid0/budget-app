@@ -101,6 +101,11 @@ void main() {
     expect(find.text('Where did I spend the most?'), findsWidgets);
     expect(find.byKey(const Key('consultant-input-field')), findsOneWidget);
     expect(find.byKey(const Key('consultant-send-btn')), findsOneWidget);
+
+    // Nothing to clear yet: Clear chat does nothing.
+    await tester.tap(find.byKey(const Key('clear-chat-btn')));
+    await tester.pumpAndSettle();
+    expect(find.text('Clear this conversation?'), findsNothing);
   });
 
   testWidgets('before the first message the shared empty state offers the suggested questions', (tester) async {
@@ -203,14 +208,14 @@ void main() {
 
     expect(find.text('Test query'), findsOneWidget);
 
-    // Tap Clear Chat action in AppBar
-    await tester.tap(find.byTooltip('Clear Chat'));
+    // Clear chat in the header
+    await tester.tap(find.byTooltip('Clear chat'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Clear Conversation'), findsOneWidget);
+    expect(find.text('Clear this conversation?'), findsOneWidget);
 
-    // Confirm Clear
-    await tester.tap(find.text('Clear'));
+    // Confirm
+    await tester.tap(find.text('Clear chat').last);
     await tester.pumpAndSettle();
 
     // Should return to welcome hero

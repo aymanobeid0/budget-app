@@ -25,9 +25,7 @@ import 'features/ai_provider/data/secret_store.dart';
 import 'features/ai_provider/models/ai_provider.dart';
 import 'features/categories/category_store.dart';
 import 'features/expenses/expense_ledger.dart';
-import 'features/income/cubit/net_period_cubit.dart';
 import 'features/income/income_ledger.dart';
-import 'features/income/net.dart';
 import 'features/settings/cubit/currency_cubit.dart';
 
 Future<void> main() async {
@@ -72,13 +70,6 @@ Future<void> main() async {
     initial: await themeStorage.read() ?? ThemeMode.light,
   );
 
-  // This month by default; the period picked last time wins.
-  final netPeriodStorage = NetPeriodStorage.file();
-  final netPeriodCubit = NetPeriodCubit(
-    storage: netPeriodStorage,
-    initial: await netPeriodStorage.read() ?? NetPeriod.month,
-  );
-
   // The month Home and the Income tab show: not saved, so every launch opens
   // on the current month.
   final chosenMonthCubit = ChosenMonthCubit();
@@ -114,7 +105,6 @@ Future<void> main() async {
     incomeLedger: incomeLedger,
     syncEngine: syncEngine,
     themeCubit: themeCubit,
-    netPeriodCubit: netPeriodCubit,
     chosenMonthCubit: chosenMonthCubit,
     currencyCubit: currencyCubit,
     accountService: accountService,

@@ -40,14 +40,15 @@ void main() {
 
   Finder inSheet(Finder f) => find.descendant(of: find.byType(ExpenseFormSheet), matching: f);
 
-  testWidgets('the Income tab with no Income shows the shared empty state, and its action opens the Add sheet on Income', (tester) async {
+  testWidgets('the Income tab with no Income shows the shared empty state, and Add Income opens the Add sheet on Income', (tester) async {
     await pumpApp(tester);
     await tester.tap(find.byKey(const Key('nav-income')));
     await tester.pumpAndSettle();
 
     final empty = find.byType(EmptyState);
     expect(find.descendant(of: empty, matching: find.text('No Income yet')), findsOneWidget);
-    await tester.tap(find.descendant(of: empty, matching: find.byKey(const Key('add-first-income'))));
+    expect(find.descendant(of: empty, matching: find.textContaining('Tap Add Income')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('add-income-btn')));
     await tester.pumpAndSettle();
 
     expect(inSheet(find.text('Income Source')), findsOneWidget);
@@ -228,5 +229,28 @@ void main() {
     await tester.tap(find.byKey(const Key('save-expense-btn')));
     await tester.pumpAndSettle();
     expect((await incomeLedger.loadIncome()).single.sourceId, 'src_freelance');
+  });
+
+  testWidgets('an Income swipes away like an Expense, after confirming', (tester) async {
+    await incomeLedger.loadSources();
+    await pumpApp(tester);
+    await tester.tap(find.byKey(const Key('nav-income')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('add-income-btn')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('expense-amount-field')), '300');
+    await tester.tap(inSheet(find.text('Salary')));
+    await tester.tap(find.byKey(const Key('save-expense-btn')));
+    await tester.pumpAndSettle();
+
+    final row = find.text('+300');
+    await tester.drag(row, const Offset(-500, 0));
+    await tester.pumpAndSettle();
+    expect(find.text('Delete income?'), findsOneWidget);
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('+300'), findsNothing);
+    expect((await incomeLedger.loadIncome()).where((i) => i.deletedAt == null), isEmpty);
   });
 }

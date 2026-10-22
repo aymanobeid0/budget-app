@@ -129,6 +129,29 @@ class _ProviderEditorSheetState extends State<ProviderEditorSheet> {
   }
 
   Future<void> _remove() async {
+    final name = widget.kind.displayName;
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: Text('Remove your $name key?', style: const TextStyle(fontWeight: FontWeight.w700)),
+        content: Text('It is deleted from this phone. The Consultant stops answering with $name '
+            'until you add a key again.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(dialogCtx).pop(false), child: const Text('Cancel')),
+          FilledButton(
+            key: const Key('confirm-remove-key-btn'),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.expense,
+              minimumSize: const Size(88, 44),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+            ),
+            onPressed: () => Navigator.of(dialogCtx).pop(true),
+            child: const Text('Remove key'),
+          ),
+        ],
+      ),
+    );
+    if (yes != true || !mounted) return;
     await _cubit.remove(widget.kind);
     if (mounted) Navigator.of(context).pop();
   }

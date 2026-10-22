@@ -29,7 +29,9 @@ class CategoryIconHelper {
   }
 }
 
-/// Soft tinted square holding a category icon (transaction list, chat).
+/// Grey rounded square holding a category icon in ink, as Monex draws every
+/// entry's icon (transaction list, chat). [color] is kept for callers that
+/// still pass the Category's hue; the tile itself is neutral.
 class CategoryIconTile extends StatelessWidget {
   const CategoryIconTile({
     super.key,
@@ -49,10 +51,10 @@ class CategoryIconTile extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: isDark ? color.withValues(alpha: 0.2) : CategoryPalette.tint(color),
-        borderRadius: BorderRadius.circular(size >= 40 ? AppRadius.lg : AppRadius.xs),
+        color: isDark ? AppColors.darkBorder : AppColors.surfaceSubtle,
+        borderRadius: BorderRadius.circular(size >= 40 ? AppRadius.md : AppRadius.xs),
       ),
-      child: Icon(icon, size: size * 0.48, color: isDark ? color : CategoryPalette.onTint(color)),
+      child: Icon(icon, size: size * 0.5, color: isDark ? AppColors.darkTextPrimary : AppColors.ink),
     );
   }
 }

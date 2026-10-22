@@ -8,6 +8,7 @@ import '../../features/expenses/ui/expenses_screen.dart';
 import '../../features/income/ui/income_screen.dart';
 import '../../features/income/ui/income_sources_screen.dart';
 import '../../features/settings/ui/settings_screen.dart';
+import '../theme/widgets.dart';
 import 'app_shell.dart';
 
 GoRouter buildRouter() => GoRouter(
@@ -31,7 +32,7 @@ GoRouter buildRouter() => GoRouter(
             StatefulShellBranch(routes: [
               GoRoute(
                 path: '/expenses',
-                builder: (_, _) => const ExpenseListScreen(),
+                builder: (_, state) => ExpenseListScreen(categoryFilter: state.uri.queryParameters['category']),
               ),
             ]),
             StatefulShellBranch(routes: [
@@ -52,15 +53,15 @@ GoRouter buildRouter() => GoRouter(
         // and Back returns to whichever tab opened them.
         GoRoute(
           path: '/categories',
-          builder: (_, _) => const CategoriesScreen(),
+          builder: (_, _) => const ReadablePage(child: CategoriesScreen()),
         ),
         GoRoute(
           path: '/income-sources',
-          builder: (_, _) => const IncomeSourcesScreen(),
+          builder: (_, _) => const ReadablePage(child: IncomeSourcesScreen()),
         ),
         GoRoute(
           path: '/ai-provider',
-          builder: (_, _) => const AiProviderScreen(),
+          builder: (_, _) => const ReadablePage(child: AiProviderScreen()),
         ),
       ],
     );

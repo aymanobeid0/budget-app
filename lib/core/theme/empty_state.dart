@@ -2,6 +2,27 @@ import 'package:flutter/material.dart';
 
 import 'tokens.dart';
 
+/// A list that couldn't be read from this phone's storage. Says so plainly,
+/// keeps the raw exception out of sight, and offers to try again.
+class LoadErrorState extends StatelessWidget {
+  const LoadErrorState({super.key, required this.what, required this.onRetry});
+
+  /// What failed to load, e.g. "your Expenses".
+  final String what;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return EmptyState(
+      key: const Key('load-error'),
+      icon: Icons.error_outline_rounded,
+      title: "Couldn't load $what",
+      message: 'Nothing was deleted. Try again, and if it keeps happening, restart the app.',
+      action: OutlinedButton(onPressed: onRetry, child: const Text('Try again')),
+    );
+  }
+}
+
 /// Shared empty state: an elevated icon tile, title, message and optional
 /// action.
 class EmptyState extends StatelessWidget {
@@ -22,6 +43,7 @@ class EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final dark = theme.brightness == Brightness.dark;
 
     return Center(
       child: Padding(
@@ -33,11 +55,10 @@ class EmptyState extends StatelessWidget {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: scheme.surface,
+                color: dark ? AppColors.darkSurfaceSubtle : AppColors.surfaceSunken,
                 borderRadius: BorderRadius.circular(AppRadius.xl),
-                boxShadow: AppShadows.card,
               ),
-              child: Icon(icon, size: 36, color: AppColors.primary),
+              child: Icon(icon, size: 36, color: dark ? AppColors.accentTextDark : AppColors.primary),
             ),
             const SizedBox(height: 24),
             Text(

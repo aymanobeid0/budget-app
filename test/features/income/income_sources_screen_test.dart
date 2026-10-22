@@ -70,19 +70,14 @@ void main() {
     expect(inSheet(find.text('Dental clinic')), findsOneWidget);
   });
 
-  testWidgets('Income Sources are also reachable from the Income tab', (tester) async {
+  testWidgets('Income Sources live only in Profile, not on the Income tab', (tester) async {
     await pumpApp(tester);
     await tester.tap(find.byKey(const Key('nav-income')));
     await tester.pumpAndSettle();
+    expect(find.byKey(const Key('income-sources-btn')), findsNothing);
 
-    await tester.tap(find.byKey(const Key('income-sources-btn')));
-    await tester.pumpAndSettle();
-
+    await openSources(tester);
     expect(find.byKey(const Key('income-sources-screen')), findsOneWidget);
-
-    await tester.tap(find.byTooltip('Back'));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('income-screen')), findsOneWidget);
   });
 
   testWidgets('a deleted source leaves the picker but its past Income keeps its name', (tester) async {

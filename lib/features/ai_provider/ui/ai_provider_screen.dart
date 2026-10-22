@@ -43,10 +43,10 @@ class AiProviderScreen extends StatelessWidget {
             ScreenHeader(
               title: 'AI provider',
               leading: canPop
-                  ? IconButton(
+                  ? SquareIconButton(
+                      icon: Icons.adaptive.arrow_back_rounded,
                       tooltip: 'Back',
-                      icon: const Icon(Icons.arrow_back_rounded),
-                      onPressed: () => context.pop(),
+                      onTap: () => context.pop(),
                     )
                   : null,
             ),

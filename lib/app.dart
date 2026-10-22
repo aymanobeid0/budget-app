@@ -19,7 +19,6 @@ import 'features/consultant/data/consultant_client.dart';
 import 'features/expenses/cubit/expense_cubit.dart';
 import 'features/expenses/expense_ledger.dart';
 import 'features/income/cubit/income_cubit.dart';
-import 'features/income/cubit/net_period_cubit.dart';
 import 'features/income/income_ledger.dart';
 import 'features/settings/cubit/currency_cubit.dart';
 
@@ -33,7 +32,6 @@ class BudgetApp extends StatefulWidget {
     this.consultantClient,
     this.aiProviderStore,
     this.themeCubit,
-    this.netPeriodCubit,
     this.chosenMonthCubit,
     this.currencyCubit,
     this.accountService,
@@ -51,9 +49,6 @@ class BudgetApp extends StatefulWidget {
 
   /// Light/dark mode. Defaults to light, kept in memory, when not given.
   final ThemeCubit? themeCubit;
-
-  /// Home's Net period. Defaults to this month, kept in memory, when not given.
-  final NetPeriodCubit? netPeriodCubit;
 
   /// The month Home and the Income tab show. Defaults to the current month
   /// by the device clock when not given.
@@ -73,7 +68,6 @@ class BudgetApp extends StatefulWidget {
 class _BudgetAppState extends State<BudgetApp> {
   late final _router = buildRouter();
   late final ThemeCubit _themeCubit = widget.themeCubit ?? ThemeCubit();
-  late final NetPeriodCubit _netPeriodCubit = widget.netPeriodCubit ?? NetPeriodCubit();
   late final ChosenMonthCubit _chosenMonthCubit = widget.chosenMonthCubit ?? ChosenMonthCubit();
   late final CurrencyCubit _currencyCubit = widget.currencyCubit ?? CurrencyCubit();
   late final AiProviderCubit _aiProviderCubit = AiProviderCubit(widget.aiProviderStore ??
@@ -127,7 +121,6 @@ class _BudgetAppState extends State<BudgetApp> {
   void dispose() {
     _lifecycle.dispose();
     if (widget.themeCubit == null) _themeCubit.close();
-    if (widget.netPeriodCubit == null) _netPeriodCubit.close();
     if (widget.chosenMonthCubit == null) _chosenMonthCubit.close();
     if (widget.currencyCubit == null) _currencyCubit.close();
     _categoryCubit?.close();
@@ -144,18 +137,26 @@ class _BudgetAppState extends State<BudgetApp> {
     Widget app = BlocBuilder<ThemeCubit, ThemeMode>(
       bloc: _themeCubit,
       builder: (context, mode) => MaterialApp.router(
-        title: 'Budget',
+        title: 'expense-advisor',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light(),
         darkTheme: AppTheme.dark(),
         themeMode: mode,
         routerConfig: _router,
+        // Monex's type runs a touch smaller than Material's: every size at
+        // 90%, on top of the reader's own text-size setting.
+        builder: (context, child) {
+          final media = MediaQuery.of(context);
+          return MediaQuery(
+            data: media.copyWith(textScaler: _ScaledTextScaler(media.textScaler, 0.9)),
+            child: child!,
+          );
+        },
       ),
     );
 
     final providers = <BlocProvider>[
       BlocProvider<ThemeCubit>.value(value: _themeCubit),
-      BlocProvider<NetPeriodCubit>.value(value: _netPeriodCubit),
       BlocProvider<ChosenMonthCubit>.value(value: _chosenMonthCubit),
       BlocProvider<CurrencyCubit>.value(value: _currencyCubit),
       BlocProvider<AccountCubit>.value(value: _accountCubit),
@@ -182,4 +183,24 @@ class _BudgetAppState extends State<BudgetApp> {
 
     return app;
   }
+}
+
+/// [base] (the reader's setting) times a fixed [factor].
+class _ScaledTextScaler extends TextScaler {
+  const _ScaledTextScaler(this.base, this.factor);
+  final TextScaler base;
+  final double factor;
+
+  @override
+  double scale(double fontSize) => base.scale(fontSize) * factor;
+
+  @override
+  // ignore: deprecated_member_use
+  double get textScaleFactor => base.textScaleFactor * factor;
+
+  @override
+  bool operator ==(Object other) => other is _ScaledTextScaler && other.base == base && other.factor == factor;
+
+  @override
+  int get hashCode => Object.hash(base, factor);
 }
