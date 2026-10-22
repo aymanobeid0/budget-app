@@ -1,0 +1,739 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-21T18:50:46+00:00",
+  "title": "Design System: expense-advisor",
+  "extensions": {
+    "colorMeta": {
+      "deep-ink-blue": {
+        "role": "primary",
+        "displayName": "Deep Ink Blue",
+        "canonical": "oklch(34.7% 0.180 264.0)",
+        "tonalRamp": [
+          "#00003A",
+          "#021964",
+          "#153891",
+          "#2D58C0",
+          "#4C7CE7",
+          "#73A2FF",
+          "#9DC8FF",
+          "#C7EEFF"
+        ]
+      },
+      "deep-ink-blue-pressed": {
+        "role": "primary",
+        "displayName": "Deep Ink Blue, pressed",
+        "canonical": "oklch(28.7% 0.144 263.9)",
+        "tonalRamp": [
+          "#000331",
+          "#081F58",
+          "#1F3D82",
+          "#385CAE",
+          "#587FD3",
+          "#7EA4F1",
+          "#A6C9FF",
+          "#CFEFFF"
+        ]
+      },
+      "deep-ink-blue-tint": {
+        "role": "primary",
+        "displayName": "Deep Ink Blue tint",
+        "canonical": "oklch(94.0% 0.018 269.1)",
+        "tonalRamp": [
+          "#090B10",
+          "#22252C",
+          "#3E424B",
+          "#5D616B",
+          "#7E828D",
+          "#A1A5AF",
+          "#C5C9D2",
+          "#EBEEF7"
+        ]
+      },
+      "on-blue-muted": {
+        "role": "primary",
+        "displayName": "Muted text on blue",
+        "canonical": "oklch(90.2% 0.035 271.6)",
+        "tonalRamp": [
+          "#080B15",
+          "#202432",
+          "#3C4152",
+          "#5A6075",
+          "#7B8297",
+          "#9EA4B8",
+          "#C3C9DB",
+          "#E9EEFE"
+        ]
+      },
+      "deep-ink-blue-dark-mode": {
+        "role": "primary",
+        "displayName": "Deep Ink Blue, dark mode",
+        "canonical": "oklch(51.1% 0.195 266.6)",
+        "tonalRamp": [
+          "#03003F",
+          "#08146A",
+          "#1A3498",
+          "#3154C8",
+          "#4F78F0",
+          "#759FFF",
+          "#9EC6FF",
+          "#C8ECFF"
+        ]
+      },
+      "blue-text-dark-mode": {
+        "role": "primary",
+        "displayName": "Blue text, dark mode",
+        "canonical": "oklch(77.4% 0.102 270.9)",
+        "tonalRamp": [
+          "#040626",
+          "#182149",
+          "#313E70",
+          "#4D5D98",
+          "#6D7FBD",
+          "#91A2DC",
+          "#B7C7FB",
+          "#DEEDFF"
+        ]
+      },
+      "blue-tint-dark-mode": {
+        "role": "primary",
+        "displayName": "Blue tint, dark mode",
+        "canonical": "oklch(30.2% 0.092 267.3)",
+        "tonalRamp": [
+          "#030823",
+          "#162246",
+          "#30406B",
+          "#4B5F93",
+          "#6B81B7",
+          "#8FA4D7",
+          "#B5C9F7",
+          "#DDEEFF"
+        ]
+      },
+      "paper-white": {
+        "role": "neutral",
+        "displayName": "Paper White",
+        "canonical": "oklch(100.0% 0.000 89.9)",
+        "tonalRamp": [
+          "#0B0B0B",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#A5A5A5",
+          "#C9C9C9",
+          "#EEEEEE"
+        ]
+      },
+      "mist": {
+        "role": "neutral",
+        "displayName": "Mist",
+        "canonical": "oklch(97.6% 0.003 264.5)",
+        "tonalRamp": [
+          "#0B0B0C",
+          "#242526",
+          "#414243",
+          "#606163",
+          "#818284",
+          "#A4A5A6",
+          "#C8C9CA",
+          "#EEEEF0"
+        ]
+      },
+      "sunken-mist": {
+        "role": "neutral",
+        "displayName": "Sunken Mist",
+        "canonical": "oklch(97.0% 0.007 268.5)",
+        "tonalRamp": [
+          "#0A0B0D",
+          "#242528",
+          "#414245",
+          "#5F6165",
+          "#808286",
+          "#A3A5A9",
+          "#C8C9CD",
+          "#EDEEF2"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "oklch(22.3% 0.040 270.2)",
+        "tonalRamp": [
+          "#070A16",
+          "#1F2434",
+          "#3B4154",
+          "#596177",
+          "#79829A",
+          "#9DA4BB",
+          "#C1C9DD",
+          "#E8EEFF"
+        ]
+      },
+      "slate": {
+        "role": "neutral",
+        "displayName": "Slate",
+        "canonical": "oklch(54.4% 0.035 265.1)",
+        "tonalRamp": [
+          "#070B15",
+          "#1F2532",
+          "#3A4252",
+          "#586175",
+          "#798297",
+          "#9CA5B8",
+          "#C1C9DB",
+          "#E7EFFE"
+        ]
+      },
+      "chevron-grey": {
+        "role": "neutral",
+        "displayName": "Chevron Grey",
+        "canonical": "oklch(71.0% 0.027 261.1)",
+        "tonalRamp": [
+          "#070B13",
+          "#20252F",
+          "#3B424F",
+          "#596270",
+          "#7A8392",
+          "#9DA6B4",
+          "#C2CAD7",
+          "#E8EFFB"
+        ]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "oklch(95.7% 0.007 260.7)",
+        "tonalRamp": [
+          "#0A0B0D",
+          "#232528",
+          "#404245",
+          "#5F6165",
+          "#808287",
+          "#A3A5A9",
+          "#C7C9CD",
+          "#EDEEF2"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Border",
+        "canonical": "oklch(92.7% 0.012 264.5)",
+        "tonalRamp": [
+          "#0A0B0E",
+          "#232529",
+          "#3F4247",
+          "#5E6168",
+          "#7F8289",
+          "#A2A5AB",
+          "#C6C9CF",
+          "#ECEEF4"
+        ]
+      },
+      "dashed-border": {
+        "role": "neutral",
+        "displayName": "Dashed Border",
+        "canonical": "oklch(85.3% 0.018 264.5)",
+        "tonalRamp": [
+          "#090B10",
+          "#22252C",
+          "#3E424A",
+          "#5C616B",
+          "#7D828D",
+          "#A0A5AF",
+          "#C5C9D2",
+          "#EBEFF6"
+        ]
+      },
+      "outflow-red": {
+        "role": "semantic",
+        "displayName": "Outflow Red",
+        "canonical": "oklch(59.3% 0.194 33.8)",
+        "tonalRamp": [
+          "#2E0000",
+          "#580000",
+          "#830000",
+          "#B22100",
+          "#DA4B2C",
+          "#FA795D",
+          "#FFA48A",
+          "#FFD0B7"
+        ]
+      },
+      "outflow-red-tint": {
+        "role": "semantic",
+        "displayName": "Outflow Red tint",
+        "canonical": "oklch(95.5% 0.019 33.4)",
+        "tonalRamp": [
+          "#100908",
+          "#2C2321",
+          "#4A3F3C",
+          "#6B5E5B",
+          "#8D7F7B",
+          "#AFA29E",
+          "#D2C6C3",
+          "#F7ECE9"
+        ]
+      },
+      "danger-red": {
+        "role": "semantic",
+        "displayName": "Danger Red",
+        "canonical": "oklch(62.6% 0.193 23.0)",
+        "tonalRamp": [
+          "#2E0000",
+          "#580000",
+          "#840011",
+          "#B21B2A",
+          "#DA474B",
+          "#FB7673",
+          "#FFA29D",
+          "#FFCDC7"
+        ]
+      },
+      "inflow-green": {
+        "role": "semantic",
+        "displayName": "Inflow Green",
+        "canonical": "oklch(62.7% 0.170 149.2)",
+        "tonalRamp": [
+          "#001500",
+          "#003300",
+          "#005509",
+          "#007825",
+          "#1C9C48",
+          "#5BBE72",
+          "#8CE09C",
+          "#BBFFC7"
+        ]
+      },
+      "inflow-green-tint": {
+        "role": "semantic",
+        "displayName": "Inflow Green tint",
+        "canonical": "oklch(96.4% 0.017 159.1)",
+        "tonalRamp": [
+          "#070D09",
+          "#202723",
+          "#3C443F",
+          "#5A645E",
+          "#7A857F",
+          "#9EA8A2",
+          "#C2CCC6",
+          "#E9F1EC"
+        ]
+      },
+      "tip-green": {
+        "role": "semantic",
+        "displayName": "Tip Green",
+        "canonical": "oklch(39.3% 0.090 152.5)",
+        "tonalRamp": [
+          "#001101",
+          "#022E14",
+          "#1C4D2E",
+          "#376F49",
+          "#599169",
+          "#81B38E",
+          "#A9D6B5",
+          "#D3FADC"
+        ]
+      },
+      "night": {
+        "role": "neutral",
+        "displayName": "Night",
+        "canonical": "oklch(17.7% 0.034 269.6)",
+        "tonalRamp": [
+          "#080B14",
+          "#202532",
+          "#3C4252",
+          "#5A6174",
+          "#7A8296",
+          "#9EA5B8",
+          "#C2C9DA",
+          "#E8EEFE"
+        ]
+      },
+      "night-surface": {
+        "role": "neutral",
+        "displayName": "Night Surface",
+        "canonical": "oklch(22.3% 0.040 270.2)",
+        "tonalRamp": [
+          "#070A16",
+          "#1F2434",
+          "#3B4154",
+          "#596177",
+          "#79829A",
+          "#9DA4BB",
+          "#C1C9DD",
+          "#E8EEFF"
+        ]
+      },
+      "night-raised": {
+        "role": "neutral",
+        "displayName": "Night Raised",
+        "canonical": "oklch(27.5% 0.050 269.9)",
+        "tonalRamp": [
+          "#060A19",
+          "#1E2437",
+          "#394159",
+          "#57607D",
+          "#77819F",
+          "#9BA4C0",
+          "#C0C9E2",
+          "#E6EEFF"
+        ]
+      },
+      "night-text": {
+        "role": "neutral",
+        "displayName": "Night Text",
+        "canonical": "oklch(97.3% 0.007 268.5)",
+        "tonalRamp": [
+          "#0A0B0D",
+          "#242528",
+          "#414245",
+          "#5F6165",
+          "#808286",
+          "#A3A5A9",
+          "#C8C9CD",
+          "#EDEEF1"
+        ]
+      },
+      "night-slate": {
+        "role": "neutral",
+        "displayName": "Night Slate",
+        "canonical": "oklch(74.2% 0.034 270.3)",
+        "tonalRamp": [
+          "#080B14",
+          "#202532",
+          "#3C4152",
+          "#5A6174",
+          "#7B8297",
+          "#9EA5B8",
+          "#C3C9DA",
+          "#E9EEFE"
+        ]
+      },
+      "night-border": {
+        "role": "neutral",
+        "displayName": "Night Border",
+        "canonical": "oklch(31.3% 0.047 268.5)",
+        "tonalRamp": [
+          "#060A18",
+          "#1E2436",
+          "#394157",
+          "#56617B",
+          "#77829E",
+          "#9AA5BF",
+          "#BFC9E1",
+          "#E6EEFF"
+        ]
+      },
+      "category-food": {
+        "role": "category",
+        "displayName": "Food",
+        "canonical": "oklch(69.3% 0.165 53.1)",
+        "tonalRamp": [
+          "#280000",
+          "#4E0200",
+          "#772100",
+          "#A23E00",
+          "#C86200",
+          "#E88A49",
+          "#FFB27B",
+          "#FFDBAB"
+        ]
+      },
+      "category-transport": {
+        "role": "category",
+        "displayName": "Transport",
+        "canonical": "oklch(62.3% 0.188 259.8)",
+        "tonalRamp": [
+          "#00003C",
+          "#001A67",
+          "#003A94",
+          "#165AC4",
+          "#3B7EEB",
+          "#67A4FF",
+          "#92CAFF",
+          "#BFF0FF"
+        ]
+      },
+      "category-utilities": {
+        "role": "category",
+        "displayName": "Utilities",
+        "canonical": "oklch(51.1% 0.086 186.4)",
+        "tonalRamp": [
+          "#00120F",
+          "#002E2A",
+          "#004E48",
+          "#127068",
+          "#3F928A",
+          "#6DB4AC",
+          "#99D7D0",
+          "#C6FBF4"
+        ]
+      },
+      "category-coffee": {
+        "role": "category",
+        "displayName": "Coffee",
+        "canonical": "oklch(53.5% 0.084 57.0)",
+        "tonalRamp": [
+          "#1B0400",
+          "#3B1C01",
+          "#5E3718",
+          "#835531",
+          "#A77652",
+          "#C89A79",
+          "#E9C0A2",
+          "#FFE6CC"
+        ]
+      },
+      "category-health": {
+        "role": "category",
+        "displayName": "Health",
+        "canonical": "oklch(62.6% 0.193 23.0)",
+        "tonalRamp": [
+          "#2E0000",
+          "#580000",
+          "#840011",
+          "#B21B2A",
+          "#DA474B",
+          "#FB7673",
+          "#FFA29D",
+          "#FFCDC7"
+        ]
+      },
+      "category-shopping": {
+        "role": "category",
+        "displayName": "Shopping",
+        "canonical": "oklch(59.2% 0.218 0.6)",
+        "tonalRamp": [
+          "#2E0008",
+          "#580021",
+          "#85003D",
+          "#B4005B",
+          "#DD377C",
+          "#FD6B9F",
+          "#FF99C4",
+          "#FFC6EA"
+        ]
+      },
+      "category-entertainment": {
+        "role": "category",
+        "displayName": "Entertainment",
+        "canonical": "oklch(51.1% 0.230 277.0)",
+        "tonalRamp": [
+          "#0D0047",
+          "#1D0075",
+          "#3223A5",
+          "#4B44D8",
+          "#676AFF",
+          "#8994FF",
+          "#AEBCFF",
+          "#D5E5FF"
+        ]
+      },
+      "category-other": {
+        "role": "category",
+        "displayName": "Other",
+        "canonical": "oklch(87.2% 0.012 259.8)",
+        "tonalRamp": [
+          "#090B0F",
+          "#22252A",
+          "#3F4248",
+          "#5D6168",
+          "#7E8389",
+          "#A1A5AC",
+          "#C6C9CF",
+          "#EBEFF4"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "The month total on the hero card. One per screen."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "The amount being typed into the add/edit form."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Centered screen titles in the header."
+      },
+      "title-section": {
+        "displayName": "Section title",
+        "purpose": "List section headings."
+      },
+      "body-strong": {
+        "displayName": "Body strong",
+        "purpose": "Row titles, field labels and button labels."
+      },
+      "amount": {
+        "displayName": "Amount",
+        "purpose": "Row amounts in Outflow Red or Inflow Green."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Consultant chat text and explanations."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Secondary labels and chip text, in Slate."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Timestamps, counts and per-section totals."
+      },
+      "nav-label": {
+        "displayName": "Nav label",
+        "purpose": "Accessibility names for the icon-only nav."
+      }
+    },
+    "shadows": [
+      {
+        "name": "fab",
+        "value": "0 6px 16px rgba(4,40,149,0.18)",
+        "purpose": "Soft glow under the add and send buttons, light mode only."
+      },
+      {
+        "name": "button",
+        "value": "0 6px 16px rgba(4,40,149,0.18)",
+        "purpose": "Soft glow under the full-width primary button, light mode only."
+      },
+      {
+        "name": "sheet",
+        "value": "0 -12px 40px rgba(0,0,0,0.20)",
+        "purpose": "Bottom sheets."
+      }
+    ],
+    "motion": [
+      {
+        "name": "entry",
+        "value": "220ms cubic-bezier(0.33, 1, 0.68, 1)",
+        "purpose": "New list entries animating in (ease-out-cubic)."
+      }
+    ],
+    "breakpoints": []
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Full-width filled action, one per screen, with the action glow.",
+      "html": "<button class=\"ds-btn-primary\">Add Expense</button>",
+      "css": ".ds-btn-primary { width: 100%; height: 58px; background: #042895; color: #fff; border: none; border-radius: 14px; font: 600 17px 'Plus Jakarta Sans', system-ui, sans-serif; box-shadow: 0 6px 16px rgba(4,40,149,0.18); cursor: pointer; transition: background 0.15s; } .ds-btn-primary:hover { background: #031E70; } .ds-btn-primary:active { background: #031E70; } .ds-btn-primary:focus-visible { outline: 2px solid #042895; outline-offset: 3px; }"
+    },
+    {
+      "name": "Outlined Button",
+      "kind": "button",
+      "refersTo": "button-outlined",
+      "description": "The secondary choice beside a primary action.",
+      "html": "<button class=\"ds-btn-outlined\">Cancel</button>",
+      "css": ".ds-btn-outlined { height: 50px; padding: 0 24px; background: #fff; color: #141A2E; border: 1.5px solid #E3E7EF; border-radius: 14px; font: 600 16px 'Plus Jakarta Sans', system-ui, sans-serif; cursor: pointer; transition: border-color 0.15s, background 0.15s; } .ds-btn-outlined:hover { background: #F6F7F9; } .ds-btn-outlined:focus-visible { outline: none; border-color: #042895; }"
+    },
+    {
+      "name": "Amount Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Outlined white field; the outline turns blue on focus, with the Currency code leading.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-prefix\">MRU</span><input class=\"ds-input\" placeholder=\"0\" inputmode=\"decimal\"></label>",
+      "css": ".ds-field { display: flex; align-items: center; gap: 12px; padding: 16px; background: #fff; border: 1.5px solid #E3E7EF; border-radius: 14px; transition: border-color 0.15s; } .ds-field:focus-within { border-color: #042895; } .ds-field-prefix { color: #042895; font: 600 15px 'Plus Jakarta Sans', system-ui, sans-serif; } .ds-input { flex: 1; border: none; outline: none; background: transparent; color: #141A2E; font: 400 16px 'Plus Jakarta Sans', system-ui, sans-serif; font-variant-numeric: tabular-nums; } .ds-input::placeholder { color: #667085; }"
+    },
+    {
+      "name": "Category Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Picks a Category. Unselected chips are white; the selected one is filled blue.",
+      "html": "<div class=\"ds-chips\"><button class=\"ds-chip ds-chip-selected\">Entertainment</button><button class=\"ds-chip\">Food</button></div>",
+      "css": ".ds-chips { display: flex; gap: 8px; } .ds-chip { padding: 10px 14px; background: #fff; color: #141A2E; border-radius: 12px; font: 500 14px 'Plus Jakarta Sans', system-ui, sans-serif; border: 1px solid #E3E7EF; cursor: pointer; transition: background 0.15s, color 0.15s; } .ds-chip:hover { background: #F6F7F9; } .ds-chip:focus-visible { outline: 2px solid #042895; outline-offset: 2px; } .ds-chip-selected, .ds-chip-selected:hover { background: #042895; color: #fff; border-color: #042895; font-weight: 600; }"
+    },
+    {
+      "name": "Hero Card",
+      "kind": "card",
+      "refersTo": "hero-card",
+      "description": "This month's total in Deep Ink Blue, with Today and This week sub-totals.",
+      "html": "<div class=\"ds-hero\"><div class=\"ds-hero-label\">Spent in October</div><div class=\"ds-hero-amount\">6,130 <span>MRU</span></div><div class=\"ds-hero-subs\"><div><small>Today</small><b>650 MRU</b></div><div><small>This week</small><b>6,130 MRU</b></div></div></div>",
+      "css": ".ds-hero { padding: 20px; background: #042895; color: #fff; border-radius: 22px; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; } .ds-hero-label { color: #D6DEF7; font-size: 14px; font-weight: 500; } .ds-hero-amount { margin-top: 6px; font-size: 34px; font-weight: 800; letter-spacing: -0.5px; line-height: 1.1; font-variant-numeric: tabular-nums; } .ds-hero-amount span { font-size: 16px; font-weight: 600; } .ds-hero-subs { display: flex; gap: 32px; margin-top: 16px; } .ds-hero-subs small { display: block; color: #D6DEF7; font-size: 12px; } .ds-hero-subs b { font-size: 15px; font-variant-numeric: tabular-nums; }"
+    },
+    {
+      "name": "Entry Row",
+      "kind": "custom",
+      "refersTo": "menu-row",
+      "description": "An Expense in the list: Category tint with icon, title and time, red amount.",
+      "html": "<div class=\"ds-entry\"><span class=\"ds-entry-tile\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"currentColor\"><path d=\"M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z\"/></svg></span><span class=\"ds-entry-text\"><b>Food</b><small>04:46 PM</small></span><span class=\"ds-entry-amount\">−450</span></div>",
+      "css": ".ds-entry { display: flex; align-items: center; gap: 14px; min-height: 62px; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; } .ds-entry-tile { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 14px; background: #FCEFE4; color: #D46A12; } .ds-entry-text { flex: 1; display: flex; flex-direction: column; gap: 2px; } .ds-entry-text b { color: #141A2E; font-size: 16px; font-weight: 600; } .ds-entry-text small { color: #667085; font-size: 13px; } .ds-entry-amount { color: #D9411F; font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }"
+    },
+    {
+      "name": "Menu Row",
+      "kind": "custom",
+      "refersTo": "menu-row",
+      "description": "Settings-style row: solid Category square, title and subtitle, chevron, hairline.",
+      "html": "<button class=\"ds-menu-row\"><span class=\"ds-menu-tile\"><svg width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"currentColor\"><path d=\"M6.99 11 3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z\"/></svg></span><span class=\"ds-menu-text\"><b>Switch account</b><small>Signed in as ayman</small></span><svg class=\"ds-chevron\" width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"currentColor\"><path d=\"M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z\"/></svg></button>",
+      "css": ".ds-menu-row { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 62px; padding: 10px 8px; background: none; border: none; border-bottom: 1px solid #EEF1F6; border-radius: 0; text-align: left; cursor: pointer; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; } .ds-menu-row:hover { background: #F6F7F9; } .ds-menu-row:focus-visible { outline: 2px solid #042895; outline-offset: -2px; border-radius: 12px; } .ds-menu-tile { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: #042895; color: #fff; } .ds-menu-text { flex: 1; display: flex; flex-direction: column; gap: 2px; } .ds-menu-text b { color: #141A2E; font-size: 16px; font-weight: 500; } .ds-menu-text small { color: #667085; font-size: 12px; } .ds-chevron { color: #98A2B3; }"
+    },
+    {
+      "name": "Bottom Navigation",
+      "kind": "nav",
+      "refersTo": "nav-bar",
+      "description": "Five labeled tabs; on Android the active icon sits on a tinted pill (Material 3 navigation bar).",
+      "html": "<nav class=\"ds-nav\"><button class=\"ds-tab ds-tab-active\" ><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"currentColor\"><path d=\"M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z\"/></svg><span>Home</span></button><button class=\"ds-tab\" aria-label=\"Income\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\"><rect x=\"3\" y=\"6\" width=\"18\" height=\"12\" rx=\"2\"/><circle cx=\"12\" cy=\"12\" r=\"2.5\"/></svg><span>Income</span></button><button class=\"ds-tab\" aria-label=\"Consultant\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\"><path d=\"M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z\"/></svg><span>Consultant</span></button></nav>",
+      "css": ".ds-nav { display: flex; height: 72px; padding: 0 8px; background: #fff; border-top: 1px solid #EEF1F6; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; } .ds-tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; background: none; border: none; color: #667085; cursor: pointer; font-size: 12px; font-weight: 500; } .ds-tab svg { width: 64px; height: 32px; padding: 4px 20px; border-radius: 16px; box-sizing: border-box; transition: background 0.2s; } .ds-tab:hover svg { background: #F3F5FA; } .ds-tab:focus-visible { outline: 2px solid #042895; outline-offset: -4px; border-radius: 12px; } .ds-tab-active { color: #141A2E; font-weight: 700; } .ds-tab-active svg, .ds-tab-active:hover svg { background: #E6EBF8; color: #042895; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Pocket Ledger",
+    "overview": "The app is a clean white page of your own records. Entries sit on paper-white in ink, and one deep ink-blue marks what you can act on: the add button, the save button, the selected day or Category, your own chat messages, and the card that holds this month's total. Everything else steps back, so the eye goes to the amount and the next action.\n\nThe mood is calm and trustworthy. Money is a stressful subject, so nothing on screen raises its voice. Red appears only on Expense amounts and destructive actions, never as a warning, and green appears only on Income. Density is relaxed: a 24px page gutter, rows at least 62px tall and 44px touch targets. A one-handed log after paying at a till should never need precision tapping.\n\nDepth is flat by default. Surfaces separate by tone and a 1px hairline, never by a drop shadow: white panels carry a light outline, header buttons are soft mist squares, and dark mode lifts surfaces with the night tones. The one shadow left on a screen is a soft glow under its single primary action.\n\nThe look is shared across iOS and Android, but behavior follows each OS. Navigation, back gestures, sheets, pickers, dialogs, haptics and scroll physics follow the platform, while color, type, shape and the components below stay the same.",
+    "keyCharacteristics": [
+      "White page, ink text, one deep ink-blue for actions and the month's total.",
+      "Amounts in tabular figures; Outflow Red for Expenses, Inflow Green for Income.",
+      "Solid-colored Category squares with white icons are the only multicolor element.",
+      "Generous rounding (12–14px on controls, 22px on the hero card, 28px on sheets).",
+      "Flat by default: tone and hairlines separate surfaces; a soft glow marks only the primary action."
+    ],
+    "rules": [
+      {
+        "name": "The One Voice Rule",
+        "body": "Deep Ink Blue is the only accent and it means \"you can act here\" (or \"this month's total\"). Never use it for decoration, illustration or a second information channel.",
+        "section": "colors"
+      },
+      {
+        "name": "The Money Hues Rule",
+        "body": "Red belongs to Expenses and green to Income. Neither is used to warn, judge or grade spending. There are no budgets to be over. Net is neither, so it is set in Ink and carries only its sign (+ or −), with no arrow.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular Money Rule",
+        "body": "Any number that is money is set in tabular figures and formatted through `Money.format`. A proportional digit in an amount is a bug.",
+        "section": "typography"
+      },
+      {
+        "name": "The One Glow Rule",
+        "body": "A glow marks the screen's single primary action. New work does not add glows to secondary controls or cards, and two glowing elements may not compete on one screen.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Tone Before Shadow Rule",
+        "body": "Surfaces separate through tone, hairlines and spacing. No component gets a drop shadow to stand off the page; use `panelDecoration` / `panelShape` (white with a 1px outline) or the mist fill.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** reserve Deep Ink Blue for the one primary action on a screen, selected states, the active tab, the user's own messages and the month-total card.",
+      "**Do** set every amount in Plus Jakarta Sans with tabular figures, through `Money.format`.",
+      "**Do** color Expense amounts Outflow Red and Income amounts Inflow Green, and nothing else in those hues.",
+      "**Do** label every tab, and keep touch targets at least 44px and rows at least 62px, with the 24px page gutter.",
+      "**Do** separate new surfaces with tone and hairlines first; in dark mode, always use borders instead of shadows.",
+      "**Do** show a list that fails to load with the shared load-error state (\"Couldn't load your Expenses\", Try again), never the raw exception.",
+      "**Do** follow each OS for behavior (navigation, back gestures, sheets, date and option pickers, dialogs, haptics, scroll physics) while keeping the visual tokens identical.",
+      "**Do** change `lib/core/theme/tokens.dart` and this file together when a token changes."
+    ],
+    "donts": [
+      "**Don't** add a second accent color, or use Deep Ink Blue for decoration.",
+      "**Don't** use red or green to warn, judge or show progress toward a limit. The product has no budgets.",
+      "**Don't** add gradients. The system is solid colors only.",
+      "**Don't** add glows to secondary controls, or put two glowing elements on one screen.",
+      "**Don't** give a card, chip or button a drop shadow to lift it off the page. Outline it, or fill it with mist.",
+      "**Don't** use grey filled panels where a white surface with a hairline will do.",
+      "**Don't** introduce another typeface. Geist and Geist Mono are bundled in `assets/fonts/` but are not part of the system."
+    ]
+  }
+}
